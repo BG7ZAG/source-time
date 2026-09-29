@@ -1,0 +1,12 @@
+{
+  "src": [
+    "pages/HomePage",
+    "pages/AddTotpPage",
+    "pages/ScanPage",
+    "pages/SettingsPage",
+    "pages/SecurityPage",
+    "pages/WebDavPage",
+    "pages/PrivacyPolicyPage",
+    "pages/AboutPage"
+  ]
+}
