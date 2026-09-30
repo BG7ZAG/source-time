@@ -67,6 +67,11 @@ export class AddTotpViewModel {
       this.error = '周期无效';
       return err<void>(AppErrorCode.INVALID_TOTP_CONFIG, this.error);
     }
+    if (this.encryptionSecret.length === 0) {
+      // 密钥由 KeyStoreService 在启动时自动取回；为空说明系统安全存储里没有可用密钥
+      this.error = '加密密钥不可用，无法读取本地数据（可在 设置 > 安全 中重新设置密钥）';
+      return err<void>(AppErrorCode.KEY_REQUIRED, this.error);
+    }
     let db: DatabaseModel | null = this.repository.getDatabase();
     if (db === null) {
       const loadResult: Result<DatabaseModel> = await this.repository.load(this.encryptionSecret);

@@ -30,6 +30,15 @@ export class WebDavService {
         if (code >= 200 && code < 300) {
           return ok(undefined);
         }
+        // 目录不存在：WebDAV 同步目录本应由客户端建立，自动 MKCOL 创建后再验证，
+        // 避免对尚未创建的目标目录误报「路径不存在」。
+        if (code === 404) {
+          const created: Result<void> = await this.createDirectory(config);
+          if (created.success) {
+            return ok(undefined);
+          }
+          return created;
+        }
         return err<void>(this.mapStatus(code), this.statusMessage(code));
       } finally {
         request.destroy();
@@ -44,6 +53,11 @@ export class WebDavService {
     const urlResult: Result<string> = this.buildFileUrl(config);
     if (!urlResult.success || urlResult.data === undefined) {
       return err<void>(AppErrorCode.WEBDAV_INVALID_URL, '服务器地址无效');
+    }
+    // 确保目标目录存在（幂等）。否则首次上传会因目录不存在而 409/404 失败。
+    const ensureDir: Result<void> = await this.createDirectory(config);
+    if (!ensureDir.success) {
+      return ensureDir;
     }
     try {
       const request = http.createHttp();
@@ -70,6 +84,46 @@ export class WebDavService {
     }
   }
 
+  /**
+   * 在服务器上创建同步目录（MKCOL）。幂等：集合已存在（405）视为可用。
+   * 测试连接与首次上传前都会调用，避免对尚未创建的目录误报 404 / 409。
+   */
+  async createDirectory(config: WebDavConfig): Promise<Result<void>> {
+    const urlResult: Result<string> = this.buildDirectoryUrl(config);
+    if (!urlResult.success || urlResult.data === undefined) {
+      return err<void>(AppErrorCode.WEBDAV_INVALID_URL, '服务器地址无效');
+    }
+    try {
+      const request = http.createHttp();
+      try {
+        const response = await request.request(urlResult.data, {
+          customMethod: 'MKCOL',
+          header: this.buildHeaders(config, false),
+          connectTimeout: TIMEOUT_MS,
+          readTimeout: TIMEOUT_MS,
+          usingCache: false
+        });
+        const code: number = response.responseCode as number;
+        if (code >= 200 && code < 300) {
+          return ok(undefined);
+        }
+        if (code === 405) {
+          // 集合已存在或该路径已是集合：视为可用，无需创建
+          return ok(undefined);
+        }
+        if (code === 401 || code === 403) {
+          return err<void>(AppErrorCode.WEBDAV_AUTH_FAILED, this.statusMessage(code));
+        }
+        return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, this.statusMessage(code));
+      } finally {
+        request.destroy();
+      }
+    } catch (error) {
+      Logger.error('WebDAV create directory failed');
+      return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, '无法连接 WebDAV 服务器');
+    }
+  }
+
   async download(config: WebDavConfig): Promise<Result<Uint8Array>> {
     const urlResult: Result<string> = this.buildFileUrl(config);
     if (!urlResult.success || urlResult.data === undefined) {
@@ -87,6 +141,10 @@ export class WebDavService {
           usingCache: false
         });
         const code: number = response.responseCode as number;
+        if (code === 404) {
+          // 尚未推送过任何备份：视为远端暂无数据，而非「路径不存在」
+          return err<Uint8Array>(AppErrorCode.WEBDAV_INVALID_REMOTE_FILE, '远端暂无备份数据');
+        }
         if (code < 200 || code >= 300) {
           return err<Uint8Array>(this.mapStatus(code), this.statusMessage(code));
         }

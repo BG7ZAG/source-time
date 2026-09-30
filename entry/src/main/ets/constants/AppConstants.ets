@@ -21,8 +21,6 @@ export const DEFAULT_WEBDAV_DIRECTORY: string = '/SourceTime/';
 export class AppRoutes {
   static readonly HOME: string = 'pages/HomePage';
 
-  static readonly ADD_TOTP: string = 'pages/AddTotpPage';
-
   static readonly SCAN: string = 'pages/ScanPage';
 
   static readonly SETTINGS: string = 'pages/SettingsPage';

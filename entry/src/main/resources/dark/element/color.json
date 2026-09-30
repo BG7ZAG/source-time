@@ -2,31 +2,75 @@
   "color": [
     {
       "name": "start_window_background",
-      "value": "#0A0E18"
+      "value": "#080C16"
     },
     {
       "name": "page_background",
-      "value": "#0A0E18"
+      "value": "#080C16"
     },
     {
       "name": "page_gradient_start",
-      "value": "#0C1424"
+      "value": "#0D1628"
+    },
+    {
+      "name": "page_gradient_mid",
+      "value": "#0A1120"
     },
     {
       "name": "page_gradient_end",
-      "value": "#06080F"
+      "value": "#05070D"
+    },
+    {
+      "name": "aurora_primary",
+      "value": "#1E5BC6"
+    },
+    {
+      "name": "aurora_secondary",
+      "value": "#14708F"
+    },
+    {
+      "name": "aurora_tertiary",
+      "value": "#4B3FA8"
     },
     {
       "name": "card_background",
-      "value": "#CC141C2E"
+      "value": "#8C16223C"
     },
     {
       "name": "card_background_pressed",
-      "value": "#E61A2540"
+      "value": "#B81F2E4D"
     },
     {
       "name": "card_border",
+      "value": "#4D5B9DFF"
+    },
+    {
+      "name": "card_highlight",
+      "value": "#66FFFFFF"
+    },
+    {
+      "name": "glass_input_background",
+      "value": "#33FFFFFF"
+    },
+    {
+      "name": "glass_input_border",
       "value": "#1FFFFFFF"
+    },
+    {
+      "name": "field_background",
+      "value": "#40000000"
+    },
+    {
+      "name": "field_border",
+      "value": "#59FFFFFF"
+    },
+    {
+      "name": "glass_track",
+      "value": "#335B9DFF"
+    },
+    {
+      "name": "track_background",
+      "value": "#335B9DFF"
     },
     {
       "name": "text_primary",
@@ -46,11 +90,19 @@
     },
     {
       "name": "brand_secondary",
+      "value": "#7FB6FF"
+    },
+    {
+      "name": "brand_tertiary",
       "value": "#6ED0FF"
     },
     {
       "name": "brand_container",
-      "value": "#1B2A47"
+      "value": "#2A3E63"
+    },
+    {
+      "name": "brand_container_strong",
+      "value": "#35507F"
     },
     {
       "name": "brand_on_container",
@@ -58,7 +110,7 @@
     },
     {
       "name": "fab_foreground",
-      "value": "#0A0E18"
+      "value": "#08101F"
     },
     {
       "name": "success",
@@ -70,7 +122,7 @@
     },
     {
       "name": "danger",
-      "value": "#FF453A"
+      "value": "#FF5F52"
     },
     {
       "name": "divider",
@@ -90,11 +142,27 @@
     },
     {
       "name": "glow",
-      "value": "#664D8DF7"
+      "value": "#665B9DFF"
     },
     {
       "name": "scrim",
       "value": "#33000000"
+    },
+    {
+      "name": "pill_background",
+      "value": "#401F2E4D"
+    },
+    {
+      "name": "pill_border",
+      "value": "#33FFFFFF"
+    },
+    {
+      "name": "status_idle",
+      "value": "#8E8E93"
+    },
+    {
+      "name": "status_active",
+      "value": "#5B9DFF"
     }
   ]
 }

@@ -2,31 +2,75 @@
   "color": [
     {
       "name": "start_window_background",
-      "value": "#F2F5FA"
+      "value": "#EDF3FF"
     },
     {
       "name": "page_background",
-      "value": "#F2F5FA"
+      "value": "#EDF3FF"
     },
     {
       "name": "page_gradient_start",
-      "value": "#E9F0FB"
+      "value": "#E4EEFF"
+    },
+    {
+      "name": "page_gradient_mid",
+      "value": "#F1F5FE"
     },
     {
       "name": "page_gradient_end",
-      "value": "#F7F9FC"
+      "value": "#FBFCFF"
+    },
+    {
+      "name": "aurora_primary",
+      "value": "#8FC0FF"
+    },
+    {
+      "name": "aurora_secondary",
+      "value": "#A9E4FF"
+    },
+    {
+      "name": "aurora_tertiary",
+      "value": "#C6BFFF"
     },
     {
       "name": "card_background",
-      "value": "#F2FFFFFF"
+      "value": "#8CFFFFFF"
     },
     {
       "name": "card_background_pressed",
-      "value": "#E6EDF5FF"
+      "value": "#B8FFFFFF"
     },
     {
       "name": "card_border",
-      "value": "#14000000"
+      "value": "#290A59F7"
+    },
+    {
+      "name": "card_highlight",
+      "value": "#E6FFFFFF"
+    },
+    {
+      "name": "glass_input_background",
+      "value": "#59FFFFFF"
+    },
+    {
+      "name": "glass_input_border",
+      "value": "#33FFFFFF"
+    },
+    {
+      "name": "field_background",
+      "value": "#12000000"
+    },
+    {
+      "name": "field_border",
+      "value": "#2E000000"
+    },
+    {
+      "name": "glass_track",
+      "value": "#1F0A59F7"
+    },
+    {
+      "name": "track_background",
+      "value": "#1F0A59F7"
     },
     {
       "name": "text_primary",
@@ -46,11 +90,19 @@
     },
     {
       "name": "brand_secondary",
-      "value": "#4FA3FF"
+      "value": "#3892FF"
+    },
+    {
+      "name": "brand_tertiary",
+      "value": "#64B5F6"
     },
     {
       "name": "brand_container",
-      "value": "#E4EDFE"
+      "value": "#D9E6FF"
+    },
+    {
+      "name": "brand_container_strong",
+      "value": "#B8D4FF"
     },
     {
       "name": "brand_on_container",
@@ -74,19 +126,19 @@
     },
     {
       "name": "divider",
-      "value": "#1A000000"
+      "value": "#14000000"
     },
     {
       "name": "particle_primary",
-      "value": "#3D7DF7"
+      "value": "#0A59F7"
     },
     {
       "name": "particle_secondary",
-      "value": "#6ED0FF"
+      "value": "#64B5F6"
     },
     {
       "name": "particle_accent",
-      "value": "#8FA8FF"
+      "value": "#E3F2FD"
     },
     {
       "name": "glow",
@@ -95,6 +147,22 @@
     {
       "name": "scrim",
       "value": "#0F000000"
+    },
+    {
+      "name": "pill_background",
+      "value": "#66FFFFFF"
+    },
+    {
+      "name": "pill_border",
+      "value": "#99FFFFFF"
+    },
+    {
+      "name": "status_idle",
+      "value": "#8C8C93"
+    },
+    {
+      "name": "status_active",
+      "value": "#0A59F7"
     }
   ]
 }
