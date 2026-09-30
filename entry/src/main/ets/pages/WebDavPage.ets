@@ -154,21 +154,31 @@ struct WebDavPage {
   @Builder
   header() {
     Row() {
-      Text('< 返回')
-        .fontSize(16)
-        .fontColor($r('app.color.text_primary'))
-        .onClick(() => router.back())
+      Button() {
+        Text('<')
+          .fontSize(18)
+          .fontColor($r('app.color.text_primary'))
+      }
+      .width(40)
+      .height(40)
+      .borderRadius(20)
+      .backgroundColor(Color.Transparent)
+      .onClick(() => router.back())
+
       Blank()
+
       Text('WebDAV 同步')
         .fontSize(20)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary'))
+
       Blank()
+
       Text('')
-        .width(48)
+        .width(40)
     }
     .width('100%')
-    .padding(16)
+    .padding({ left: 8, right: 16, top: 12, bottom: 12 })
   }
 
   @Builder
@@ -182,45 +192,7 @@ struct WebDavPage {
         .onChange(onChange)
     }
     .width('100%')
-    .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-  }
-
-  @Builder
-  syncStatusRow() {
-    Column({ space: 4 }) {
-      Row() {
-        Text('同步状态')
-          .fontSize(16)
-          .fontColor($r('app.color.text_primary'))
-        Blank()
-        Text(this.formatSyncStatus())
-          .fontSize(16)
-          .fontColor(this.syncStatus === SyncStatus.FAILED ? '#E84026'
-            : this.syncStatus === SyncStatus.SUCCESS ? '#4CAF50'
-            : $r('app.color.text_secondary'))
-      }
-      .width('100%')
-      Row() {
-        Text('上次同步')
-          .fontSize(14)
-          .fontColor($r('app.color.text_secondary'))
-        Blank()
-        Text(this.formatLastSyncAt())
-          .fontSize(14)
-          .fontColor($r('app.color.text_secondary'))
-      }
-      .width('100%')
-      if (this.syncMessage.length > 0) {
-        Text(this.syncMessage)
-          .fontSize(12)
-          .fontColor('#E84026')
-          .width('100%')
-      }
-    }
-    .width('100%')
-    .padding(16)
-    .borderRadius(8)
-    .backgroundColor($r('app.color.card_background'))
+    .padding({ left: 16, right: 16, top: 10, bottom: 10 })
   }
 
   build() {
@@ -228,71 +200,139 @@ struct WebDavPage {
       Column({ space: 12 }) {
         this.header()
 
-        this.toggleRow('启用 WebDAV', this.webDavEnabled, (value: boolean) => {
-          this.webDavEnabled = value;
-        })
-
-        TextInput({ placeholder: '服务器地址（https://example.com/dav/）', text: this.baseUrl })
-          .width('100%')
-          .padding({ left: 16, right: 16 })
-          .onChange((value: string) => {
-            this.baseUrl = value;
+        Column({ space: 0 }) {
+          this.toggleRow('启用 WebDAV', this.webDavEnabled, (value: boolean) => {
+            this.webDavEnabled = value;
           })
-
-        TextInput({ placeholder: '用户名', text: this.username })
-          .width('100%')
-          .padding({ left: 16, right: 16 })
-          .onChange((value: string) => {
-            this.username = value;
+          Divider().color($r('app.color.divider')).width('100%')
+          this.toggleRow('自动推送（增删后自动上传）', this.autoPush, (value: boolean) => {
+            this.autoPush = value;
           })
-
-        TextInput({ placeholder: '密码', text: this.password })
-          .type(InputType.Password)
-          .width('100%')
-          .padding({ left: 16, right: 16 })
-          .onChange((value: string) => {
-            this.password = value;
+          Divider().color($r('app.color.divider')).width('100%')
+          this.toggleRow('启动时自动拉取', this.autoPullOnStart, (value: boolean) => {
+            this.autoPullOnStart = value;
           })
+        }
+        .width('100%')
+        .borderRadius(16)
+        .backgroundColor($r('app.color.card_background'))
+        .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
+        .border({ width: 0.5, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+        .shadow({ radius: 4, color: '#1A000000', offsetX: 0, offsetY: 2 })
+        .margin({ left: 16, right: 16 })
 
-        TextInput({ placeholder: '同步目录（/SourceTime/）', text: this.remotePath })
-          .width('100%')
-          .padding({ left: 16, right: 16 })
-          .onChange((value: string) => {
-            this.remotePath = value;
-          })
+        Column({ space: 12 }) {
+          TextInput({ placeholder: '服务器地址（https://example.com/dav/）', text: this.baseUrl })
+            .width('100%')
+            .borderRadius(12)
+            .onChange((value: string) => {
+              this.baseUrl = value;
+            })
 
-        this.toggleRow('自动推送（增删后自动上传）', this.autoPush, (value: boolean) => {
-          this.autoPush = value;
-        })
+          TextInput({ placeholder: '用户名', text: this.username })
+            .width('100%')
+            .borderRadius(12)
+            .onChange((value: string) => {
+              this.username = value;
+            })
 
-        this.toggleRow('启动时自动拉取', this.autoPullOnStart, (value: boolean) => {
-          this.autoPullOnStart = value;
-        })
+          TextInput({ placeholder: '密码', text: this.password })
+            .type(InputType.Password)
+            .width('100%')
+            .borderRadius(12)
+            .onChange((value: string) => {
+              this.password = value;
+            })
+
+          TextInput({ placeholder: '同步目录（/SourceTime/）', text: this.remotePath })
+            .width('100%')
+            .borderRadius(12)
+            .onChange((value: string) => {
+              this.remotePath = value;
+            })
+        }
+        .width('100%')
+        .padding(16)
+        .borderRadius(16)
+        .backgroundColor($r('app.color.card_background'))
+        .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
+        .border({ width: 0.5, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+        .shadow({ radius: 4, color: '#1A000000', offsetX: 0, offsetY: 2 })
+        .margin({ left: 16, right: 16 })
 
         Row({ space: 12 }) {
           Button(this.testing ? '测试中...' : '测试连接')
             .layoutWeight(1)
+            .borderRadius(12)
+            .backgroundColor($r('app.color.brand_container'))
+            .fontColor($r('app.color.brand_on_container'))
             .enabled(!this.testing && !this.saving)
             .onClick(() => this.onTest())
 
           Button(this.saving ? '保存中...' : '保存配置')
             .layoutWeight(1)
+            .borderRadius(12)
+            .backgroundColor($r('app.color.brand'))
+            .fontColor($r('app.color.fab_foreground'))
             .enabled(!this.testing && !this.saving)
             .onClick(() => this.onSave())
         }
         .width('100%')
         .padding({ left: 16, right: 16 })
 
-        this.syncStatusRow()
+        Column({ space: 4 }) {
+          Row() {
+            Text('同步状态')
+              .fontSize(16)
+              .fontColor($r('app.color.text_primary'))
+            Blank()
+            Text(this.formatSyncStatus())
+              .fontSize(16)
+              .fontColor(this.syncStatus === SyncStatus.FAILED ? $r('app.color.danger')
+                : this.syncStatus === SyncStatus.SUCCESS ? $r('app.color.success')
+                : $r('app.color.text_secondary'))
+          }
+          .width('100%')
+          Row() {
+            Text('上次同步')
+              .fontSize(14)
+              .fontColor($r('app.color.text_secondary'))
+            Blank()
+            Text(this.formatLastSyncAt())
+              .fontSize(14)
+              .fontColor($r('app.color.text_secondary'))
+          }
+          .width('100%')
+          if (this.syncMessage.length > 0) {
+            Text(this.syncMessage)
+              .fontSize(12)
+              .fontColor($r('app.color.danger'))
+              .width('100%')
+          }
+        }
+        .width('100%')
+        .padding(16)
+        .borderRadius(16)
+        .backgroundColor($r('app.color.card_background'))
+        .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
+        .border({ width: 0.5, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+        .shadow({ radius: 4, color: '#1A000000', offsetX: 0, offsetY: 2 })
+        .margin({ left: 16, right: 16 })
 
         Row({ space: 12 }) {
           Button(this.pushing ? '推送中...' : '手动推送')
             .layoutWeight(1)
+            .borderRadius(12)
+            .backgroundColor($r('app.color.brand_container'))
+            .fontColor($r('app.color.brand_on_container'))
             .enabled(!this.pushing && !this.pulling && this.webDavEnabled)
             .onClick(() => this.onPush())
 
           Button(this.pulling ? '拉取中...' : '手动拉取')
             .layoutWeight(1)
+            .borderRadius(12)
+            .backgroundColor($r('app.color.brand_container'))
+            .fontColor($r('app.color.brand_on_container'))
             .enabled(!this.pushing && !this.pulling && this.webDavEnabled)
             .onClick(() => this.onPull())
         }
@@ -302,6 +342,9 @@ struct WebDavPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.page_background'))
+    .linearGradient({
+      direction: GradientDirection.Bottom,
+      colors: [[$r('app.color.page_gradient_start'), 0.0], [$r('app.color.page_gradient_end'), 1.0]]
+    })
   }
 }

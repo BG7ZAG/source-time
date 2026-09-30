@@ -1,6 +1,7 @@
 import { router, promptAction } from '@kit.ArkUI';
 import { TotpCard } from '../components/TotpCard';
 import { EmptyState } from '../components/EmptyState';
+import { ParticleButton } from '../components/ParticleButton';
 import { HomeViewModel, TotpDisplayItem } from '../viewmodel/HomeViewModel';
 import { TotpItem } from '../model/TotpItem';
 import { Result } from '../types/Result';
@@ -16,7 +17,6 @@ struct HomePage {
   @State displayItems: TotpDisplayItem[] = [];
   private viewModel: HomeViewModel = new HomeViewModel();
   private settingsService: SettingsService = new SettingsService();
-  private timerId: number = -1;
 
   aboutToAppear(): void {
     const settings = this.settingsService.getSettings();
@@ -90,17 +90,6 @@ struct HomePage {
         this.refreshItems();
       });
     }
-    this.timerId = setInterval(() => {
-      this.viewModel.refreshTime();
-      this.refreshItems();
-    }, 1000);
-  }
-
-  aboutToDisappear(): void {
-    if (this.timerId >= 0) {
-      clearInterval(this.timerId);
-      this.timerId = -1;
-    }
   }
 
   private refreshItems(): void {
@@ -149,16 +138,23 @@ struct HomePage {
   header() {
     Row() {
       Text('源时')
-        .fontSize(20)
+        .fontSize(22)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary'))
       Blank()
-      Text('⚙')
-        .fontSize(20)
-        .onClick(() => this.openSettings())
+      Button() {
+        Text('⚙')
+          .fontSize(20)
+          .fontColor($r('app.color.text_secondary'))
+      }
+      .width(40)
+      .height(40)
+      .borderRadius(20)
+      .backgroundColor(Color.Transparent)
+      .onClick(() => this.openSettings())
     }
     .width('100%')
-    .padding(16)
+    .padding({ left: 16, right: 16, top: 12, bottom: 12 })
   }
 
   build() {
@@ -175,8 +171,10 @@ struct HomePage {
               TotpCard({
                 issuer: display.item.issuer,
                 account: display.item.account,
-                code: display.code,
-                remaining: display.remaining,
+                secret: display.item.secret,
+                algorithm: display.item.algorithm,
+                digits: display.item.digits,
+                period: display.item.period,
                 onCopy: () => {
                   this.onCopy(display.item);
                 },
@@ -189,19 +187,26 @@ struct HomePage {
         }
         .layoutWeight(1)
         .width('100%')
-        .padding({ left: 16, right: 16 })
+        .padding({ left: 16, right: 16, top: 4 })
       }
 
-      Button('＋')
-        .fontSize(24)
-        .width(56)
-        .height(56)
-        .borderRadius(28)
+      ParticleButton({
+        text: '＋',
+        buttonType: ButtonType.Circle,
+        buttonWidth: 56,
+        buttonHeight: 56,
+        fontSize: 24,
+        bgColor: $r('app.color.brand'),
+        fontColor: $r('app.color.fab_foreground'),
+        onTap: () => this.openAdd()
+      })
         .margin({ bottom: 24 })
-        .onClick(() => this.openAdd())
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.page_background'))
+    .linearGradient({
+      direction: GradientDirection.Bottom,
+      colors: [[$r('app.color.page_gradient_start'), 0.0], [$r('app.color.page_gradient_end'), 1.0]]
+    })
   }
 }

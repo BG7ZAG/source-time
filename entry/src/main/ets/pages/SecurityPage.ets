@@ -161,10 +161,16 @@ struct SecurityPage {
   header() {
     Row() {
       if (!this.isFirstSetup) {
-        Text('< 返回')
-          .fontSize(16)
-          .fontColor($r('app.color.text_primary'))
-          .onClick(() => router.back())
+        Button() {
+          Text('<')
+            .fontSize(18)
+            .fontColor($r('app.color.text_primary'))
+        }
+        .width(40)
+        .height(40)
+        .borderRadius(20)
+        .backgroundColor(Color.Transparent)
+        .onClick(() => router.back())
       }
       Blank()
       Text('保护你的数据')
@@ -173,10 +179,10 @@ struct SecurityPage {
         .fontColor($r('app.color.text_primary'))
       Blank()
       Text('')
-        .width(48)
+        .width(40)
     }
     .width('100%')
-    .padding(16)
+    .padding({ left: 8, right: 16, top: 12, bottom: 12 })
   }
 
   @Builder
@@ -195,6 +201,7 @@ struct SecurityPage {
       Row() {
         TextInput({ placeholder: '输入加密密钥', text: this.encryptionSecret })
           .layoutWeight(1)
+          .borderRadius(12)
           .onChange((value: string) => {
             this.encryptionSecret = value;
             this.hasGenerated = false;
@@ -203,6 +210,9 @@ struct SecurityPage {
 
         Button('生成')
           .width(80)
+          .borderRadius(12)
+          .backgroundColor($r('app.color.brand'))
+          .fontColor($r('app.color.fab_foreground'))
           .onClick(() => this.onGenerate())
       }
       .width('100%')
@@ -211,7 +221,9 @@ struct SecurityPage {
         Row() {
           Button(this.copied ? '已复制' : '复制密钥')
             .width(140)
-            .backgroundColor(this.copied ? '#4CAF50' : '#007DFF')
+            .borderRadius(12)
+            .backgroundColor(this.copied ? $r('app.color.success') : $r('app.color.brand'))
+            .fontColor($r('app.color.fab_foreground'))
             .onClick(() => this.onCopy())
         }
         .width('100%')
@@ -220,22 +232,31 @@ struct SecurityPage {
 
       Text('请将此密钥保存到安全的位置。源时不会提供服务器端密钥恢复能力。')
         .fontSize(12)
-        .fontColor('#E84026')
+        .fontColor($r('app.color.danger'))
         .width('100%')
 
       if (this.error.length > 0) {
         Text(this.error)
           .fontSize(14)
-          .fontColor('#E84026')
+          .fontColor($r('app.color.danger'))
           .width('100%')
       }
 
       Button(this.saving ? '保存中...' : '保存')
         .width('100%')
+        .borderRadius(12)
+        .backgroundColor($r('app.color.brand'))
+        .fontColor($r('app.color.fab_foreground'))
         .enabled(!this.saving)
         .onClick(() => this.onSaveFirstSetup())
     }
-    .padding({ left: 16, right: 16 })
+    .padding(16)
+    .borderRadius(16)
+    .backgroundColor($r('app.color.card_background'))
+    .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
+    .border({ width: 0.5, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+    .shadow({ radius: 4, color: '#1A000000', offsetX: 0, offsetY: 2 })
+    .margin({ left: 16, right: 16 })
     .width('100%')
   }
 
@@ -250,6 +271,7 @@ struct SecurityPage {
       TextInput({ placeholder: '输入旧密钥', text: this.oldSecret })
         .type(InputType.Password)
         .width('100%')
+        .borderRadius(12)
         .onChange((value: string) => {
           this.oldSecret = value;
         })
@@ -257,16 +279,25 @@ struct SecurityPage {
       if (this.error.length > 0) {
         Text(this.error)
           .fontSize(14)
-          .fontColor('#E84026')
+          .fontColor($r('app.color.danger'))
           .width('100%')
       }
 
       Button(this.verifyingOld ? '验证中...' : '验证旧密钥')
         .width('100%')
+        .borderRadius(12)
+        .backgroundColor($r('app.color.brand'))
+        .fontColor($r('app.color.fab_foreground'))
         .enabled(!this.verifyingOld)
         .onClick(() => this.onVerifyOldSecret())
     }
-    .padding({ left: 16, right: 16 })
+    .padding(16)
+    .borderRadius(16)
+    .backgroundColor($r('app.color.card_background'))
+    .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
+    .border({ width: 0.5, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+    .shadow({ radius: 4, color: '#1A000000', offsetX: 0, offsetY: 2 })
+    .margin({ left: 16, right: 16 })
     .width('100%')
   }
 
@@ -281,6 +312,7 @@ struct SecurityPage {
       Row() {
         TextInput({ placeholder: '输入新密钥', text: this.newSecret })
           .layoutWeight(1)
+          .borderRadius(12)
           .onChange((value: string) => {
             this.newSecret = value;
             this.copied = false;
@@ -288,6 +320,9 @@ struct SecurityPage {
 
         Button('生成')
           .width(80)
+          .borderRadius(12)
+          .backgroundColor($r('app.color.brand'))
+          .fontColor($r('app.color.fab_foreground'))
           .onClick(() => {
             this.newSecret = this.cryptoService.generateRandomEncryptionSecret();
             this.copied = false;
@@ -299,7 +334,9 @@ struct SecurityPage {
         Row() {
           Button(this.copied ? '已复制' : '复制新密钥')
             .width(140)
-            .backgroundColor(this.copied ? '#4CAF50' : '#007DFF')
+            .borderRadius(12)
+            .backgroundColor(this.copied ? $r('app.color.success') : $r('app.color.brand'))
+            .fontColor($r('app.color.fab_foreground'))
             .onClick(() => {
               this.clipboardService.copyText(this.newSecret).then((result: Result<void>) => {
                 if (result.success) {
@@ -317,22 +354,31 @@ struct SecurityPage {
 
       Text('请将此密钥保存到安全的位置。源时不会提供服务器端密钥恢复能力。')
         .fontSize(12)
-        .fontColor('#E84026')
+        .fontColor($r('app.color.danger'))
         .width('100%')
 
       if (this.error.length > 0) {
         Text(this.error)
           .fontSize(14)
-          .fontColor('#E84026')
+          .fontColor($r('app.color.danger'))
           .width('100%')
       }
 
       Button(this.saving ? '保存中...' : '保存新密钥')
         .width('100%')
+        .borderRadius(12)
+        .backgroundColor($r('app.color.brand'))
+        .fontColor($r('app.color.fab_foreground'))
         .enabled(!this.saving)
         .onClick(() => this.onSaveNewSecret())
     }
-    .padding({ left: 16, right: 16 })
+    .padding(16)
+    .borderRadius(16)
+    .backgroundColor($r('app.color.card_background'))
+    .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
+    .border({ width: 0.5, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+    .shadow({ radius: 4, color: '#1A000000', offsetX: 0, offsetY: 2 })
+    .margin({ left: 16, right: 16 })
     .width('100%')
   }
 
@@ -358,6 +404,9 @@ struct SecurityPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.page_background'))
+    .linearGradient({
+      direction: GradientDirection.Bottom,
+      colors: [[$r('app.color.page_gradient_start'), 0.0], [$r('app.color.page_gradient_end'), 1.0]]
+    })
   }
 }

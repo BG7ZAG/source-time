@@ -72,43 +72,59 @@ struct ScanPage {
 
   @Builder
   confirmView() {
-    Column({ space: 12 }) {
+    Column({ space: 16 }) {
       Text('确认验证码信息')
         .fontSize(20)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary'))
-      Row() {
-        Text('发行方').fontSize(14).fontColor($r('app.color.text_secondary'))
-        Blank()
-        Text(this.issuer).fontSize(14).fontColor($r('app.color.text_primary'))
+        .width('100%')
+
+      Column({ space: 8 }) {
+        Row() {
+          Text('发行方').fontSize(14).fontColor($r('app.color.text_secondary'))
+          Blank()
+          Text(this.issuer).fontSize(14).fontColor($r('app.color.text_primary'))
+        }
+        .width('100%')
+        Row() {
+          Text('账号').fontSize(14).fontColor($r('app.color.text_secondary'))
+          Blank()
+          Text(this.account).fontSize(14).fontColor($r('app.color.text_primary'))
+        }
+        .width('100%')
+        Row() {
+          Text('算法').fontSize(14).fontColor($r('app.color.text_secondary'))
+          Blank()
+          Text(this.algorithm).fontSize(14).fontColor($r('app.color.text_primary'))
+        }
+        .width('100%')
+        Row() {
+          Text('位数').fontSize(14).fontColor($r('app.color.text_secondary'))
+          Blank()
+          Text(this.digits.toString()).fontSize(14).fontColor($r('app.color.text_primary'))
+        }
+        .width('100%')
+        Row() {
+          Text('周期').fontSize(14).fontColor($r('app.color.text_secondary'))
+          Blank()
+          Text(this.period.toString()).fontSize(14).fontColor($r('app.color.text_primary'))
+        }
+        .width('100%')
       }
       .width('100%')
-      Row() {
-        Text('账号').fontSize(14).fontColor($r('app.color.text_secondary'))
-        Blank()
-        Text(this.account).fontSize(14).fontColor($r('app.color.text_primary'))
-      }
-      .width('100%')
-      Row() {
-        Text('算法').fontSize(14).fontColor($r('app.color.text_secondary'))
-        Blank()
-        Text(this.algorithm).fontSize(14).fontColor($r('app.color.text_primary'))
-      }
-      .width('100%')
-      Row() {
-        Text('位数').fontSize(14).fontColor($r('app.color.text_secondary'))
-        Blank()
-        Text(this.digits.toString()).fontSize(14).fontColor($r('app.color.text_primary'))
-      }
-      .width('100%')
-      Row() {
-        Text('周期').fontSize(14).fontColor($r('app.color.text_secondary'))
-        Blank()
-        Text(this.period.toString()).fontSize(14).fontColor($r('app.color.text_primary'))
-      }
-      .width('100%')
+      .padding(16)
+      .borderRadius(16)
+      .backgroundColor($r('app.color.card_background'))
+      .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
+      .border({ width: 0.5, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+      .shadow({ radius: 4, color: '#1A000000', offsetX: 0, offsetY: 2 })
+
       Button(this.saving ? '保存中...' : '保存')
         .width('100%')
+        .height(48)
+        .borderRadius(12)
+        .backgroundColor($r('app.color.brand'))
+        .fontColor($r('app.color.fab_foreground'))
         .enabled(!this.saving)
         .onClick(() => this.onSave())
     }
@@ -121,14 +137,24 @@ struct ScanPage {
       if (this.stage === 'CONFIRM') {
         this.confirmView()
       } else {
-        Text('正在扫描二维码...')
-          .fontSize(16)
-          .fontColor($r('app.color.text_secondary'))
+        Column({ space: 12 }) {
+          Text('正在扫描二维码...')
+            .fontSize(16)
+            .fontColor($r('app.color.text_secondary'))
+          Progress({ value: 0, total: 100, type: ProgressType.Linear })
+            .width('60%')
+            .height(2)
+            .color($r('app.color.brand'))
+        }
+        .justifyContent(FlexAlign.Center)
       }
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .backgroundColor($r('app.color.page_background'))
+    .linearGradient({
+      direction: GradientDirection.Bottom,
+      colors: [[$r('app.color.page_gradient_start'), 0.0], [$r('app.color.page_gradient_end'), 1.0]]
+    })
   }
 }

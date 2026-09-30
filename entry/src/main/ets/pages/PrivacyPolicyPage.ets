@@ -3,24 +3,39 @@ import { router } from '@kit.ArkUI';
 @Entry
 @Component
 struct PrivacyPolicyPage {
+  @Builder
+  header() {
+    Row() {
+      Button() {
+        Text('<')
+          .fontSize(18)
+          .fontColor($r('app.color.text_primary'))
+      }
+      .width(40)
+      .height(40)
+      .borderRadius(20)
+      .backgroundColor(Color.Transparent)
+      .onClick(() => router.back())
+
+      Blank()
+
+      Text('隐私政策')
+        .fontSize(20)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.text_primary'))
+
+      Blank()
+
+      Text('')
+        .width(40)
+    }
+    .width('100%')
+    .padding({ left: 8, right: 16, top: 12, bottom: 12 })
+  }
+
   build() {
     Column() {
-      Row() {
-        Text('< 返回')
-          .fontSize(16)
-          .fontColor($r('app.color.text_primary'))
-          .onClick(() => router.back())
-        Blank()
-        Text('隐私政策')
-          .fontSize(20)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.text_primary'))
-        Blank()
-        Text('')
-          .width(48)
-      }
-      .width('100%')
-      .padding(16)
+      this.header()
 
       Scroll() {
         Column({ space: 16 }) {
@@ -42,6 +57,7 @@ struct PrivacyPolicyPage {
 
           Divider()
             .width('100%')
+            .color($r('app.color.divider'))
 
           Text('一、引言')
             .fontSize(16)
@@ -176,12 +192,12 @@ struct PrivacyPolicyPage {
 
           Text('6.1 请妥善保管您的加密密钥。源时不提供服务器端密钥恢复能力，丢失密钥后将无法解密已加密的数据。')
             .fontSize(14)
-            .fontColor('#E84026')
+            .fontColor($r('app.color.danger'))
             .width('100%')
 
           Text('6.2 建议在设置加密密钥后立即将密钥备份到安全的位置（如密码管理器或离线存储）。')
             .fontSize(14)
-            .fontColor('#E84026')
+            .fontColor($r('app.color.danger'))
             .width('100%')
 
           Text('6.3 WebDAV 同步传输的是加密文件，但请确保您的 WebDAV 服务器使用 HTTPS 协议以防止传输过程中的中间人攻击。')
@@ -218,6 +234,7 @@ struct PrivacyPolicyPage {
 
           Divider()
             .width('100%')
+            .color($r('app.color.divider'))
 
           Text('如您对本隐私政策有任何疑问，请通过项目仓库提交 Issue 反馈。')
             .fontSize(14)
@@ -232,6 +249,9 @@ struct PrivacyPolicyPage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor($r('app.color.page_background'))
+    .linearGradient({
+      direction: GradientDirection.Bottom,
+      colors: [[$r('app.color.page_gradient_start'), 0.0], [$r('app.color.page_gradient_end'), 1.0]]
+    })
   }
 }

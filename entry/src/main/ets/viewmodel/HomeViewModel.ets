@@ -8,12 +8,10 @@ import { SyncService } from '../service/SyncService';
 import { Result, ok, err } from '../types/Result';
 import { AppErrorCode } from '../types/Errors';
 import { Logger } from '../utils/Logger';
-import { nowMilliseconds, calculateRemainingSeconds } from '../utils/TimeUtils';
+import { nowMilliseconds } from '../utils/TimeUtils';
 
 export interface TotpDisplayItem {
   item: TotpItem;
-  code: string;
-  remaining: number;
 }
 
 export class HomeViewModel {
@@ -22,7 +20,6 @@ export class HomeViewModel {
   syncing: boolean = false;
   syncStatus: SyncStatus = SyncStatus.IDLE;
   lastSyncAt: number = 0;
-  now: number = nowMilliseconds();
 
   private repository: LocalRepository = new LocalRepository();
   private totpService: TotpService = new TotpService();
@@ -93,17 +90,13 @@ export class HomeViewModel {
     return this.clipboardService.copyText(code);
   }
 
-  refreshTime(): void {
-    this.now = nowMilliseconds();
-  }
-
   generateCode(item: TotpItem): string {
     const result: Result<string> = this.totpService.generate({
       secret: item.secret,
       algorithm: item.algorithm,
       digits: item.digits,
       period: item.period,
-      timestamp: Math.floor(this.now / 1000)
+      timestamp: Math.floor(nowMilliseconds() / 1000)
     });
     if (!result.success || result.data === undefined) {
       return '';
@@ -116,9 +109,7 @@ export class HomeViewModel {
     for (let i = 0; i < this.items.length; i++) {
       const item: TotpItem = this.items[i];
       const displayItem: TotpDisplayItem = {
-        item: item,
-        code: this.generateCode(item),
-        remaining: calculateRemainingSeconds(this.now, item.period)
+        item: item
       };
       displayItems.push(displayItem);
     }
