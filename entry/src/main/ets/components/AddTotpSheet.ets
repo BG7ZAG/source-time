@@ -40,17 +40,26 @@ export struct AddTotpSheet {
   onScan: () => void = () => {};
   // 默认进入扫码模式（0=扫码 1=手动输入）
   @State mode: number = 0;
+  /**
+   * 密钥输入框的可见文本（可能是裸密钥，也可能是 otpauth:// 链接）。
+   *
+   * 用 @State + @Watch 配合子组件的 $$ 双向绑定：链接解析**不再回写本字段**，
+   * 用户输入什么就保留什么，避免「解析后一失焦输入框被清空」。
+   */
+  @State @Watch('onSecretTextChange') secret: string = '';
   @State issuer: string = '';
   @State account: string = '';
-  @State secret: string = '';
   @State algorithm: TotpAlgorithm = 'SHA1';
   @State digits: number = 6;
-  @State period: number = 30;
+  // 周期输入框的可见文本；保存/解析时再转成数字，避免数字输入框与字符串控件的类型来回转换
+  @State periodText: string = '30';
   @State saving: boolean = false;
   @State showAdvanced: boolean = false;
   @State parsedFromUri: boolean = false;
-  @State focusedField: string = '';
 
+  // otpauth 链接解析出的真实密钥。与可见文本分离存放：
+  // 输入框始终展示用户原文，真正用于保存的密钥单独保存，避免解析结果被重渲染冲掉。
+  private parsedSecret: string = '';
   private viewModel: AddTotpViewModel = new AddTotpViewModel();
   private parser: OtpParser = new OtpParser();
 
@@ -61,48 +70,64 @@ export struct AddTotpSheet {
     }
   }
 
-  private onSecretChange(value: string): void {
+  /**
+   * 密钥文本变化（$$ 双向绑定后由 @Watch 触发）。
+   * - otpauth:// 链接：解析出真实密钥与各参数，填充表单并标记「已解析」；
+   * - 裸密钥 / 无效链接：按裸密钥处理，并清除解析态与自动填充的字段。
+   */
+  private onSecretTextChange(): void {
+    const value: string = this.secret;
     if (value.trim().toLowerCase().startsWith('otpauth://')) {
       const parseResult: Result<ParsedOtpUri> = this.parser.parseUri(value.trim());
       if (parseResult.success && parseResult.data !== undefined) {
         const parsed: ParsedOtpUri = parseResult.data;
-        this.secret = parsed.secret;
+        const wasParsed: boolean = this.parsedFromUri;
         this.issuer = parsed.issuer;
         this.account = parsed.account;
+        this.parsedSecret = parsed.secret;
         this.algorithm = parsed.algorithm;
         this.digits = parsed.digits;
-        this.period = parsed.period;
+        this.periodText = parsed.period.toString();
         this.parsedFromUri = true;
         if (parsed.algorithm !== 'SHA1' || parsed.digits !== 6 || parsed.period !== 30) {
           this.showAdvanced = true;
         }
-        promptAction.showToast({ message: '已从链接解析配置' });
+        // 仅在「首次解析」时提示，避免用户继续编辑链接时反复弹 toast
+        if (!wasParsed) {
+          promptAction.showToast({ message: '已从链接解析配置' });
+        }
         return;
       }
     }
-    // TextInput 受控 text 被回填时也会触发一次 onChange，其 value 与刚解析出的 secret 相同，
-    // 必须忽略，否则会把刚解析出来的 algorithm/digits/period 冲回默认值（SHA1/6/30）。
-    if (value === this.secret) {
-      return;
-    }
-    this.secret = value;
+    // 非链接或链接无效：按裸密钥处理
+    this.parsedSecret = '';
     if (this.parsedFromUri) {
       this.issuer = '';
       this.account = '';
       this.algorithm = 'SHA1';
       this.digits = 6;
-      this.period = 30;
+      this.periodText = '30';
       this.parsedFromUri = false;
     }
+  }
+
+  /** 实际用于保存的密钥：链接解析成功时用解析结果，否则用输入框原文。 */
+  private resolveSecret(): string {
+    return this.parsedFromUri ? this.parsedSecret : this.secret;
+  }
+
+  private resolvePeriod(): number {
+    const parsed: number = Number.parseInt(this.periodText, 10);
+    return Number.isNaN(parsed) || parsed <= 0 ? 30 : parsed;
   }
 
   private onSave(): void {
     this.viewModel.issuer = this.issuer;
     this.viewModel.account = this.account;
-    this.viewModel.secret = this.secret;
+    this.viewModel.secret = this.resolveSecret();
     this.viewModel.algorithm = this.algorithm;
     this.viewModel.digits = this.digits === 8 ? 8 : 6;
-    this.viewModel.period = this.period;
+    this.viewModel.period = this.resolvePeriod();
     this.saving = true;
     this.viewModel.save().then((result: Result<void>) => {
       this.saving = false;
@@ -114,51 +139,6 @@ export struct AddTotpSheet {
         promptAction.showToast({ message: message });
       }
     });
-  }
-
-  /**
-   * 下沉式输入框：比卡片更暗一档的填充 + 清晰描边，与上方的浅色 label 形成明确的层级差异；
-   * 获焦时描边转主色并散发光晕。
-   */
-  @Builder
-  glassField(key: string, placeholder: string, value: string, numeric: boolean) {
-    TextInput({ placeholder: placeholder, text: value })
-      .width('100%')
-      .height(44)
-      .borderRadius(12)
-      .fontSize(14)
-      .fontColor($r('app.color.text_primary'))
-      .padding({ left: 12, right: 12 })
-      .backgroundColor($r('app.color.field_background'))
-      .placeholderColor($r('app.color.text_tertiary'))
-      .caretColor($r('app.color.brand'))
-      .type(numeric ? InputType.Number : InputType.Normal)
-      .border({
-        width: 1.5,
-        color: this.focusedField === key ? $r('app.color.brand') : $r('app.color.field_border'),
-        style: BorderStyle.Solid
-      })
-      .shadow(this.focusedField === key ? focusGlowShadow() : noShadow())
-      .onFocus(() => {
-        this.focusedField = key;
-      })
-      .onBlur(() => {
-        if (this.focusedField === key) {
-          this.focusedField = '';
-        }
-      })
-      .onChange((input: string) => {
-        if (key === 'secret') {
-          this.onSecretChange(input);
-        } else if (key === 'issuer') {
-          this.issuer = input;
-        } else if (key === 'account') {
-          this.account = input;
-        } else {
-          const parsed: number = Number.parseInt(input, 10);
-          this.period = Number.isNaN(parsed) ? 30 : parsed;
-        }
-      })
   }
 
   /**
@@ -281,7 +261,7 @@ export struct AddTotpSheet {
     Column({ space: 12 }) {
         Column({ space: 6 }) {
           this.fieldLabel('密钥 / otpauth 链接', false, this.parsedFromUri ? '已解析' : '')
-          this.glassField('secret', '粘贴 Base32 密钥或 otpauth:// 链接', this.secret, false)
+          SheetField({ value: $secret, placeholder: '粘贴 Base32 密钥或 otpauth:// 链接', numeric: false })
         }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
@@ -289,14 +269,14 @@ export struct AddTotpSheet {
       Row({ space: 10 }) {
         Column({ space: 6 }) {
           this.fieldLabel('发行方', true)
-          this.glassField('issuer', '如：Google', this.issuer, false)
+          SheetField({ value: $issuer, placeholder: '如：Google', numeric: false })
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
 
         Column({ space: 6 }) {
           this.fieldLabel('账号', true)
-          this.glassField('account', '如：user@xx.com', this.account, false)
+          SheetField({ value: $account, placeholder: '如：user@xx.com', numeric: false })
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
@@ -358,7 +338,7 @@ export struct AddTotpSheet {
 
             Column({ space: 6 }) {
               this.fieldLabel('周期（秒）', false)
-              this.glassField('period', '30', this.period.toString(), true)
+              SheetField({ value: $periodText, placeholder: '30', numeric: true })
             }
             .width('100%')
             .alignItems(HorizontalAlign.Start)
@@ -434,5 +414,47 @@ export struct AddTotpSheet {
     }
     .scrollBar(BarState.Off)
     .edgeEffect(EdgeEffect.Spring)
+  }
+}
+
+/**
+ * 表单输入框：下沉式冰晶输入 + 获焦主色光晕。
+ *
+ * 关键点：TextInput 的 text 必须用 **$$ 双向绑定**（@Link 变量）。
+ * 官方明确提示 —— 只传 `text: value` 时「组件刷新会导致 TextInput 中的文本内容异常」，
+ * 表现为输入后一失焦（触发重渲染）内容被回滚/清空；$$ 绑定后变量与组件内部状态实时同步，
+ * 任何刷新都不会丢失输入。聚焦光晕状态收敛在组件内部，不再驱动页面级重渲染。
+ */
+@Component
+struct SheetField {
+  @Link value: string;
+  @Prop placeholder: string = '';
+  @Prop numeric: boolean = false;
+  @State focused: boolean = false;
+
+  build() {
+    TextInput({ placeholder: this.placeholder, text: $$this.value })
+      .width('100%')
+      .height(44)
+      .borderRadius(12)
+      .fontSize(14)
+      .fontColor($r('app.color.text_primary'))
+      .padding({ left: 12, right: 12 })
+      .backgroundColor($r('app.color.field_background'))
+      .placeholderColor($r('app.color.text_tertiary'))
+      .caretColor($r('app.color.brand'))
+      .type(this.numeric ? InputType.Number : InputType.Normal)
+      .border({
+        width: 1.5,
+        color: this.focused ? $r('app.color.brand') : $r('app.color.field_border'),
+        style: BorderStyle.Solid
+      })
+      .shadow(this.focused ? focusGlowShadow() : noShadow())
+      .onFocus(() => {
+        this.focused = true;
+      })
+      .onBlur(() => {
+        this.focused = false;
+      })
   }
 }

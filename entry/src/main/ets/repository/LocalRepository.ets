@@ -22,6 +22,11 @@ export class LocalRepository {
     return this.storageService.changeEncryptionSecret(oldSecret, newSecret);
   }
 
+  /** 隔离无法解密的本地数据文件（重命名备份，不删除），返回空库。 */
+  async quarantineUnreadable(): Promise<Result<DatabaseModel>> {
+    return this.storageService.quarantineUnreadableDatabase();
+  }
+
   getDatabase(): DatabaseModel | null {
     return this.storageService.getDatabase();
   }

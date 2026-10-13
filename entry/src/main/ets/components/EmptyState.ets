@@ -15,6 +15,8 @@ export struct EmptyState {
   @Prop message: string = '暂无验证码';
   @Prop hint: string = '点击右下角悬浮球添加';
   @State breathing: boolean = false;
+  /** 点击中央加号触发新增，与右下角悬浮球同一动作。 */
+  onTap: () => void = () => {};
 
   aboutToAppear(): void {
     this.breathing = true;
@@ -63,6 +65,7 @@ export struct EmptyState {
       }
       .width(132)
       .height(132)
+      .onClick(() => this.onTap())
 
       Column({ space: 6 }) {
         Text(this.message)

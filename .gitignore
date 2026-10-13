@@ -12,3 +12,24 @@
 /.appanalyzer
 
 .codeartsdoer
+
+# JiuwenSwarm runtime file operation logs
+.agent_history/
+.office-claw
+coding_memory
+todo
+
+# OfficeAce / openjiuwen 宿主运行时在会话工作目录重建的 agent-home 脚手架（非业务代码，每次会话初始化时生成）
+AGENT.md
+BACKLOG.md
+HEARTBEAT.md
+IDENTITY.md
+SOUL.md
+USER.md
+agents/
+context/
+docs/
+memory/
+messages/
+prompt_attachment/
+skills/.workspace

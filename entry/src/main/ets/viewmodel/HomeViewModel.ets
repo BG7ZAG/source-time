@@ -55,7 +55,8 @@ export class HomeViewModel {
     if (db === null) {
       const loadResult: Result<DatabaseModel> = await this.repository.load(this.encryptionSecret);
       if (!loadResult.success || loadResult.data === undefined) {
-        return err<void>(AppErrorCode.STORAGE_WRITE_FAILED, '数据加载失败');
+        const message: string = loadResult.error !== undefined ? loadResult.error.message : '数据加载失败';
+        return err<void>(AppErrorCode.STORAGE_WRITE_FAILED, message);
       }
       db = loadResult.data;
     }
@@ -79,6 +80,20 @@ export class HomeViewModel {
     this.items = nextItems;
     Logger.info('TOTP deleted: id=' + item.id);
     SyncService.getInstance().enqueuePush(SyncReason.DELETE_TOTP);
+    return ok(undefined);
+  }
+
+  /**
+   * 本地文件已无法用当前密钥解密时的自助恢复：隔离旧密文（重命名备份，不删除），
+   * 以空库重建内存数据，使应用重新可用。
+   */
+  async resetLocalData(): Promise<Result<void>> {
+    const result: Result<DatabaseModel> = await this.repository.quarantineUnreadable();
+    if (!result.success) {
+      const message: string = result.error !== undefined ? result.error.message : '清除本地数据失败';
+      return err<void>(AppErrorCode.STORAGE_WRITE_FAILED, message);
+    }
+    this.items = [];
     return ok(undefined);
   }
 

@@ -4,6 +4,7 @@ import { Logger } from '../utils/Logger';
 import { CryptoService } from './CryptoService';
 import { AppContextHolder } from '../utils/AppContextHolder';
 import { generateUuid } from '../utils/UUIDUtils';
+import { nowMilliseconds } from '../utils/TimeUtils';
 import { DatabaseModel } from '../model/DatabaseModel';
 import { TotpItem } from '../model/TotpItem';
 import { Result, ok, err } from '../types/Result';
@@ -13,6 +14,7 @@ import { DATABASE_FILE_NAME, CURRENT_SCHEMA_VERSION } from '../constants/AppCons
 const OPEN_READ_ONLY: number = 0;
 const OPEN_WRITE_CREATE_TRUNC: number = 0o2 | 0o100 | 0o1000;
 const TMP_SUFFIX: string = '.tmp';
+const ORPHAN_SUFFIX: string = '.orphan';
 const VALID_ALGORITHMS: string[] = ['SHA1', 'SHA256', 'SHA512'];
 
 export class StorageService {
@@ -93,6 +95,31 @@ export class StorageService {
 
   async replaceDatabase(database: DatabaseModel, encryptionSecret: string): Promise<Result<void>> {
     return this.saveDatabase(database, encryptionSecret);
+  }
+
+  /**
+   * 隔离当前无法解密的本地数据文件，并返回一个全新的空数据库。
+   *
+   * 场景：加密密钥丢失 / 变更后，本地的 totp.db.enc 已无法用当前密钥解开，
+   * 若不处理会导致「读取失败 → 新增/删除全部失败」的死锁。
+   *
+   * 安全性：只做同目录**重命名**（totp.db.enc → totp.db.enc.orphan-<时间戳>），
+   * 不删除任何字节；原密文仍留在磁盘上，日后用原密钥仍可手动恢复。
+   */
+  async quarantineUnreadableDatabase(): Promise<Result<DatabaseModel>> {
+    try {
+      if (this.isInitialized()) {
+        const orphanPath: string = this.dbPath + ORPHAN_SUFFIX + '-' + nowMilliseconds().toString();
+        fs.renameSync(this.dbPath, orphanPath);
+        Logger.info('Unreadable database quarantined: ' + orphanPath);
+      }
+      const emptyDb: DatabaseModel = this.createEmptyDatabase();
+      this.database = emptyDb;
+      return ok(emptyDb);
+    } catch (error) {
+      Logger.error('Storage quarantine failed');
+      return err<DatabaseModel>(AppErrorCode.STORAGE_WRITE_FAILED, '清除本地数据失败');
+    }
   }
 
   async changeEncryptionSecret(oldSecret: string, newSecret: string): Promise<Result<void>> {

@@ -267,47 +267,6 @@ struct SecurityPage {
     .justifyContent(FlexAlign.Center)
   }
 
-  @Builder
-  glassField(key: string, placeholder: string, value: string, masked: boolean) {
-    TextInput({ placeholder: placeholder, text: value })
-      .layoutWeight(1)
-      .height(40)
-      .borderRadius(12)
-      .fontSize(14)
-      .padding({ left: 14, right: 14 })
-      .backgroundColor($r('app.color.field_background'))
-      .placeholderColor($r('app.color.text_tertiary'))
-      .caretColor($r('app.color.brand'))
-      .type(masked ? InputType.Password : InputType.Normal)
-      .showPasswordIcon(masked)
-      .border({
-        width: 1.5,
-        color: this.focusedField === key ? $r('app.color.brand') : $r('app.color.field_border'),
-        style: BorderStyle.Solid
-      })
-      .shadow(this.focusedField === key ? focusGlowShadow() : noShadow())
-      .onFocus(() => {
-        this.focusedField = key;
-      })
-      .onBlur(() => {
-        if (this.focusedField === key) {
-          this.focusedField = '';
-        }
-      })
-      .onChange((input: string) => {
-        if (key === 'first') {
-          this.encryptionSecret = input;
-          this.hasGenerated = false;
-          this.copied = false;
-        } else if (key === 'old') {
-          this.oldSecret = input;
-        } else {
-          this.newSecret = input;
-          this.copied = false;
-        }
-      })
-  }
-
   /** 主操作：渐变高光填充 + 能量光晕（Button 不支持 letterSpacing）。 */
   @Builder
   primaryButton(label: string, enabled: boolean, onTap: () => void) {
@@ -486,7 +445,7 @@ struct SecurityPage {
           .fontSize(12.5)
           .fontColor($r('app.color.text_secondary'))
           .width('100%')
-        this.glassField('old', '输入旧密钥', this.oldSecret, true)
+        SecurityField({ value: $oldSecret, placeholder: '输入旧密钥' })
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
@@ -652,5 +611,47 @@ struct SecurityPage {
     }
     .width('100%')
     .height('100%')
+  }
+}
+
+/**
+ * 密码输入框：下沉式冰晶输入 + 获焦主色光晕。
+ *
+ * 关键点：TextInput 的 text 必须用 **$$ 双向绑定**（@Link 变量）。
+ * 官方明确提示 —— 只传 `text: value` 时「组件刷新会导致 TextInput 中的文本内容异常」，
+ * 表现为输入后一失焦（触发重渲染）内容被回滚/清空；$$ 绑定后变量与组件内部状态实时同步，
+ * 任何刷新都不会丢失输入。聚焦光晕状态收敛在组件内部，不再驱动页面级重渲染。
+ */
+@Component
+struct SecurityField {
+  @Link value: string;
+  @Prop placeholder: string = '';
+  @State focused: boolean = false;
+
+  build() {
+    TextInput({ placeholder: this.placeholder, text: $$this.value })
+      .width('100%')
+      .height(40)
+      .borderRadius(12)
+      .fontSize(14)
+      .fontColor($r('app.color.text_primary'))
+      .padding({ left: 14, right: 14 })
+      .backgroundColor($r('app.color.field_background'))
+      .placeholderColor($r('app.color.text_tertiary'))
+      .caretColor($r('app.color.brand'))
+      .type(InputType.Password)
+      .showPasswordIcon(true)
+      .border({
+        width: 1.5,
+        color: this.focused ? $r('app.color.brand') : $r('app.color.field_border'),
+        style: BorderStyle.Solid
+      })
+      .shadow(this.focused ? focusGlowShadow() : noShadow())
+      .onFocus(() => {
+        this.focused = true;
+      })
+      .onBlur(() => {
+        this.focused = false;
+      })
   }
 }

@@ -1,5 +1,5 @@
 import { router, promptAction, LengthMetrics } from '@kit.ArkUI';
-import { TotpCard } from '../components/TotpCard';
+import { TotpCard, DELETE_ANIM_DURATION } from '../components/TotpCard';
 import { EmptyState, GlowFab } from '../components/EmptyState';
 import { AuroraBackground } from '../components/AuroraBackground';
 import { AddTotpSheet } from '../components/AddTotpSheet';
@@ -15,6 +15,7 @@ import {
   frostedPillColor,
   glassCardShadow,
   glassPillShadow,
+  particleColorRange,
   supportsImmersive,
   titleGradientColors
 } from '../theme/GlassStyle';
@@ -26,6 +27,10 @@ const SECRET_STORAGE_KEY: string = 'encryptionSecret';
 struct HomePage {
   @State displayItems: TotpDisplayItem[] = [];
   @State showAddSheet: boolean = false;
+  /** 正在播放「粒子消散」删除动画的条目 id；非空时忽略新的删除触发。 */
+  @State deletingId: string = '';
+  /** 本地数据无法解密时，本会话只提示一次，避免反复弹窗。 */
+  @State loadErrorShown: boolean = false;
   private viewModel: HomeViewModel = new HomeViewModel();
   private settingsService: SettingsService = new SettingsService();
   private privacyDialog: CustomDialogController = new CustomDialogController({
@@ -54,8 +59,12 @@ struct HomePage {
   onPageShow(): void {
     const settings = this.settingsService.getSettings();
     if (settings.privacyPolicyAccepted && settings.encryptionInitialized) {
-      this.viewModel.load().then(() => {
-        this.refreshItems();
+      this.viewModel.load().then((result: Result<void>) => {
+        if (result.success) {
+          this.refreshItems();
+        } else {
+          this.onLoadFailed(result);
+        }
       });
     }
   }
@@ -83,10 +92,50 @@ struct HomePage {
     const secret: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
     if (secret !== undefined && secret.length > 0) {
       this.viewModel.setEncryptionSecret(secret);
-      this.viewModel.load().then(() => {
-        this.refreshItems();
+      this.viewModel.load().then((result: Result<void>) => {
+        if (result.success) {
+          this.refreshItems();
+        } else {
+          this.onLoadFailed(result);
+        }
       });
     }
+  }
+
+  /**
+   * 本地数据加载/解密失败：不再静默显示空列表——那会让用户以为「本来就空了」，
+   * 直到新增口令时才撞到一句笼统的「数据加载失败」。
+   * 这里明确说明原因，并提供「隔离旧密文、重新开始」的自助恢复入口（不删除原文件）。
+   */
+  private onLoadFailed(result: Result<void>): void {
+    if (this.loadErrorShown) {
+      return;
+    }
+    this.loadErrorShown = true;
+    const message: string = result.error !== undefined ? result.error.message : '无法读取本地数据';
+    promptAction.showDialog({
+      title: '本地数据无法解密',
+      message: message + '\n\n若你更换过加密密钥，本地旧数据将无法用新密钥解密。可选择清除本地数据后重新开始：'
+        + '清除只会把当前加密文件隔离备份（不删除），之后需用原密钥才能恢复其中内容。',
+      buttons: [
+        { text: '暂不处理', color: '#666666' },
+        { text: '清除并重开', color: '#E84026' }
+      ]
+    }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
+      if (dialogResult.index !== 1) {
+        return;
+      }
+      this.viewModel.resetLocalData().then((resetResult: Result<void>) => {
+        if (resetResult.success) {
+          this.refreshItems();
+          promptAction.showToast({ message: '已清除本地数据，可重新添加口令' });
+        } else {
+          const failMessage: string =
+            resetResult.error !== undefined ? resetResult.error.message : '清除本地数据失败';
+          promptAction.showToast({ message: failMessage });
+        }
+      });
+    });
   }
 
   private refreshItems(): void {
@@ -115,6 +164,71 @@ struct HomePage {
         router.pushUrl({ url: AppRoutes.SCAN });
       }
     })
+  }
+
+  /** 左滑动作区：点击删除图标触发二次确认；确认后图标也播放「粒子消散」并淡出。 */
+  @Builder
+  deleteAction(item: TotpItem) {
+    Row() {
+      Stack({ alignContent: Alignment.Center }) {
+        Stack({ alignContent: Alignment.Center }) {
+          Image($r('app.media.ic_delete'))
+            .width(22)
+            .height(22)
+            .fillColor(Color.White)
+        }
+        .width(54)
+        .height(54)
+        .borderRadius(18)
+        .linearGradient({ angle: 135, colors: [['#FF7A70', 0.0], ['#FF3B30', 1.0]] })
+        .shadow({ radius: 12, color: '#66FF3B30', offsetX: 0, offsetY: 4 })
+        .onClick(() => this.onDelete(item))
+        // 删除时图标淡出；粒子消散由下方浮层叠加（与卡片粒子同一走向）
+        .opacity(this.deletingId === item.id ? 0.0 : 1.0)
+        .animation({
+          duration: this.deletingId === item.id ? DELETE_ANIM_DURATION : 200,
+          curve: Curve.Friction
+        })
+
+        // 图标区域粒子消散：一次性爆发后整体向左流动（自右向左）
+        if (this.deletingId === item.id) {
+          Particle({
+            particles: [
+              {
+                emitter: {
+                  particle: {
+                    type: ParticleType.POINT,
+                    config: { radius: 2.4 },
+                    count: 80,
+                    lifetime: DELETE_ANIM_DURATION,
+                    lifetimeRange: 160
+                  },
+                  emitRate: 1400,
+                  shape: ParticleEmitterShape.RECTANGLE,
+                  position: [0, 0],
+                  size: [54, 54]
+                },
+                color: { range: particleColorRange() },
+                opacity: { range: [0.5, 1.0] },
+                scale: { range: [0.2, 0.6] },
+                velocity: { angle: [150, 210], speed: [50, 130] },
+                acceleration: { angle: { range: [180, 180] }, speed: { range: [40, 90] } }
+              }
+            ]
+          })
+          .width(74)
+          .height(74)
+          .hitTestBehavior(HitTestMode.Transparent)
+        }
+      }
+      .width('100%')
+      .height('100%')
+    }
+    .width(74)
+    .height('100%')
+    .padding({ left: 10, right: 10 })
+    .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
@@ -204,26 +318,58 @@ struct HomePage {
     });
   }
 
+  /** 条目显示名：发行方 · 账号，缺省时退回可用的一项。 */
+  private itemLabel(item: TotpItem): string {
+    if (item.issuer.length > 0 && item.account.length > 0) {
+      return item.issuer + ' · ' + item.account;
+    }
+    if (item.issuer.length > 0) {
+      return item.issuer;
+    }
+    if (item.account.length > 0) {
+      return item.account;
+    }
+    return '该口令';
+  }
+
+  /** 点击左滑删除图标：先弹二次确认，确认后才真正删除（不可恢复）。 */
   private onDelete(item: TotpItem): void {
+    if (this.deletingId.length > 0) {
+      return;
+    }
     promptAction.showDialog({
-      title: '删除验证码？',
-      message: '删除后该验证码将从本地数据中移除。',
+      title: '删除这个口令？',
+      message: this.itemLabel(item) + '\n删除后无法恢复。',
       buttons: [
         { text: '取消', color: '#666666' },
         { text: '删除', color: '#E84026' }
       ]
     }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
       if (dialogResult.index === 1) {
-        this.viewModel.remove(item).then((removeResult: Result<void>) => {
-          if (removeResult.success) {
-            this.refreshItems();
-          } else {
-            const message: string = removeResult.error !== undefined ? removeResult.error.message : '删除失败';
-            promptAction.showToast({ message: message });
-          }
-        });
+        this.performDelete(item);
       }
     });
+  }
+
+  /** 确认后的实际删除：先播放「粒子消散」动画，动画结束再从数据层移除。 */
+  private performDelete(item: TotpItem): void {
+    // 删除动画进行中，忽略重复触发
+    if (this.deletingId.length > 0) {
+      return;
+    }
+    this.deletingId = item.id;
+    // 先播放「粒子消散」动画，动画结束再从数据层移除，避免卡片瞬间消失看不出效果
+    setTimeout(() => {
+      this.viewModel.remove(item).then((removeResult: Result<void>) => {
+        if (removeResult.success) {
+          this.refreshItems();
+        } else {
+          const message: string = removeResult.error !== undefined ? removeResult.error.message : '删除失败';
+          promptAction.showToast({ message: message });
+        }
+        this.deletingId = '';
+      });
+    }, DELETE_ANIM_DURATION);
   }
 
   build() {
@@ -239,7 +385,11 @@ struct HomePage {
             if (this.displayItems.length === 0) {
               // 用普通容器承载 layoutWeight：避免把通用属性挂在自定义组件上
               Column() {
-                EmptyState({ message: '还没有口令', hint: '点击右下角光球添加' })
+                EmptyState({
+                  message: '还没有口令',
+                  hint: '点击右下角光球添加',
+                  onTap: () => this.openAdd()
+                })
               }
               .layoutWeight(1)
               .width('100%')
@@ -250,22 +400,58 @@ struct HomePage {
               List({ space: 14 }) {
                 ForEach(this.displayItems, (display: TotpDisplayItem, index: number) => {
                   ListItem() {
-                    TotpCard({
-                      issuer: display.item.issuer,
-                      account: display.item.account,
-                      secret: display.item.secret,
-                      algorithm: display.item.algorithm,
-                      digits: display.item.digits,
-                      period: display.item.period,
-                      index: index,
-                      onCopy: () => {
-                        this.onCopy(display.item);
-                      },
-                      onDelete: () => {
-                        this.onDelete(display.item);
+                    Stack({ alignContent: Alignment.Center }) {
+                      TotpCard({
+                        issuer: display.item.issuer,
+                        account: display.item.account,
+                        secret: display.item.secret,
+                        algorithm: display.item.algorithm,
+                        digits: display.item.digits,
+                        period: display.item.period,
+                        index: index,
+                        deleting: this.deletingId === display.item.id,
+                        onCopy: () => {
+                          this.onCopy(display.item);
+                        }
+                      })
+
+                      // 删除粒子层：作为卡片兄弟节点，卡片淡出时粒子仍可见，形成「瓦解消散」观感。
+                      // 画布宽取卡片宽度、发射矩形铺满卡片主体，保证粒子覆盖整卡。
+                      if (this.deletingId === display.item.id) {
+                        Particle({
+                          particles: [
+                            {
+                              emitter: {
+                                particle: {
+                                  type: ParticleType.POINT,
+                                  config: { radius: 2.8 },
+                                  count: 160,
+                                  lifetime: DELETE_ANIM_DURATION,
+                                  lifetimeRange: 200
+                                },
+                                // 一次性爆发：提高发射速率让全部粒子在同一帧内散出
+                                emitRate: 1800,
+                                shape: ParticleEmitterShape.RECTANGLE,
+                                position: [0, 0],
+                                size: [340, 96]
+                              },
+                              color: { range: particleColorRange() },
+                              opacity: { range: [0.5, 1.0] },
+                              scale: { range: [0.2, 0.6] },
+                              velocity: { angle: [150, 210], speed: [60, 150] },
+                              acceleration: { angle: { range: [180, 180] }, speed: { range: [40, 90] } }
+                            }
+                          ]
+                        })
+                        .width('100%')
+                        .height(96)
+                        .align(Alignment.Center)
+                        .hitTestBehavior(HitTestMode.Transparent)
                       }
-                    })
+                    }
+                    .width('100%')
                   }
+                  .swipeAction({ end: this.deleteAction(display.item) })
                 }, (display: TotpDisplayItem) => display.item.id)
               }
               .layoutWeight(1)

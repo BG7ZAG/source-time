@@ -20,6 +20,9 @@ import {
 const COPY_PARTICLE_DURATION: number = 800;
 const REFRESH_PARTICLE_DURATION: number = 900;
 
+/** 删除「粒子消散」动画时长；父层（首页）也按此时长延迟真正移除数据。 */
+export const DELETE_ANIM_DURATION: number = 500;
+
 /**
  * 首页动态口令卡片（鸿蒙 7 冰晶材质版）。
  *
@@ -40,8 +43,9 @@ export struct TotpCard {
   @State copyParticleActive: boolean = false;
   @State refreshParticleActive: boolean = false;
   @State appeared: boolean = false;
+  /** 由父层驱动：为 true 时卡片执行「粒子消散」删除动画并淡出。 */
+  @Prop deleting: boolean = false;
   onCopy: () => void = () => {};
-  onDelete: () => void = () => {};
 
   private totpService: TotpService = new TotpService();
   private timerId: number = -1;
@@ -328,10 +332,14 @@ export struct TotpCard {
       style: BorderStyle.Solid
     })
     .shadow(glassCardShadow())
-    .opacity(this.appeared ? 1.0 : 0.0)
+    // 删除：整体收缩并淡出；粒子消散由父层叠加，避免粒子随卡片一起被淡出
+    .opacity(this.deleting ? 0.0 : (this.appeared ? 1.0 : 0.0))
+    .scale({ x: this.deleting ? 0.9 : 1.0, y: this.deleting ? 0.9 : 1.0 })
     .translate({ y: this.appeared ? 0 : 12 })
-    .animation({ duration: 300, curve: Curve.FastOutSlowIn })
+    .animation({
+      duration: this.deleting ? DELETE_ANIM_DURATION : 300,
+      curve: this.deleting ? Curve.Friction : Curve.FastOutSlowIn
+    })
     .onClick(() => this.onCopy())
-    .gesture(LongPressGesture().onAction(() => this.onDelete()))
   }
 }

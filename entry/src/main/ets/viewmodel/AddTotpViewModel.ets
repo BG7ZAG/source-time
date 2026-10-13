@@ -76,7 +76,8 @@ export class AddTotpViewModel {
     if (db === null) {
       const loadResult: Result<DatabaseModel> = await this.repository.load(this.encryptionSecret);
       if (!loadResult.success || loadResult.data === undefined) {
-        this.error = '数据加载失败';
+        // 回流底层真实原因（如「无法解密数据，请确认加密密钥是否正确」），避免笼统的「数据加载失败」无从定位
+        this.error = loadResult.error !== undefined ? loadResult.error.message : '数据加载失败';
         return err<void>(AppErrorCode.STORAGE_WRITE_FAILED, this.error);
       }
       db = loadResult.data;
