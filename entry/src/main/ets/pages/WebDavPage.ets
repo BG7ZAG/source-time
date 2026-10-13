@@ -6,6 +6,7 @@ import { WebDavConfig } from '../model/WebDavConfig';
 import { SyncStatus } from '../model/SyncModel';
 import { Result } from '../types/Result';
 import { DEFAULT_WEBDAV_DIRECTORY } from '../constants/AppConstants';
+import { Logger } from '../utils/Logger';
 import { AuroraBackground } from '../components/AuroraBackground';
 import {
   focusGlowShadow,
@@ -14,12 +15,24 @@ import {
   glassPillShadow,
   glowButtonShadow,
   noShadow,
-  particleColorRange,
   statusDotColor,
   trackGradientColors
 } from '../theme/GlassStyle';
 
 const SECRET_STORAGE_KEY: string = 'encryptionSecret';
+
+/**
+ * 操作按钮参数。
+ *
+ * ArkUI 的 @Builder 按值传参时，状态变量变化不会引起其内部 UI 刷新；
+ * 只有传入对象字面量（按引用传参）才会随状态刷新。故按钮参数收敛为一个对象。
+ */
+interface ActionButtonParams {
+  label: string;
+  enabled: boolean;
+  onTap: () => void;
+  icon?: Resource;
+}
 
 /**
  * WebDAV 同步配置页（鸿蒙 7 版）。
@@ -34,6 +47,7 @@ struct WebDavPage {
   @State baseUrl: string = '';
   @State username: string = '';
   @State password: string = '';
+  @State passwordInput: string = '';
   @State remotePath: string = DEFAULT_WEBDAV_DIRECTORY;
   @State webDavEnabled: boolean = false;
   @State autoPush: boolean = false;
@@ -45,12 +59,10 @@ struct WebDavPage {
   @State syncStatus: SyncStatus = SyncStatus.IDLE;
   @State lastSyncAt: number = 0;
   @State syncMessage: string = '';
-  @State actionParticleActive: boolean = false;
 
   private webDavService: WebDavService = new WebDavService();
   private settingsService: SettingsService = new SettingsService();
   private encryptionSecret: string = '';
-  private actionParticleTimerId: number = -1;
 
   aboutToAppear(): void {
     const secret: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
@@ -61,10 +73,6 @@ struct WebDavPage {
   }
 
   aboutToDisappear(): void {
-    if (this.actionParticleTimerId >= 0) {
-      clearTimeout(this.actionParticleTimerId);
-      this.actionParticleTimerId = -1;
-    }
   }
 
   private loadConfig(): void {
@@ -72,10 +80,12 @@ struct WebDavPage {
       this.baseUrl = config.baseUrl;
       this.username = config.username;
       this.password = config.password;
+      this.passwordInput = '';
       this.remotePath = config.remotePath.length > 0 ? config.remotePath : DEFAULT_WEBDAV_DIRECTORY;
       this.webDavEnabled = config.enabled;
       this.autoPush = config.autoPush;
       this.autoPullOnStart = config.autoPullOnStart;
+      SyncService.getInstance().configure(config, this.encryptionSecret);
     });
     const settings = this.settingsService.getSettings();
     this.lastSyncAt = settings.lastSyncAt !== undefined ? settings.lastSyncAt : 0;
@@ -89,22 +99,35 @@ struct WebDavPage {
       enabled: this.webDavEnabled,
       baseUrl: this.baseUrl,
       username: this.username,
-      password: this.password,
+      password: this.passwordInput.length > 0 ? this.passwordInput : this.password,
       remotePath: this.remotePath,
       autoPush: this.autoPush,
       autoPullOnStart: this.autoPullOnStart
     };
   }
 
-  private triggerActionParticle(): void {
-    this.actionParticleActive = true;
-    if (this.actionParticleTimerId >= 0) {
-      clearTimeout(this.actionParticleTimerId);
-    }
-    this.actionParticleTimerId = setTimeout(() => {
-      this.actionParticleActive = false;
-      this.actionParticleTimerId = -1;
-    }, 850);
+  /**
+   * 将页面当前配置同步到 SyncService。
+   *
+   * 使「启用 WebDAV 同步」开关打开后即可直接推送/拉取，无需先点「保存配置」；
+   * 同时让依赖 SyncService.isConfigured() 的自动推送在本次会话内即时生效。
+   */
+  private syncConfigToService(): void {
+    SyncService.getInstance().configure(this.buildConfig(), this.encryptionSecret);
+  }
+
+  private persistConfig(): void {
+    const config: WebDavConfig = this.buildConfig();
+    this.settingsService.saveWebDavConfig(config, this.encryptionSecret).then((result: Result<void>) => {
+      if (result.success) {
+        SyncService.getInstance().configure(config, this.encryptionSecret);
+      }
+    });
+  }
+
+  /** 是否已填写必要的同步配置：至少包含服务器地址。 */
+  private hasConfig(): boolean {
+    return this.baseUrl.trim().length > 0;
   }
 
   private onSave(): void {
@@ -113,8 +136,11 @@ struct WebDavPage {
     this.settingsService.saveWebDavConfig(config, this.encryptionSecret).then((result: Result<void>) => {
       this.saving = false;
       if (result.success) {
+        if (this.passwordInput.length > 0) {
+          this.password = this.passwordInput;
+          this.passwordInput = '';
+        }
         SyncService.getInstance().configure(config, this.encryptionSecret);
-        this.triggerActionParticle();
         promptAction.showToast({ message: '保存成功' });
       } else {
         const message: string = result.error !== undefined ? result.error.message : '保存失败';
@@ -127,9 +153,6 @@ struct WebDavPage {
     this.testing = true;
     this.webDavService.testConnection(this.buildConfig()).then((result: Result<void>) => {
       this.testing = false;
-      if (result.success) {
-        this.triggerActionParticle();
-      }
       const message: string = result.success ? '连接成功'
         : (result.error !== undefined ? result.error.message : '连接失败');
       promptAction.showToast({ message: message });
@@ -137,6 +160,9 @@ struct WebDavPage {
   }
 
   private onPush(): void {
+    this.syncConfigToService();
+    Logger.info('WebDAV push: userLen=' + this.username.length + ' pwdLen=' + this.password.length
+      + ' keyLen=' + this.encryptionSecret.length);
     this.pushing = true;
     SyncService.getInstance().push().then((result: Result<void>) => {
       this.pushing = false;
@@ -144,9 +170,6 @@ struct WebDavPage {
       this.syncStatus = state.status;
       this.syncMessage = state.message !== undefined ? state.message : '';
       this.lastSyncAt = state.lastSyncAt !== undefined ? state.lastSyncAt : 0;
-      if (result.success) {
-        this.triggerActionParticle();
-      }
       const message: string = result.success ? '推送成功'
         : (result.error !== undefined ? result.error.message : '推送失败');
       promptAction.showToast({ message: message });
@@ -154,6 +177,7 @@ struct WebDavPage {
   }
 
   private onPull(): void {
+    this.syncConfigToService();
     this.pulling = true;
     SyncService.getInstance().pull().then((result: Result<void>) => {
       this.pulling = false;
@@ -161,9 +185,6 @@ struct WebDavPage {
       this.syncStatus = state.status;
       this.syncMessage = state.message !== undefined ? state.message : '';
       this.lastSyncAt = state.lastSyncAt !== undefined ? state.lastSyncAt : 0;
-      if (result.success) {
-        this.triggerActionParticle();
-      }
       const message: string = result.success ? '拉取成功'
         : (result.error !== undefined ? result.error.message : '拉取失败');
       promptAction.showToast({ message: message });
@@ -310,19 +331,19 @@ struct WebDavPage {
 
   /** Outlined Glass 次要按钮：高光虚框 + 透明底。 */
   @Builder
-  outlinedButton(label: string, enabled: boolean, onTap: () => void, icon?: Resource) {
+  outlinedButton(params: ActionButtonParams) {
     Button() {
       Row({ space: 6 }) {
-        if (icon !== undefined) {
-          Image(icon)
+        if (params.icon !== undefined) {
+          Image(params.icon)
             .width(15)
             .height(15)
-            .fillColor(enabled ? $r('app.color.brand') : $r('app.color.text_tertiary'))
+            .fillColor(params.enabled ? $r('app.color.brand') : $r('app.color.text_tertiary'))
         }
-        Text(label)
+        Text(params.label)
           .fontSize(14.5)
           .fontWeight(FontWeight.Medium)
-          .fontColor(enabled ? $r('app.color.brand') : $r('app.color.text_tertiary'))
+          .fontColor(params.enabled ? $r('app.color.brand') : $r('app.color.text_tertiary'))
       }
       .width('100%')
       .justifyContent(FlexAlign.Center)
@@ -333,17 +354,17 @@ struct WebDavPage {
     .backgroundColor(Color.Transparent)
     .border({
       width: 1,
-      color: enabled ? $r('app.color.brand') : $r('app.color.field_border'),
+      color: params.enabled ? $r('app.color.brand') : $r('app.color.field_border'),
       style: BorderStyle.Solid
     })
-    .enabled(enabled)
-    .onClick(onTap)
+    .enabled(params.enabled)
+    .onClick(params.onTap)
   }
 
   /** 主操作按钮：渐变高光填充 + 能量光晕。 */
   @Builder
-  solidButton(label: string, enabled: boolean, onTap: () => void) {
-    Button(label)
+  solidButton(params: ActionButtonParams) {
+    Button(params.label)
       .layoutWeight(1)
       .height(48)
       .borderRadius(24)
@@ -352,8 +373,8 @@ struct WebDavPage {
       .linearGradient({ angle: 90, colors: trackGradientColors(0) })
       .fontColor($r('app.color.fab_foreground'))
       .shadow(glowButtonShadow())
-      .enabled(enabled)
-      .onClick(onTap)
+      .enabled(params.enabled)
+      .onClick(params.onTap)
   }
 
   @Builder
@@ -392,12 +413,15 @@ struct WebDavPage {
                 this.toggleRow('启用 WebDAV 同步', '开启后可将加密数据备份到你自己的服务器', this.webDavEnabled, false,
                   (value: boolean) => {
                     this.webDavEnabled = value;
+                    this.persistConfig();
                   })
                 this.toggleRow('自动推送', '增删改后自动上传加密副本', this.autoPush, false, (value: boolean) => {
-                  this.autoPush = value;
+                    this.autoPush = value;
+                    this.persistConfig();
                 })
                 this.toggleRow('启动时自动拉取', '冷启动时检查远端新版本', this.autoPullOnStart, true, (value: boolean) => {
-                  this.autoPullOnStart = value;
+                    this.autoPullOnStart = value;
+                    this.persistConfig();
                 })
               }
               .width('100%')
@@ -420,7 +444,7 @@ struct WebDavPage {
                 Column({ space: 8 }) {
                   this.fieldLabel('账号与密码')
                   WebDavField({ value: $username, placeholder: '用户名', masked: false })
-                  WebDavField({ value: $password, placeholder: '密码', masked: true })
+                  WebDavField({ value: $passwordInput, placeholder: '密码（已保存，如需修改请输入）', masked: true })
                 }
                 .width('100%')
                 .alignItems(HorizontalAlign.Start)
@@ -442,10 +466,16 @@ struct WebDavPage {
 
               // ---- Outlined / Solid 按钮组合 ----
               Row({ space: 12 }) {
-                this.outlinedButton(this.testing ? '测试中...' : '测试连接', !this.testing && !this.saving,
-                  () => this.onTest())
-                this.solidButton(this.saving ? '保存中...' : '保存配置', !this.testing && !this.saving,
-                  () => this.onSave())
+                this.outlinedButton({
+                  label: this.testing ? '测试中...' : '测试连接',
+                  enabled: !this.testing && !this.saving,
+                  onTap: () => this.onTest()
+                })
+                this.solidButton({
+                  label: this.saving ? '保存中...' : '保存配置',
+                  enabled: !this.testing && !this.saving,
+                  onTap: () => this.onSave()
+                })
               }
               .width('100%')
 
@@ -492,45 +522,20 @@ struct WebDavPage {
                 }
 
                 Row({ space: 12 }) {
-                  this.outlinedButton(this.pushing ? '推送中...' : '手动推送',
-                    !this.pushing && !this.pulling && this.webDavEnabled, () => this.onPush(),
-                    $r('app.media.ic_arrow_up'))
-                  this.outlinedButton(this.pulling ? '拉取中...' : '手动拉取',
-                    !this.pushing && !this.pulling && this.webDavEnabled, () => this.onPull(),
-                    $r('app.media.ic_arrow_down'))
+                  this.outlinedButton({
+                    label: this.pushing ? '推送中...' : '手动推送',
+                    enabled: !this.pushing && !this.pulling && this.webDavEnabled && this.hasConfig(),
+                    onTap: () => this.onPush(),
+                    icon: $r('app.media.ic_arrow_up')
+                  })
+                  this.outlinedButton({
+                    label: this.pulling ? '拉取中...' : '手动拉取',
+                    enabled: !this.pushing && !this.pulling && this.webDavEnabled && this.hasConfig(),
+                    onTap: () => this.onPull(),
+                    icon: $r('app.media.ic_arrow_down')
+                  })
                 }
                 .width('100%')
-
-                // 同步动作触发粒子反馈
-                if (this.actionParticleActive) {
-                  Particle({
-                    particles: [
-                      {
-                        emitter: {
-                          particle: {
-                            type: ParticleType.POINT,
-                            config: { radius: 2 },
-                            count: 24,
-                            lifetime: 850,
-                            lifetimeRange: 200
-                          },
-                          emitRate: 500,
-                          shape: ParticleEmitterShape.RECTANGLE,
-                          position: [0, 0],
-                          size: [220, 10]
-                        },
-                        color: { range: particleColorRange() },
-                        opacity: { range: [0.4, 0.95] },
-                        scale: { range: [0.15, 0.55] },
-                        velocity: { angle: [-120, -60], speed: [40, 110] },
-                        acceleration: { angle: { range: [-90, -90] }, speed: { range: [40, 80] } }
-                      }
-                    ]
-                  })
-                  .width('100%')
-                  .height(120)
-                  .hitTestBehavior(HitTestMode.Transparent)
-                }
               }
               .width('100%')
               .padding(16)

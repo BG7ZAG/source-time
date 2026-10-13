@@ -70,13 +70,20 @@ export class SettingsService {
       this.store.putSync(KEY_WEBDAV_REMOTE_PATH, config.remotePath);
       this.store.putSync(KEY_AUTO_PUSH, config.autoPush);
       this.store.putSync(KEY_AUTO_PULL, config.autoPullOnStart);
-      if (config.password.length > 0 && encryptionSecret.length > 0) {
+      if (config.password.length > 0) {
+        if (encryptionSecret.length === 0) {
+          // 没有加密密钥：明文落盘违反安全要求，静默丢弃又会让用户误以为已保存。
+          Logger.error('WebDAV password save skipped: encryption secret missing');
+          return err<void>(AppErrorCode.WEBDAV_AUTH_FAILED, '缺少加密密钥，无法安全保存 WebDAV 密码');
+        }
         const plainBytes: Uint8Array = new util.TextEncoder().encodeInto(config.password);
         const encrypted: Uint8Array = await this.cryptoService.encrypt(plainBytes, encryptionSecret);
         const encoded: string = new util.Base64Helper().encodeToStringSync(encrypted, util.Type.BASIC);
         this.store.putSync(KEY_WEBDAV_PASSWORD_ENC, encoded);
-      } else if (config.password.length === 0) {
+        Logger.info('WebDAV password stored: keyLen=' + encryptionSecret.length + ' pwdLen=' + config.password.length);
+      } else {
         this.store.deleteSync(KEY_WEBDAV_PASSWORD_ENC);
+        Logger.info('WebDAV password cleared');
       }
       await this.store.flush();
       return ok(undefined);
@@ -93,11 +100,14 @@ export class SettingsService {
       try {
         const encrypted: Uint8Array = new util.Base64Helper().decodeSync(encoded, util.Type.BASIC);
         const plainBytes: Uint8Array = await this.cryptoService.decrypt(encrypted, encryptionSecret);
-        password = new util.TextDecoder().decode(plainBytes);
+        password = util.TextDecoder.create('utf-8', { ignoreBOM: true }).decodeToString(plainBytes, { stream: false });
+        Logger.info('WebDAV password loaded: keyLen=' + encryptionSecret.length + ' pwdLen=' + password.length);
       } catch (error) {
-        Logger.error('WebDAV password decrypt failed');
+        Logger.error('WebDAV password decrypt failed (key mismatch or corrupted ciphertext)');
         password = '';
       }
+    } else {
+      Logger.info('WebDAV password not loadable: encLen=' + encoded.length + ' keyLen=' + encryptionSecret.length);
     }
     const config: WebDavConfig = {
       enabled: this.getBoolean(KEY_WEBDAV_ENABLED, false),

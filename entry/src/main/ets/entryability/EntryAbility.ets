@@ -72,6 +72,9 @@ export default class EntryAbility extends UIAbility {
     let initialPage: string = 'pages/HomePage';
     if (settings.privacyPolicyAccepted && !settings.encryptionInitialized) {
       initialPage = 'pages/SecurityPage';
+    } else if (settings.privacyPolicyAccepted && settings.encryptionInitialized && secret.length === 0) {
+      hilog.error(DOMAIN, 'SourceTime', 'Encryption secret lost: initialized but KeyStore returned empty');
+      initialPage = 'pages/SecurityPage';
     }
 
     windowStage.loadContent(initialPage, (err) => {

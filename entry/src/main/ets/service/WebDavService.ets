@@ -30,14 +30,10 @@ export class WebDavService {
         if (code >= 200 && code < 300) {
           return ok(undefined);
         }
-        // 目录不存在：WebDAV 同步目录本应由客户端建立，自动 MKCOL 创建后再验证，
+        // 目录不存在：WebDAV 同步目录本应由客户端建立，自动 MKCOL 逐级创建后再验证，
         // 避免对尚未创建的目标目录误报「路径不存在」。
         if (code === 404) {
-          const created: Result<void> = await this.createDirectory(config);
-          if (created.success) {
-            return ok(undefined);
-          }
-          return created;
+          return await this.createDirectory(config);
         }
         return err<void>(this.mapStatus(code), this.statusMessage(code));
       } finally {
@@ -85,18 +81,52 @@ export class WebDavService {
   }
 
   /**
-   * 在服务器上创建同步目录（MKCOL）。幂等：集合已存在（405）视为可用。
-   * 测试连接与首次上传前都会调用，避免对尚未创建的目录误报 404 / 409。
+   * 确保远程同步目录存在：从 baseUrl 起，对 remotePath 逐级执行 MKCOL。
+   *
+   * 逐级创建可兼容多级目录（如 /a/b/c/）以及父目录尚未建立的情况——
+   * 直接对完整路径发一次 MKCOL 会因父目录缺失返回 409，导致误报失败。
+   * 集合已存在（405）视为成功，因此该方法是幂等的，可安全地在上传/测试连接前调用。
    */
   async createDirectory(config: WebDavConfig): Promise<Result<void>> {
-    const urlResult: Result<string> = this.buildDirectoryUrl(config);
-    if (!urlResult.success || urlResult.data === undefined) {
+    const base: string = config.baseUrl.trim();
+    if (base.length === 0 || !URL_PATTERN.test(base)) {
       return err<void>(AppErrorCode.WEBDAV_INVALID_URL, '服务器地址无效');
     }
+    const segments: string[] = this.buildRemoteSegments(config);
+    let current: string = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+    for (let i = 0; i < segments.length; i++) {
+      current = current + '/' + encodeURI(segments[i]);
+      const result: Result<void> = await this.mkcol(current, config);
+      if (!result.success) {
+        return result;
+      }
+    }
+    return ok(undefined);
+  }
+
+  /** 将 remotePath 拆分为非空路径段；为空时回退到默认同步目录。 */
+  private buildRemoteSegments(config: WebDavConfig): string[] {
+    let remotePath: string = config.remotePath.trim();
+    if (remotePath.length === 0) {
+      remotePath = DEFAULT_WEBDAV_DIRECTORY;
+    }
+    const segments: string[] = [];
+    const parts: string[] = remotePath.split('/');
+    for (let i = 0; i < parts.length; i++) {
+      const part: string = parts[i].trim();
+      if (part.length > 0) {
+        segments.push(part);
+      }
+    }
+    return segments;
+  }
+
+  /** 发送一次 MKCOL 请求创建集合。集合已存在（405）视为成功。 */
+  private async mkcol(url: string, config: WebDavConfig): Promise<Result<void>> {
     try {
       const request = http.createHttp();
       try {
-        const response = await request.request(urlResult.data, {
+        const response = await request.request(url, {
           customMethod: 'MKCOL',
           header: this.buildHeaders(config, false),
           connectTimeout: TIMEOUT_MS,
@@ -233,6 +263,9 @@ export class WebDavService {
     }
     if (code === 404) {
       return '远程路径不存在';
+    }
+    if (code === 409) {
+      return '上级目录不存在，请检查服务器地址与同步目录层级';
     }
     if (code === 408) {
       return '请求超时';

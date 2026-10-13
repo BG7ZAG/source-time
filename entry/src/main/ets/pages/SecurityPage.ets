@@ -5,6 +5,7 @@ import { SettingsService } from '../service/SettingsService';
 import { StorageService } from '../service/StorageService';
 import { ClipboardService } from '../service/ClipboardService';
 import { DatabaseModel } from '../model/DatabaseModel';
+import { WebDavConfig } from '../model/WebDavConfig';
 import { Result } from '../types/Result';
 import { Logger } from '../utils/Logger';
 import { AuroraBackground } from '../components/AuroraBackground';
@@ -27,6 +28,7 @@ const SECRET_STORAGE_KEY: string = 'encryptionSecret';
 @Component
 struct SecurityPage {
   @State isFirstSetup: boolean = true;
+  @State keyLost: boolean = false;
   @State encryptionSecret: string = '';
   @State generatedSecret: string = '';
   @State hasGenerated: boolean = false;
@@ -48,7 +50,13 @@ struct SecurityPage {
     const settings = this.settingsService.getSettings();
     this.isFirstSetup = !settings.encryptionInitialized;
     if (!this.isFirstSetup) {
-      this.step = 0;
+      const secret: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
+      if (secret === undefined || secret.length === 0) {
+        this.keyLost = true;
+        this.isFirstSetup = true;
+      } else {
+        this.step = 0;
+      }
     }
   }
 
@@ -174,6 +182,12 @@ struct SecurityPage {
               promptAction.showToast({ message: '密钥已更新，但未能写入系统安全存储' });
             }
           });
+          // WebDAV 密码同样用旧密钥加密，需用新密钥重新加密，否则之后解密失败导致同步认证失败
+          this.settingsService.loadWebDavConfig(oldSecret).then((webDavConfig: WebDavConfig) => {
+            if (webDavConfig.password.length > 0) {
+              this.settingsService.saveWebDavConfig(webDavConfig, newSecret);
+            }
+          });
           Logger.info('Encryption key changed');
           promptAction.showToast({ message: '密钥已更新' });
           router.back();
@@ -257,8 +271,8 @@ struct SecurityPage {
   glassField(key: string, placeholder: string, value: string, masked: boolean) {
     TextInput({ placeholder: placeholder, text: value })
       .layoutWeight(1)
-      .height(48)
-      .borderRadius(14)
+      .height(40)
+      .borderRadius(12)
       .fontSize(14)
       .padding({ left: 14, right: 14 })
       .backgroundColor($r('app.color.field_background'))
@@ -374,8 +388,13 @@ struct SecurityPage {
   @Builder
   firstSetupView() {
     Column({ space: 16 }) {
-      this.hintCard($r('app.media.ic_security'), '本地加密保护',
-        '源时会使用你设置的加密密钥保护本地 TOTP 数据，密钥不会上传到任何服务器。', false)
+      if (this.keyLost) {
+        this.hintCard($r('app.media.ic_warning'), '加密密钥丢失',
+          '系统安全存储中的加密密钥已丢失，之前加密的数据（包括 TOTP 条目和 WebDAV 密码）将无法解密。请重新设置密钥，之后需重新输入 WebDAV 密码。', true)
+      } else {
+        this.hintCard($r('app.media.ic_security'), '本地加密保护',
+          '源时会使用你设置的加密密钥保护本地 TOTP 数据，密钥不会上传到任何服务器。', false)
+      }
 
       Column({ space: 8 }) {
         Text('加密密钥')
@@ -383,44 +402,67 @@ struct SecurityPage {
           .fontColor($r('app.color.text_secondary'))
           .width('100%')
 
+        TextInput({ placeholder: '输入加密密钥', text: $$this.encryptionSecret })
+          .width('100%')
+          .height(40)
+          .borderRadius(12)
+          .fontSize(14)
+          .padding({ left: 14, right: 14 })
+          .backgroundColor($r('app.color.field_background'))
+          .placeholderColor($r('app.color.text_tertiary'))
+          .caretColor($r('app.color.brand'))
+          .type(InputType.Password)
+          .showPasswordIcon(true)
+          .border({
+            width: 1.5,
+            color: this.focusedField === 'first' ? $r('app.color.brand') : $r('app.color.field_border'),
+            style: BorderStyle.Solid
+          })
+          .shadow(this.focusedField === 'first' ? focusGlowShadow() : noShadow())
+          .onFocus(() => { this.focusedField = 'first'; })
+          .onBlur(() => { if (this.focusedField === 'first') { this.focusedField = ''; } })
+          .onChange((input: string) => {
+            this.encryptionSecret = input;
+            this.hasGenerated = false;
+            this.copied = false;
+          })
+
         Row({ space: 10 }) {
-          this.glassField('first', '输入加密密钥', this.encryptionSecret, true)
-          this.outlinedButton('生成', () => this.onGenerate())
+          Button('生成')
+            .layoutWeight(1)
+            .height(48)
+            .borderRadius(14)
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .backgroundColor(Color.Transparent)
+            .fontColor($r('app.color.brand'))
+            .border({ width: 1, color: $r('app.color.brand'), style: BorderStyle.Solid })
+            .onClick(() => this.onGenerate())
+
+          Button(this.copied ? '已复制' : '复制密钥')
+            .layoutWeight(1)
+            .height(48)
+            .borderRadius(14)
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .backgroundColor(Color.Transparent)
+            .fontColor(this.encryptionSecret.length > 0 ? $r('app.color.brand') : $r('app.color.text_tertiary'))
+            .border({
+              width: 1,
+              color: this.encryptionSecret.length > 0 ? $r('app.color.brand') : $r('app.color.field_border'),
+              style: BorderStyle.Solid
+            })
+            .enabled(this.encryptionSecret.length > 0)
+            .onClick(() => this.onCopy())
         }
         .width('100%')
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
 
-      if (this.encryptionSecret.length > 0) {
-        Row({ space: 10 }) {
-          if (this.copied) {
-            Row({ space: 6 }) {
-              Image($r('app.media.ic_check'))
-                .width(13)
-                .height(13)
-                .fillColor($r('app.color.text_secondary'))
-              Text('已复制到剪贴板')
-                .fontSize(12.5)
-                .fontColor($r('app.color.success'))
-                .layoutWeight(1)
-            }
-            .layoutWeight(1)
-          } else {
-            Text('建议立即复制并离线保存')
-              .fontSize(12.5)
-              .fontColor($r('app.color.text_tertiary'))
-              .layoutWeight(1)
-          }
-          this.outlinedButton(this.copied ? '已复制' : '复制密钥', () => this.onCopy())
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-      }
-
       this.errorText()
 
-      this.primaryButton(this.saving ? '保存中...' : '完成初始化', !this.saving, () => this.onSaveFirstSetup())
+      this.primaryButton(this.saving ? '保存中...' : (this.keyLost ? '重新设置密钥' : '完成初始化'), !this.saving, () => this.onSaveFirstSetup())
     }
     .width('100%')
     .padding(18)
@@ -477,52 +519,74 @@ struct SecurityPage {
           .fontColor($r('app.color.text_secondary'))
           .width('100%')
 
-        Row({ space: 10 }) {
-          this.glassField('new', '输入新密钥', this.newSecret, true)
-          this.outlinedButton('生成', () => {
-            this.newSecret = this.cryptoService.generateRandomEncryptionSecret();
+        TextInput({ placeholder: '输入新密钥', text: $$this.newSecret })
+          .width('100%')
+          .height(40)
+          .borderRadius(12)
+          .fontSize(14)
+          .padding({ left: 14, right: 14 })
+          .backgroundColor($r('app.color.field_background'))
+          .placeholderColor($r('app.color.text_tertiary'))
+          .caretColor($r('app.color.brand'))
+          .type(InputType.Password)
+          .showPasswordIcon(true)
+          .border({
+            width: 1.5,
+            color: this.focusedField === 'new' ? $r('app.color.brand') : $r('app.color.field_border'),
+            style: BorderStyle.Solid
+          })
+          .shadow(this.focusedField === 'new' ? focusGlowShadow() : noShadow())
+          .onFocus(() => { this.focusedField = 'new'; })
+          .onBlur(() => { if (this.focusedField === 'new') { this.focusedField = ''; } })
+          .onChange((input: string) => {
+            this.newSecret = input;
             this.copied = false;
           })
+
+        Row({ space: 10 }) {
+          Button('生成')
+            .layoutWeight(1)
+            .height(48)
+            .borderRadius(14)
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .backgroundColor(Color.Transparent)
+            .fontColor($r('app.color.brand'))
+            .border({ width: 1, color: $r('app.color.brand'), style: BorderStyle.Solid })
+            .onClick(() => {
+              this.newSecret = this.cryptoService.generateRandomEncryptionSecret();
+              this.copied = false;
+            })
+
+          Button(this.copied ? '已复制' : '复制新密钥')
+            .layoutWeight(1)
+            .height(48)
+            .borderRadius(14)
+            .fontSize(14)
+            .fontWeight(FontWeight.Medium)
+            .backgroundColor(Color.Transparent)
+            .fontColor(this.newSecret.length > 0 ? $r('app.color.brand') : $r('app.color.text_tertiary'))
+            .border({
+              width: 1,
+              color: this.newSecret.length > 0 ? $r('app.color.brand') : $r('app.color.field_border'),
+              style: BorderStyle.Solid
+            })
+            .enabled(this.newSecret.length > 0)
+            .onClick(() => {
+              this.clipboardService.copyText(this.newSecret).then((result: Result<void>) => {
+                if (result.success) {
+                  this.copied = true;
+                  promptAction.showToast({ message: '密钥已复制' });
+                } else {
+                  promptAction.showToast({ message: '复制失败' });
+                }
+              })
+            })
         }
         .width('100%')
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
-
-      if (this.newSecret.length > 0) {
-        Row({ space: 10 }) {
-          if (this.copied) {
-            Row({ space: 6 }) {
-              Image($r('app.media.ic_check'))
-                .width(13)
-                .height(13)
-                .fillColor($r('app.color.text_secondary'))
-              Text('已复制到剪贴板')
-                .fontSize(12.5)
-                .fontColor($r('app.color.success'))
-                .layoutWeight(1)
-            }
-            .layoutWeight(1)
-          } else {
-            Text('建议立即复制并离线保存')
-              .fontSize(12.5)
-              .fontColor($r('app.color.text_tertiary'))
-              .layoutWeight(1)
-          }
-          this.outlinedButton(this.copied ? '已复制' : '复制新密钥', () => {
-            this.clipboardService.copyText(this.newSecret).then((result: Result<void>) => {
-              if (result.success) {
-                this.copied = true;
-                promptAction.showToast({ message: '密钥已复制' });
-              } else {
-                promptAction.showToast({ message: '复制失败' });
-              }
-            })
-          })
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
-      }
 
       this.hintCard($r('app.media.ic_warning'), '请妥善保管',
         '源时不提供服务器端密钥恢复能力，丢失密钥后已加密数据将无法解密。', true)
