@@ -3,11 +3,13 @@ import { WebDavService } from '../service/WebDavService';
 import { SyncService } from '../service/SyncService';
 import { SettingsService } from '../service/SettingsService';
 import { WebDavConfig } from '../model/WebDavConfig';
+import { RemoteBackup } from '../model/RemoteBackup';
 import { SyncStatus } from '../model/SyncModel';
 import { Result } from '../types/Result';
 import { DEFAULT_WEBDAV_DIRECTORY } from '../constants/AppConstants';
 import { Logger } from '../utils/Logger';
 import { AuroraBackground } from '../components/AuroraBackground';
+import { BackupPickerDialog } from '../components/BackupPickerDialog';
 import {
   focusGlowShadow,
   frostedPillColor,
@@ -52,6 +54,8 @@ struct WebDavPage {
   @State webDavEnabled: boolean = false;
   @State autoPush: boolean = false;
   @State autoPullOnStart: boolean = false;
+  /** 推送后自动清理云端旧快照，仅保留最近 REMOTE_BACKUP_KEEP_COUNT（10）份。 */
+  @State cleanOldBackups: boolean = true;
   @State testing: boolean = false;
   @State saving: boolean = false;
   @State pushing: boolean = false;
@@ -60,9 +64,16 @@ struct WebDavPage {
   @State lastSyncAt: number = 0;
   @State syncMessage: string = '';
 
+  /** 远端备份列表（已按时间倒序，最新在前），供选择弹窗展示。 */
+  @State backups: RemoteBackup[] = [];
+  /** 备份选择弹窗的默认选中项（最新一条）。 */
+  @State selectedBackup: string = '';
+
   private webDavService: WebDavService = new WebDavService();
   private settingsService: SettingsService = new SettingsService();
   private encryptionSecret: string = '';
+  /** 备份选择弹窗控制器：需等列表返回后才创建，故非初始化字段。 */
+  private backupDialog: CustomDialogController | null = null;
 
   aboutToAppear(): void {
     const secret: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
@@ -85,6 +96,7 @@ struct WebDavPage {
       this.webDavEnabled = config.enabled;
       this.autoPush = config.autoPush;
       this.autoPullOnStart = config.autoPullOnStart;
+      this.cleanOldBackups = config.cleanOldBackups;
       SyncService.getInstance().configure(config, this.encryptionSecret);
     });
     const settings = this.settingsService.getSettings();
@@ -102,7 +114,8 @@ struct WebDavPage {
       password: this.passwordInput.length > 0 ? this.passwordInput : this.password,
       remotePath: this.remotePath,
       autoPush: this.autoPush,
-      autoPullOnStart: this.autoPullOnStart
+      autoPullOnStart: this.autoPullOnStart,
+      cleanOldBackups: this.cleanOldBackups
     };
   }
 
@@ -161,8 +174,10 @@ struct WebDavPage {
 
   private onPush(): void {
     this.syncConfigToService();
-    Logger.info('WebDAV push: userLen=' + this.username.length + ' pwdLen=' + this.password.length
-      + ' keyLen=' + this.encryptionSecret.length);
+    const config: WebDavConfig = this.buildConfig();
+    Logger.info('WebDAV push requested: user=' + this.username + ' url=' + this.baseUrl
+      + ' path=' + this.remotePath + ' enabled=' + this.webDavEnabled + ' autoPush=' + this.autoPush
+      + ' passwordSet=' + (config.password.length > 0), 'WebDAV');
     this.pushing = true;
     SyncService.getInstance().push().then((result: Result<void>) => {
       this.pushing = false;
@@ -170,24 +185,97 @@ struct WebDavPage {
       this.syncStatus = state.status;
       this.syncMessage = state.message !== undefined ? state.message : '';
       this.lastSyncAt = state.lastSyncAt !== undefined ? state.lastSyncAt : 0;
-      const message: string = result.success ? '推送成功'
+      const message: string = result.success ? '推送成功（已生成时间戳备份）'
         : (result.error !== undefined ? result.error.message : '推送失败');
+      Logger.info('WebDAV push result: success=' + result.success + ' message=' + message, 'WebDAV');
       promptAction.showToast({ message: message });
     });
   }
 
+  /**
+   * 点击「手动拉取」：先取远端备份列表，再弹窗让用户选择要恢复的版本（默认最新一条）。
+   * 避免以前那样直接覆盖本地、无法选择历史版本。
+   */
   private onPull(): void {
     this.syncConfigToService();
+    Logger.info('WebDAV pull requested: user=' + this.username + ' url=' + this.baseUrl
+      + ' path=' + this.remotePath, 'WebDAV');
     this.pulling = true;
-    SyncService.getInstance().pull().then((result: Result<void>) => {
+    SyncService.getInstance().listBackups().then((result: Result<RemoteBackup[]>) => {
       this.pulling = false;
-      const state = SyncService.getInstance().getState();
-      this.syncStatus = state.status;
-      this.syncMessage = state.message !== undefined ? state.message : '';
-      this.lastSyncAt = state.lastSyncAt !== undefined ? state.lastSyncAt : 0;
-      const message: string = result.success ? '拉取成功'
-        : (result.error !== undefined ? result.error.message : '拉取失败');
-      promptAction.showToast({ message: message });
+      if (!result.success || result.data === undefined) {
+        const message: string = result.error !== undefined ? result.error.message : '获取备份列表失败';
+        promptAction.showToast({ message: message });
+        return;
+      }
+      const backups: RemoteBackup[] = result.data;
+      if (backups.length === 0) {
+        promptAction.showToast({ message: '云端暂无备份，请先推送' });
+        return;
+      }
+      this.backups = backups;
+      this.selectedBackup = backups[0].name;   // 默认勾选最新一条
+      this.openBackupPicker();
+    });
+  }
+
+  /** 弹出备份选择列表（默认选中最新一条）。 */
+  private openBackupPicker(): void {
+    const controller: CustomDialogController = new CustomDialogController({
+      builder: BackupPickerDialog({
+        backups: this.backups,
+        selected: this.selectedBackup,
+        onConfirm: (fileName: string) => {
+          // 先关闭选择弹窗，再做「覆盖并恢复」二次确认，避免弹窗叠弹窗
+          this.closeBackupPicker();
+          this.doPullBackup(fileName);
+        },
+        onCancel: () => {
+          this.closeBackupPicker();
+        }
+      }),
+      autoCancel: true,
+      customStyle: true,
+      alignment: DialogAlignment.Center
+    });
+    this.backupDialog = controller;
+    controller.open();
+  }
+
+  /** 关闭备份选择弹窗；重复调用安全。 */
+  private closeBackupPicker(): void {
+    if (this.backupDialog !== null) {
+      this.backupDialog.close();
+      this.backupDialog = null;
+    }
+  }
+
+  /** 用户选好备份后：二次确认「覆盖本机数据」，再按文件名拉取。 */
+  private doPullBackup(fileName: string): void {
+    promptAction.showDialog({
+      title: '恢复此备份？',
+      message: '将用所选备份覆盖本机数据，本机尚未推送的改动会丢失。\n\n所选文件：' + fileName,
+      buttons: [
+        { text: '取消', color: '#666666' },
+        { text: '覆盖并恢复', color: '#E84026' }
+      ]
+    }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
+      if (dialogResult.index !== 1) {
+        return;
+      }
+      this.pulling = true;
+      SyncService.getInstance().pullBackup(fileName).then((result: Result<void>) => {
+        this.pulling = false;
+        const state = SyncService.getInstance().getState();
+        this.syncStatus = state.status;
+        this.syncMessage = state.message !== undefined ? state.message : '';
+        this.lastSyncAt = state.lastSyncAt !== undefined ? state.lastSyncAt : 0;
+        const message: string = result.success ? '拉取成功'
+          : (result.error !== undefined ? result.error.message : '拉取失败');
+        Logger.info('WebDAV pull result: file=' + fileName + ' success=' + result.success
+          + ' message=' + message, 'WebDAV');
+        promptAction.showToast({ message: message });
+      });
     });
   }
 
@@ -415,12 +503,17 @@ struct WebDavPage {
                     this.webDavEnabled = value;
                     this.persistConfig();
                   })
-                this.toggleRow('自动推送', '增删改后自动上传加密副本', this.autoPush, false, (value: boolean) => {
+                this.toggleRow('自动推送', '增删改后自动上传带时间戳的加密备份', this.autoPush, false, (value: boolean) => {
                     this.autoPush = value;
                     this.persistConfig();
                 })
-                this.toggleRow('启动时自动拉取', '冷启动时检查远端新版本', this.autoPullOnStart, true, (value: boolean) => {
+                this.toggleRow('启动时自动拉取', '冷启动时检查远端新版本', this.autoPullOnStart, false, (value: boolean) => {
                     this.autoPullOnStart = value;
+                    this.persistConfig();
+                })
+                this.toggleRow('自动清理旧备份', '推送后只保留云端最近 10 份快照（手动/自动推送都会新建带时间的备份）',
+                  this.cleanOldBackups, true, (value: boolean) => {
+                    this.cleanOldBackups = value;
                     this.persistConfig();
                 })
               }

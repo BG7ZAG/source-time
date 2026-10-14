@@ -76,16 +76,23 @@ export class KeyStoreService {
     }
   }
 
-  async remove(): Promise<void> {
+  /**
+   * 删除加密密钥。成功、或本就不存在（NOT_FOUND）都返回 true；其他失败返回 false，
+   * 由调用方决定是否提示用户重试（例如「忘记密钥」必须确认真删掉了旧密钥，不能静默放过）。
+   */
+  async remove(): Promise<boolean> {
     const query: asset.AssetMap = new Map();
     query.set(asset.Tag.ALIAS, this.alias());
     try {
       await asset.remove(query);
+      return true;
     } catch (error) {
       const err = error as BusinessError;
-      if (err.code !== NOT_FOUND_CODE) {
-        Logger.error('KeyStore remove failed, code=' + err.code);
+      if (err.code === NOT_FOUND_CODE) {
+        return true;
       }
+      Logger.error('KeyStore remove failed, code=' + err.code);
+      return false;
     }
   }
 }

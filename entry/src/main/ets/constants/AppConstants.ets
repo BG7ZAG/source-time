@@ -8,7 +8,13 @@ export const DATABASE_FILE_NAME: string = 'totp.db.enc';
 
 export const CURRENT_SCHEMA_VERSION: number = 1;
 
-export const CURRENT_PRIVACY_POLICY_VERSION: string = '1.0';
+export const CURRENT_PRIVACY_POLICY_VERSION: string = '2.0';
+
+/** 本地运行日志文件名（NDJSON，每行一条已脱敏日志）。 */
+export const LOG_FILE_NAME: string = 'sourcetime_logs.ndjson';
+
+/** 内存与磁盘保留的最大日志条数（超出丢弃最旧条目）。 */
+export const LOG_MAX_ENTRIES: number = 500;
 
 export const DEFAULT_TOTP_PERIOD: number = 30;
 
@@ -32,4 +38,6 @@ export class AppRoutes {
   static readonly PRIVACY_POLICY: string = 'pages/PrivacyPolicyPage';
 
   static readonly ABOUT: string = 'pages/AboutPage';
+
+  static readonly LOGS: string = 'pages/LogPage';
 }

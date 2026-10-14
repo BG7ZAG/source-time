@@ -54,27 +54,32 @@ export class StorageService {
   async loadDatabase(encryptionSecret: string): Promise<Result<DatabaseModel>> {
     try {
       if (!this.isInitialized()) {
+        // 本地还没有密文文件：返回空库（首次使用或刚清库后的正常状态），不视为错误
         const emptyDb: DatabaseModel = this.createEmptyDatabase();
         this.database = emptyDb;
+        Logger.info('Storage load: local database not initialized, using empty database', 'Storage');
         return ok(emptyDb);
       }
       const bytes: Uint8Array = this.readFile();
       if (bytes.length === 0) {
         const emptyDb: DatabaseModel = this.createEmptyDatabase();
         this.database = emptyDb;
+        Logger.warn('Storage load: encrypted file is empty, using empty database', 'Storage');
         return ok(emptyDb);
       }
       const plainBytes: Uint8Array = await this.cryptoService.decrypt(bytes, encryptionSecret);
       const json: string = new util.TextDecoder().decode(plainBytes);
       const parsed: DatabaseModel = JSON.parse(json) as DatabaseModel;
       if (!this.validateDatabase(parsed)) {
-        Logger.error('Storage load: invalid database schema');
+        Logger.error('Storage load: invalid database schema', 'Storage');
         return err<DatabaseModel>(AppErrorCode.INVALID_ENCRYPTED_FILE, '数据库格式无效');
       }
       this.database = parsed;
+      Logger.info('Storage load ok: items=' + parsed.items.length + ' revision=' + parsed.revision
+        + ' bytes=' + bytes.length, 'Storage');
       return ok(parsed);
     } catch (error) {
-      Logger.error('Storage load failed');
+      Logger.error('Storage load failed: decrypt error (key mismatch or corrupted file)', 'Storage');
       return err<DatabaseModel>(AppErrorCode.DECRYPT_FAILED, '无法解密数据，请确认加密密钥是否正确');
     }
   }
@@ -86,9 +91,11 @@ export class StorageService {
       const encrypted: Uint8Array = await this.cryptoService.encrypt(plainBytes, encryptionSecret);
       this.atomicWrite(encrypted);
       this.database = database;
+      Logger.info('Storage save ok: items=' + database.items.length + ' revision=' + database.revision
+        + ' bytes=' + encrypted.length, 'Storage');
       return ok(undefined);
     } catch (error) {
-      Logger.error('Storage save failed');
+      Logger.error('Storage save failed', 'Storage');
       return err<void>(AppErrorCode.STORAGE_WRITE_FAILED, '保存数据失败');
     }
   }
@@ -122,6 +129,41 @@ export class StorageService {
     }
   }
 
+  /**
+   * 物理删除本地加密数据文件（含临时文件与历史隔离备份），不可恢复。
+   *
+   * 与 quarantineUnreadableDatabase()（同目录重命名、保留字节）不同：本方法真正 unlink，
+   * 只用于「忘记密钥」这类用户已明确要求销毁数据的场景。
+   */
+  async deleteLocalDatabase(): Promise<Result<void>> {
+    this.database = null;
+    const dir: string = AppContextHolder.getContext().filesDir;
+    // 待删清单：当前密文、写入临时文件、以及历史隔离备份 totp.db.enc.orphan-<时间戳>
+    const targets: string[] = [this.dbPath, this.tmpPath];
+    try {
+      const names: string[] = fs.listFileSync(dir);
+      const orphanPrefix: string = DATABASE_FILE_NAME + ORPHAN_SUFFIX;
+      for (const name of names) {
+        if (name.startsWith(orphanPrefix)) {
+          targets.push(dir + '/' + name);
+        }
+      }
+    } catch (error) {
+      // 列目录失败不阻断主流程：仍继续删除当前密文
+      Logger.error('Storage delete: list files failed');
+    }
+    for (const path of targets) {
+      try {
+        fs.unlinkSync(path);
+        Logger.info('Local encrypted file removed: ' + path);
+      } catch (error) {
+        // 文件本就不存在属正常情况，忽略
+      }
+    }
+    Logger.info('Local encrypted data physically deleted');
+    return ok(undefined);
+  }
+
   async changeEncryptionSecret(oldSecret: string, newSecret: string): Promise<Result<void>> {
     try {
       if (!this.isInitialized()) {
@@ -145,11 +187,14 @@ export class StorageService {
   readEncryptedFile(): Result<Uint8Array> {
     try {
       if (!this.isInitialized()) {
+        Logger.warn('Storage read skipped: local database not initialized', 'Storage');
         return err<Uint8Array>(AppErrorCode.STORAGE_READ_FAILED, '本地尚无数据');
       }
-      return ok(this.readFile());
+      const bytes: Uint8Array = this.readFile();
+      Logger.debug('Storage read encrypted file: bytes=' + bytes.length, 'Storage');
+      return ok(bytes);
     } catch (error) {
-      Logger.error('Storage read encrypted file failed');
+      Logger.error('Storage read encrypted file failed', 'Storage');
       return err<Uint8Array>(AppErrorCode.STORAGE_READ_FAILED, '读取数据失败');
     }
   }

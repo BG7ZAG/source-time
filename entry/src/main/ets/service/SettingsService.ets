@@ -19,6 +19,7 @@ const KEY_WEBDAV_REMOTE_PATH: string = 'webDavRemotePath';
 const KEY_WEBDAV_PASSWORD_ENC: string = 'webDavPasswordEnc';
 const KEY_AUTO_PUSH: string = 'autoPush';
 const KEY_AUTO_PULL: string = 'autoPullOnStart';
+const KEY_AUTO_CLEAN_BACKUPS: string = 'webDavCleanOldBackups';
 const KEY_LAST_SYNC_AT: string = 'lastSyncAt';
 
 export class SettingsService {
@@ -70,6 +71,7 @@ export class SettingsService {
       this.store.putSync(KEY_WEBDAV_REMOTE_PATH, config.remotePath);
       this.store.putSync(KEY_AUTO_PUSH, config.autoPush);
       this.store.putSync(KEY_AUTO_PULL, config.autoPullOnStart);
+      this.store.putSync(KEY_AUTO_CLEAN_BACKUPS, config.cleanOldBackups);
       if (config.password.length > 0) {
         if (encryptionSecret.length === 0) {
           // 没有加密密钥：明文落盘违反安全要求，静默丢弃又会让用户误以为已保存。
@@ -80,7 +82,8 @@ export class SettingsService {
         const encrypted: Uint8Array = await this.cryptoService.encrypt(plainBytes, encryptionSecret);
         const encoded: string = new util.Base64Helper().encodeToStringSync(encrypted, util.Type.BASIC);
         this.store.putSync(KEY_WEBDAV_PASSWORD_ENC, encoded);
-        Logger.info('WebDAV password stored: keyLen=' + encryptionSecret.length + ' pwdLen=' + config.password.length);
+        Logger.info('WebDAV password stored (encrypted with current key): url=' + config.baseUrl
+          + ' user=' + config.username + ' pwdLen=' + config.password.length, 'Settings');
       } else {
         this.store.deleteSync(KEY_WEBDAV_PASSWORD_ENC);
         Logger.info('WebDAV password cleared');
@@ -101,13 +104,14 @@ export class SettingsService {
         const encrypted: Uint8Array = new util.Base64Helper().decodeSync(encoded, util.Type.BASIC);
         const plainBytes: Uint8Array = await this.cryptoService.decrypt(encrypted, encryptionSecret);
         password = util.TextDecoder.create('utf-8', { ignoreBOM: true }).decodeToString(plainBytes, { stream: false });
-        Logger.info('WebDAV password loaded: keyLen=' + encryptionSecret.length + ' pwdLen=' + password.length);
+        Logger.info('WebDAV password loaded: pwdLen=' + password.length, 'Settings');
       } catch (error) {
-        Logger.error('WebDAV password decrypt failed (key mismatch or corrupted ciphertext)');
+        Logger.error('WebDAV password decrypt failed (key mismatch or corrupted ciphertext)', 'Settings');
         password = '';
       }
     } else {
-      Logger.info('WebDAV password not loadable: encLen=' + encoded.length + ' keyLen=' + encryptionSecret.length);
+      Logger.info('WebDAV password not loadable: hasCiphertext=' + (encoded.length > 0)
+        + ' hasKey=' + (encryptionSecret.length > 0), 'Settings');
     }
     const config: WebDavConfig = {
       enabled: this.getBoolean(KEY_WEBDAV_ENABLED, false),
@@ -116,7 +120,8 @@ export class SettingsService {
       password: password,
       remotePath: this.getString(KEY_WEBDAV_REMOTE_PATH, ''),
       autoPush: this.getBoolean(KEY_AUTO_PUSH, false),
-      autoPullOnStart: this.getBoolean(KEY_AUTO_PULL, false)
+      autoPullOnStart: this.getBoolean(KEY_AUTO_PULL, false),
+      cleanOldBackups: this.getBoolean(KEY_AUTO_CLEAN_BACKUPS, true)
     };
     return config;
   }

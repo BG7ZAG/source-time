@@ -3,6 +3,7 @@ import { CryptoService } from '../service/CryptoService';
 import { KeyStoreService } from '../service/KeyStoreService';
 import { SettingsService } from '../service/SettingsService';
 import { StorageService } from '../service/StorageService';
+import { SyncService } from '../service/SyncService';
 import { ClipboardService } from '../service/ClipboardService';
 import { DatabaseModel } from '../model/DatabaseModel';
 import { WebDavConfig } from '../model/WebDavConfig';
@@ -94,6 +95,37 @@ struct SecurityPage {
     });
   }
 
+  /**
+   * 把密钥交给系统关键资产存储托管；写入失败则弹窗提示，用户可点「重试」重新写入。
+   *
+   * 无论最终是否写入成功都会回调 onDone，保证主流程（跳转首页 / 返回上一页）不被阻断——
+   * 密钥已在 AppStorage 生效，本次会话可用；仅下次冷启动需手动输入密钥。
+   */
+  private persistSecretToKeyStore(secret: string, onDone: () => void): void {
+    const keyStoreService: KeyStoreService = new KeyStoreService();
+    keyStoreService.save(secret).then((stored: boolean) => {
+      if (stored) {
+        onDone();
+        return;
+      }
+      promptAction.showDialog({
+        title: '密钥未写入系统安全存储',
+        message: '源时无法把加密密钥交给系统关键资产托管。\n\n'
+          + '不重试的话，下次启动将无法自动解锁，需要手动输入密钥。',
+        buttons: [
+          { text: '稍后再说', color: '#666666' },
+          { text: '重试', color: '#0A59F7' }
+        ]
+      }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
+        if (dialogResult.index === 1) {
+          this.persistSecretToKeyStore(secret, onDone);
+        } else {
+          onDone();
+        }
+      });
+    });
+  }
+
   private onSaveFirstSetup(): void {
     if (this.encryptionSecret.trim().length === 0) {
       this.error = '请输入或生成加密密钥';
@@ -110,11 +142,7 @@ struct SecurityPage {
       if (result.success) {
         Logger.info('Encryption key initialized');
         // 交给系统关键资产存储保管，之后启动可静默自动解锁（加密只作用于本地存储与 WebDAV 密文）
-        const keyStoreService: KeyStoreService = new KeyStoreService();
-        keyStoreService.save(secret).then((stored: boolean) => {
-          if (!stored) {
-            promptAction.showToast({ message: '密钥未能写入系统安全存储，下次启动可能无法自动解锁' });
-          }
+        this.persistSecretToKeyStore(secret, () => {
           router.replaceUrl({ url: 'pages/HomePage' });
         });
       } else {
@@ -132,10 +160,18 @@ struct SecurityPage {
       this.verifyingOld = false;
       return;
     }
+    // 本地还没有加密数据（从未保存过口令，或旧密文已被「清除并重开」隔离）：
+    // 没有密文需要校验与重加密，直接进入第 2 步设置新密钥，不应报「读取失败」。
+    if (!this.storageService.isInitialized()) {
+      this.verifyingOld = false;
+      this.step = 1;
+      promptAction.showToast({ message: '本地暂无加密数据，可直接设置新密钥' });
+      return;
+    }
     const bytesResult: Result<Uint8Array> = this.storageService.readEncryptedFile();
     if (!bytesResult.success || bytesResult.data === undefined) {
       this.verifyingOld = false;
-      this.error = '读取本地数据失败';
+      this.error = bytesResult.error !== undefined ? bytesResult.error.message : '读取本地数据失败';
       return;
     }
     this.storageService.decodeEncryptedDatabase(bytesResult.data, oldSecret).then((decodeResult: Result<DatabaseModel>) => {
@@ -158,10 +194,15 @@ struct SecurityPage {
     this.error = '';
     const newSecret: string = this.newSecret.trim();
     const oldSecret: string = this.oldSecret.trim();
+    // 本地无加密数据：没有密文需要重加密，直接切换密钥（否则会误报「读取本地数据失败」）
+    if (!this.storageService.isInitialized()) {
+      this.applyNewSecretWithoutData(newSecret);
+      return;
+    }
     const bytesResult: Result<Uint8Array> = this.storageService.readEncryptedFile();
     if (!bytesResult.success || bytesResult.data === undefined) {
       this.saving = false;
-      this.error = '读取本地数据失败';
+      this.error = bytesResult.error !== undefined ? bytesResult.error.message : '读取本地数据失败';
       return;
     }
     this.storageService.decodeEncryptedDatabase(bytesResult.data, oldSecret).then((decodeResult: Result<DatabaseModel>) => {
@@ -175,27 +216,166 @@ struct SecurityPage {
         this.saving = false;
         if (replaceResult.success) {
           AppStorage.setOrCreate<string>(SECRET_STORAGE_KEY, newSecret);
-          // 同步更新系统关键资产存储里的密钥（save 内部先删后加）
-          const keyStoreService: KeyStoreService = new KeyStoreService();
-          keyStoreService.save(newSecret).then((stored: boolean) => {
-            if (!stored) {
-              promptAction.showToast({ message: '密钥已更新，但未能写入系统安全存储' });
-            }
-          });
-          // WebDAV 密码同样用旧密钥加密，需用新密钥重新加密，否则之后解密失败导致同步认证失败
+          // WebDAV 密码同样用旧密钥加密，需用新密钥重新加密，否则之后解密失败导致同步认证失败；
+          // 重加密完成后再触发上传，避免同步读到尚未更新的密码密文
           this.settingsService.loadWebDavConfig(oldSecret).then((webDavConfig: WebDavConfig) => {
             if (webDavConfig.password.length > 0) {
-              this.settingsService.saveWebDavConfig(webDavConfig, newSecret);
+              this.settingsService.saveWebDavConfig(webDavConfig, newSecret).then(() => {
+                this.triggerSyncAfterKeyChange(newSecret);
+              });
+            } else {
+              this.triggerSyncAfterKeyChange(newSecret);
             }
           });
-          Logger.info('Encryption key changed');
-          promptAction.showToast({ message: '密钥已更新' });
-          router.back();
+          // 更新系统关键资产存储里的密钥（save 内部先删后加）；写入失败弹窗可重试
+          this.persistSecretToKeyStore(newSecret, () => {
+            Logger.info('Encryption key changed');
+            promptAction.showToast({ message: '密钥已更新' });
+            router.back();
+          });
         } else {
           this.error = '保存失败';
         }
       });
     });
+  }
+
+  /**
+   * 本地已用新密钥重新加密，云端仍是旧密钥的密文：主动上传覆盖，否则之后拉取必然解密失败。
+   * 未启用同步 / 未开启自动推送时，SyncService 内部会静默跳过。
+   */
+  private triggerSyncAfterKeyChange(newSecret: string): void {
+    SyncService.getInstance().onEncryptionKeyChanged(newSecret).then((result: Result<void>) => {
+      if (result.success) {
+        Logger.info('Sync after key change requested');
+        return;
+      }
+      const message: string = result.error !== undefined ? result.error.message : '同步失败';
+      Logger.error('Sync after key change failed: ' + message);
+    });
+  }
+
+  /**
+   * 本地没有加密数据文件时的密钥切换：跳过数据库重加密，只更新密钥托管与 WebDAV 密码。
+   * 旧密钥取自当前生效的密钥（AppStorage），而不是用户在「验证旧密钥」里输入的文本——
+   * 没有密文可校验时输入值不可信，用它去解密 WebDAV 密码会失败。
+   */
+  private applyNewSecretWithoutData(newSecret: string): void {
+    const previous: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
+    const previousSecret: string = previous !== undefined ? previous : '';
+    AppStorage.setOrCreate<string>(SECRET_STORAGE_KEY, newSecret);
+    // WebDAV 密码用旧密钥加密，需用新密钥重新加密，否则之后解密失败导致同步认证失败
+    if (previousSecret.length > 0) {
+      this.settingsService.loadWebDavConfig(previousSecret).then((webDavConfig: WebDavConfig) => {
+        if (webDavConfig.password.length > 0) {
+          this.settingsService.saveWebDavConfig(webDavConfig, newSecret);
+        }
+      });
+    }
+    // 写入系统关键资产存储；失败弹窗可重试，完成后才收尾退出
+    this.persistSecretToKeyStore(newSecret, () => {
+      this.saving = false;
+      Logger.info('Encryption key changed (no local encrypted data)');
+      promptAction.showToast({ message: '密钥已更新' });
+      router.back();
+    });
+  }
+
+  /**
+   * 忘记密钥：安全提示确认后，删除系统安全存储中的旧密钥、清空本地加密数据与 WebDAV 密码，
+   * 随后回到「设置新密钥」界面让用户重新录入。
+   *
+   * 本地密文**物理删除**（fs.unlink：totp.db.enc、写入临时文件，以及历史遗留的
+   * totp.db.enc.orphan-<时间戳> 备份），不可恢复；不删除则新密钥会被旧密文挡住。
+   */
+  private onForgetKey(): void {
+    promptAction.showDialog({
+      title: '忘记加密密钥？',
+      message: '确认后将删除系统安全存储中的旧密钥，并从本地永久删除已加密的数据文件'
+        + '（TOTP 条目、历史备份）及 WebDAV 密码。\n\n'
+        + '源时不提供密钥恢复能力，删除后数据无法找回，需要重新设置新密钥并从零开始录入口令。',
+      buttons: [
+        { text: '取消', color: '#666666' },
+        { text: '确认删除', color: '#E84026' }
+      ]
+    }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
+      if (dialogResult.index !== 1) {
+        return;
+      }
+      this.saving = true;
+      this.error = '';
+      this.removeOldKeyThenReset();
+    });
+  }
+
+  /**
+   * 删除系统安全存储中的旧密钥；失败时弹窗可重试。
+   * 取消则中止整个「忘记密钥」流程——旧密钥仍留在系统托管里，此时若继续删本地数据，
+   * 用户会以为密钥已销毁，实际仍可能被系统静默取回，属于安全隐患。
+   */
+  private removeOldKeyThenReset(): void {
+    const keyStoreService: KeyStoreService = new KeyStoreService();
+    keyStoreService.remove().then((removed: boolean) => {
+      if (removed) {
+        this.resetLocalAfterForgetKey();
+        return;
+      }
+      this.saving = false;
+      promptAction.showDialog({
+        title: '旧密钥删除失败',
+        message: '系统安全存储中的加密密钥未能删除。为避免旧密钥残留，本地加密数据暂未清除，请重试。',
+        buttons: [
+          { text: '取消', color: '#666666' },
+          { text: '重试', color: '#E84026' }
+        ]
+      }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
+        if (dialogResult.index === 1) {
+          this.saving = true;
+          this.removeOldKeyThenReset();
+        } else {
+          promptAction.showToast({ message: '已取消，数据未删除' });
+        }
+      });
+    });
+  }
+
+  /** 确认旧密钥已从系统托管中删除后，才真正清除本地加密数据与相关密钥副本。 */
+  private resetLocalAfterForgetKey(): void {
+    AppStorage.setOrCreate<string>(SECRET_STORAGE_KEY, '');
+    // 旧密钥已丢弃，WebDAV 密码密文不可再解密：只清密码，保留地址等非密配置
+    this.settingsService.loadWebDavConfig('').then((webDavConfig: WebDavConfig) => {
+      webDavConfig.password = '';
+      this.settingsService.saveWebDavConfig(webDavConfig, '');
+    });
+    this.storageService.deleteLocalDatabase().then((resetResult: Result<void>) => {
+      const settings = this.settingsService.getSettings();
+      settings.encryptionInitialized = false;
+      this.settingsService.saveSettings(settings).then(() => {
+        this.saving = false;
+        if (!resetResult.success) {
+          const message: string = resetResult.error !== undefined ? resetResult.error.message : '清除本地数据失败';
+          promptAction.showToast({ message: message });
+          return;
+        }
+        this.enterSetupAfterReset();
+        promptAction.showToast({ message: '旧密钥与加密数据已清除，请设置新密钥' });
+      });
+    });
+  }
+
+  /** 重置后的本地状态：回到「设置密钥」界面，并清空全部残留输入。 */
+  private enterSetupAfterReset(): void {
+    this.keyLost = false;
+    this.isFirstSetup = true;
+    this.step = 0;
+    this.oldSecret = '';
+    this.newSecret = '';
+    this.encryptionSecret = '';
+    this.generatedSecret = '';
+    this.hasGenerated = false;
+    this.copied = false;
+    this.focusedField = '';
+    this.error = '';
   }
 
   @Builder
@@ -454,6 +634,18 @@ struct SecurityPage {
 
       this.primaryButton(this.verifyingOld ? '验证中...' : '验证旧密钥', !this.verifyingOld,
         () => this.onVerifyOldSecret())
+
+      // 忘记密钥：删除旧密钥与本地加密数据，转入「设置新密钥」
+      Button('忘记密钥？')
+        .width('100%')
+        .height(44)
+        .borderRadius(14)
+        .fontSize(13.5)
+        .fontWeight(FontWeight.Medium)
+        .backgroundColor(Color.Transparent)
+        .fontColor($r('app.color.danger'))
+        .enabled(!this.saving && !this.verifyingOld)
+        .onClick(() => this.onForgetKey())
     }
     .width('100%')
     .padding(18)

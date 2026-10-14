@@ -2,7 +2,6 @@ import { router } from '@kit.ArkUI';
 import { AppRoutes } from '../constants/AppConstants';
 import { AuroraBackground } from '../components/AuroraBackground';
 import {
-  avatarGradientColors,
   avatarShadow,
   frostedPillColor,
   glassGroupShadow,
@@ -10,7 +9,7 @@ import {
 } from '../theme/GlassStyle';
 
 /**
- * 设置页：模块化分组冰晶卡片 + 双色柔光微立体图标。
+ * 设置页：模块化分组冰晶卡片 + 单色图标（本项目禁止彩色图标）。
  */
 @Entry
 @Component
@@ -55,28 +54,29 @@ struct SettingsPage {
     .alignItems(VerticalAlign.Center)
   }
 
-  /** 双色柔光微立体图标：玻璃感衬底 + 渐变勾勒。 */
+  /** 单色图标：中性玻璃衬底 + 单色图标（不再使用彩色渐变衬底）。 */
   @Builder
-  glassIcon(icon: Resource, tintKey: string) {
+  glassIcon(icon: Resource) {
     Stack({ alignContent: Alignment.Center }) {
       Image(icon)
         .width(19)
         .height(19)
-        .fillColor(Color.White)
+        .fillColor($r('app.color.text_primary'))
     }
     .width(38)
     .height(38)
     .borderRadius(13)
-    .linearGradient({ angle: 145, colors: avatarGradientColors(tintKey) })
-    .border({ width: 1, color: $r('app.color.card_highlight'), style: BorderStyle.Solid })
+    .backgroundColor(frostedPillColor())
+    .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
+    .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
     .shadow(avatarShadow())
   }
 
   @Builder
-  settingItem(title: string, subtitle: string, route: string, icon: Resource, tintKey: string, isLast: boolean) {
+  settingItem(title: string, subtitle: string, route: string, icon: Resource, isLast: boolean) {
     Column() {
       Row({ space: 14 }) {
-        this.glassIcon(icon, tintKey)
+        this.glassIcon(icon)
 
         Column({ space: 3 }) {
           Text(title)
@@ -131,10 +131,11 @@ struct SettingsPage {
           Scroll() {
             Column() {
               Column() {
-                this.settingItem('安全与密钥', '应用锁、主密码与加密配置', AppRoutes.SECURITY, $r('app.media.ic_security'), '安全', false)
-                this.settingItem('WebDAV 同步', '云端数据备份与多端联动', AppRoutes.WEBDAV, $r('app.media.ic_sync'), 'WebDAV', false)
-                this.settingItem('隐私政策', '数据本地存储说明', AppRoutes.PRIVACY_POLICY, $r('app.media.ic_privacy'), '隐私', false)
-                this.settingItem('关于源时', 'V1.0.0 (HarmonyOS Native)', AppRoutes.ABOUT, $r('app.media.ic_about'), '关于', true)
+                this.settingItem('安全与密钥', '应用锁、主密码与加密配置', AppRoutes.SECURITY, $r('app.media.ic_security'), false)
+                this.settingItem('WebDAV 同步', '云端数据备份与多端联动', AppRoutes.WEBDAV, $r('app.media.ic_sync'), false)
+                this.settingItem('运行日志', '本机运行记录', AppRoutes.LOGS, $r('app.media.ic_log'), false)
+                this.settingItem('隐私政策', '数据本地存储说明', AppRoutes.PRIVACY_POLICY, $r('app.media.ic_privacy'), false)
+                this.settingItem('关于源时', 'V1.0.0', AppRoutes.ABOUT, $r('app.media.ic_about'), true)
               }
               .width('100%')
               .borderRadius(22)

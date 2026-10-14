@@ -34,7 +34,7 @@ function makeDatabase(deviceId: string, items: TotpItem[]): DatabaseModel {
 export default function storageServiceTest() {
   describe('StorageServiceTest', () => {
     beforeAll(() => {
-      const context = abilityDelegatorRegistry.getAbilityDelegator().getAppContext() as common.Context;
+      const context = abilityDelegatorRegistry.getAbilityDelegator().getAppContext() as common.UIAbilityContext;
       AppContextHolder.init(context);
     });
 
