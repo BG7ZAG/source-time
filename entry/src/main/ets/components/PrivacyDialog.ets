@@ -51,7 +51,7 @@ export struct PrivacyDialog {
           .fontSize(19)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.text_primary'))
-        Text('版本 2.0 · 本地优先')
+        Text('版本 2.1 · 本地优先')
           .fontSize(11.5)
           .fontColor($r('app.color.text_tertiary'))
       }

@@ -8,7 +8,7 @@ export const DATABASE_FILE_NAME: string = 'totp.db.enc';
 
 export const CURRENT_SCHEMA_VERSION: number = 1;
 
-export const CURRENT_PRIVACY_POLICY_VERSION: string = '2.0';
+export const CURRENT_PRIVACY_POLICY_VERSION: string = '2.1';
 
 /** 本地运行日志文件名（NDJSON，每行一条已脱敏日志）。 */
 export const LOG_FILE_NAME: string = 'sourcetime_logs.ndjson';
