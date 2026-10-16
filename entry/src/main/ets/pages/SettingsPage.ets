@@ -1,5 +1,6 @@
 import { router } from '@kit.ArkUI';
 import { AppRoutes } from '../constants/AppConstants';
+import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { AuroraBackground } from '../components/AuroraBackground';
 import {
   avatarShadow,
@@ -38,7 +39,7 @@ struct SettingsPage {
 
       Blank()
 
-      Text('设置')
+      Text($r('app.string.settings_title'))
         .fontSize(20)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary'))
@@ -73,7 +74,7 @@ struct SettingsPage {
   }
 
   @Builder
-  settingItem(title: string, subtitle: string, route: string, icon: Resource, isLast: boolean) {
+  settingItem(title: ResourceStr, subtitle: ResourceStr, route: string, icon: Resource, isLast: boolean) {
     Column() {
       Row({ space: 14 }) {
         this.glassIcon(icon)
@@ -131,11 +132,17 @@ struct SettingsPage {
           Scroll() {
             Column() {
               Column() {
-                this.settingItem('安全与密钥', '应用锁、主密码与加密配置', AppRoutes.SECURITY, $r('app.media.ic_security'), false)
-                this.settingItem('WebDAV 同步', '云端数据备份与多端联动', AppRoutes.WEBDAV, $r('app.media.ic_sync'), false)
-                this.settingItem('运行日志', '本机运行记录', AppRoutes.LOGS, $r('app.media.ic_log'), false)
-                this.settingItem('隐私政策', '数据本地存储说明', AppRoutes.PRIVACY_POLICY, $r('app.media.ic_privacy'), false)
-                this.settingItem('关于源时', 'V1.0.0', AppRoutes.ABOUT, $r('app.media.ic_about'), true)
+                this.settingItem($r('app.string.settings_item_security'),
+                  $r('app.string.settings_item_security_note'), AppRoutes.SECURITY, $r('app.media.ic_security'), false)
+                this.settingItem($r('app.string.settings_item_webdav'),
+                  $r('app.string.settings_item_webdav_note'), AppRoutes.WEBDAV, $r('app.media.ic_sync'), false)
+                this.settingItem($r('app.string.settings_item_logs'),
+                  $r('app.string.settings_item_logs_note'), AppRoutes.LOGS, $r('app.media.ic_log'), false)
+                this.settingItem($r('app.string.settings_item_privacy'),
+                  $r('app.string.settings_item_privacy_note'), AppRoutes.PRIVACY_POLICY, $r('app.media.ic_privacy'), false)
+                // 副标题为版本号，无需本地化
+                this.settingItem($r('app.string.settings_item_about'),
+                  'V1.0.0', AppRoutes.ABOUT, $r('app.media.ic_about'), true)
               }
               .width('100%')
               .borderRadius(22)
@@ -158,7 +165,7 @@ struct SettingsPage {
           .align(Alignment.TopStart)  // 内容不足一屏时不被 Scroll 垂直居中
 
           // 底部标语固定在页面底部（不再随列表漂浮），与居上的菜单形成上下呼应
-          Text('源时 · 本地离线优先，除 WebDAV 外不进行任何网络通信')
+          Text($r('app.string.settings_footer'))
             .fontSize(11)
             .textAlign(TextAlign.Center)
             .fontColor($r('app.color.text_tertiary'))
@@ -167,6 +174,7 @@ struct SettingsPage {
         }
         .width('100%')
         .height('100%')
+        .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
       }
     }
     .width('100%')

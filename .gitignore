@@ -33,3 +33,5 @@ memory/
 messages/
 prompt_attachment/
 skills/.workspace
+.team
+.workbuddy

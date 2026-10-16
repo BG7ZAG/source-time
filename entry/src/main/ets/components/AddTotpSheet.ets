@@ -3,6 +3,8 @@ import { AddTotpViewModel } from '../viewmodel/AddTotpViewModel';
 import { TotpAlgorithm } from '../model/TotpItem';
 import { OtpParser, ParsedOtpUri } from '../service/OtpParser';
 import { Result } from '../types/Result';
+import { DEFAULT_TOTP_PERIOD, MAX_TOTP_PERIOD, MIN_TOTP_PERIOD } from '../constants/AppConstants';
+import { OVERLAY_MAX_WIDTH } from '../constants/LayoutConstants';
 import {
   focusGlowShadow,
   glassCardShadow,
@@ -15,6 +17,25 @@ import {
 
 const SECRET_STORAGE_KEY: string = 'encryptionSecret';
 const ALGORITHM_OPTIONS: TotpAlgorithm[] = ['SHA1', 'SHA256', 'SHA512'];
+
+/**
+ * 字段标签参数。
+ *
+ * ArkUI 的 @Builder 按值传参时，状态变量变化不会引起其内部 UI 刷新；
+ * 只有传入对象字面量（按引用传参）才会随状态刷新。故参数收敛为一个对象。
+ */
+interface FieldLabelParams {
+  label: ResourceStr;
+  optional?: boolean;
+  showParsedBadge?: boolean;
+}
+
+/** 胶囊选项参数（同 FieldLabelParams：需对象字面量传参才能随状态刷新）。 */
+interface ChipOptionParams {
+  label: ResourceStr;
+  active: boolean;
+  onSelect: () => void;
+}
 
 /**
  * 内容区高度对齐：半模态为 FIT_CONTENT，两个分段的**总高度**必须一致，否则切换时弹窗会重新测量并跳动。
@@ -94,7 +115,7 @@ export struct AddTotpSheet {
         }
         // 仅在「首次解析」时提示，避免用户继续编辑链接时反复弹 toast
         if (!wasParsed) {
-          promptAction.showToast({ message: '已从链接解析配置' });
+          promptAction.showToast({ message: $r('app.string.add_uri_parsed_toast') });
         }
         return;
       }
@@ -116,58 +137,74 @@ export struct AddTotpSheet {
     return this.parsedFromUri ? this.parsedSecret : this.secret;
   }
 
-  private resolvePeriod(): number {
-    const parsed: number = Number.parseInt(this.periodText, 10);
-    return Number.isNaN(parsed) || parsed <= 0 ? 30 : parsed;
+  /** 空值按默认周期处理；返回 null 表示超出允许范围，由调用方提示用户，避免静默改写成错误参数。 */
+  private resolvePeriod(): number | null {
+    const text: string = this.periodText.trim();
+    if (text.length === 0) {
+      return DEFAULT_TOTP_PERIOD;
+    }
+    const parsed: number = Number.parseInt(text, 10);
+    if (Number.isNaN(parsed)) {
+      return DEFAULT_TOTP_PERIOD;
+    }
+    if (parsed < MIN_TOTP_PERIOD || parsed > MAX_TOTP_PERIOD) {
+      return null;
+    }
+    return parsed;
   }
 
   private onSave(): void {
+    const period: number | null = this.resolvePeriod();
+    if (period === null) {
+      promptAction.showToast({ message: $r('app.string.add_period_invalid') });
+      return;
+    }
     this.viewModel.issuer = this.issuer;
     this.viewModel.account = this.account;
     this.viewModel.secret = this.resolveSecret();
     this.viewModel.algorithm = this.algorithm;
     this.viewModel.digits = this.digits === 8 ? 8 : 6;
-    this.viewModel.period = this.resolvePeriod();
+    this.viewModel.period = period;
     this.saving = true;
     this.viewModel.save().then((result: Result<void>) => {
       this.saving = false;
       if (result.success) {
-        promptAction.showToast({ message: '已添加' });
+        promptAction.showToast({ message: $r('app.string.add_saved_toast') });
         this.onSaved();
       } else {
-        const message: string = result.error !== undefined ? result.error.message : '保存失败';
+        const message: ResourceStr = result.error !== undefined ? result.error.message : $r('app.string.add_save_failed');
         promptAction.showToast({ message: message });
       }
     });
   }
 
   /**
-   * 字段标签行。badge 用于在行尾追加状态徽标（例如密钥由 otpauth 链接解析而来）。
+   * 字段标签行。showParsedBadge 为 true 时在行尾追加「已解析」徽标。
    * 徽标与标签同处一行，不会额外增加表单高度，避免弹窗尺寸抖动。
    */
   @Builder
-  fieldLabel(label: string, optional: boolean, badge: string = '') {
+  fieldLabel(params: FieldLabelParams) {
     Row({ space: 6 }) {
-      Text(label)
+      Text(params.label)
         .fontSize(12.5)
         .fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.text_secondary'))
-      if (optional) {
-        Text('可选')
+      if (params.optional) {
+        Text($r('app.string.add_optional'))
           .fontSize(10)
           .fontColor($r('app.color.text_tertiary'))
           .padding({ left: 5, right: 5, top: 1, bottom: 1 })
           .borderRadius(6)
           .backgroundColor($r('app.color.scrim'))
       }
-      if (badge.length > 0) {
+      if (params.showParsedBadge) {
         Blank()
         Row({ space: 4 }) {
           Image($r('app.media.ic_check'))
             .width(11)
             .height(11)
             .fillColor($r('app.color.text_secondary'))
-          Text(badge)
+          Text($r('app.string.add_parsed_badge'))
             .fontSize(10)
             .fontColor($r('app.color.text_secondary'))
         }
@@ -182,7 +219,7 @@ export struct AddTotpSheet {
 
   /** Segment 胶囊分段按钮组：灰色矢量图标 + 文案。 */
   @Builder
-  segmentOption(icon: Resource, label: string, index: number) {
+  segmentOption(icon: Resource, label: ResourceStr, index: number) {
     Row({ space: 6 }) {
       Image(icon)
         .width(15)
@@ -206,24 +243,24 @@ export struct AddTotpSheet {
   }
 
   @Builder
-  chipOption(label: string, active: boolean, onSelect: () => void) {
-    Text(label)
+  chipOption(params: ChipOptionParams) {
+    Text(params.label)
       .fontSize(12.5)
-      .fontWeight(active ? FontWeight.Medium : FontWeight.Normal)
-      .fontColor(active ? $r('app.color.fab_foreground') : $r('app.color.text_primary'))
+      .fontWeight(params.active ? FontWeight.Medium : FontWeight.Normal)
+      .fontColor(params.active ? $r('app.color.fab_foreground') : $r('app.color.text_primary'))
       .textAlign(TextAlign.Center)
       .layoutWeight(1)
       .height(32)
       .borderRadius(11)
-      .backgroundColor(active ? $r('app.color.brand') : $r('app.color.field_background'))
+      .backgroundColor(params.active ? $r('app.color.brand') : $r('app.color.field_background'))
       .border({
         width: 1,
-        color: active ? $r('app.color.brand') : $r('app.color.field_border'),
+        color: params.active ? $r('app.color.brand') : $r('app.color.field_border'),
         style: BorderStyle.Solid
       })
-      .shadow(active ? glowButtonShadow() : noShadow())
+      .shadow(params.active ? glowButtonShadow() : noShadow())
       .animation({ duration: 200, curve: Curve.FastOutSlowIn })
-      .onClick(() => onSelect())
+      .onClick(() => params.onSelect())
   }
 
   /** 扫码态：整张卡片即点击区域（不额外放按钮），高度与手动录入态一致。 */
@@ -235,11 +272,11 @@ export struct AddTotpSheet {
         .height(38)
         .fillColor($r('app.color.text_secondary'))
         .opacity(0.85)
-      Text('点击开始扫描')
+      Text($r('app.string.add_scan_start'))
         .fontSize(14)
         .fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.text_primary'))
-      Text('将服务方提供的 otpauth 二维码放入取景框')
+      Text($r('app.string.add_scan_guide'))
         .fontSize(11.5)
         .fontColor($r('app.color.text_tertiary'))
         .textAlign(TextAlign.Center)
@@ -260,23 +297,23 @@ export struct AddTotpSheet {
   manualCard() {
     Column({ space: 12 }) {
         Column({ space: 6 }) {
-          this.fieldLabel('密钥 / otpauth 链接', false, this.parsedFromUri ? '已解析' : '')
-          SheetField({ value: $secret, placeholder: '粘贴 Base32 密钥或 otpauth:// 链接', numeric: false })
+          this.fieldLabel({ label: $r('app.string.add_secret_label'), showParsedBadge: this.parsedFromUri })
+          SheetField({ value: $secret, placeholder: $r('app.string.add_secret_placeholder'), numeric: false })
         }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
 
       Row({ space: 10 }) {
         Column({ space: 6 }) {
-          this.fieldLabel('发行方', true)
-          SheetField({ value: $issuer, placeholder: '如：Google', numeric: false })
+          this.fieldLabel({ label: $r('app.string.add_issuer_label'), optional: true })
+          SheetField({ value: $issuer, placeholder: $r('app.string.add_issuer_placeholder'), numeric: false })
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
 
         Column({ space: 6 }) {
-          this.fieldLabel('账号', true)
-          SheetField({ value: $account, placeholder: '如：user@xx.com', numeric: false })
+          this.fieldLabel({ label: $r('app.string.add_account_label'), optional: true })
+          SheetField({ value: $account, placeholder: $r('app.string.add_account_placeholder'), numeric: false })
         }
         .layoutWeight(1)
         .alignItems(HorizontalAlign.Start)
@@ -286,7 +323,7 @@ export struct AddTotpSheet {
       // 高级选项
       Column() {
         Row({ space: 6 }) {
-          Text('高级选项')
+          Text($r('app.string.add_advanced_options'))
             .fontSize(13)
             .fontColor($r('app.color.text_secondary'))
           Blank()
@@ -308,11 +345,15 @@ export struct AddTotpSheet {
             Divider().color($r('app.color.divider'))
 
             Column({ space: 6 }) {
-              this.fieldLabel('算法', false)
+              this.fieldLabel({ label: $r('app.string.add_algorithm_label') })
               Row({ space: 8 }) {
                 ForEach(ALGORITHM_OPTIONS, (value: TotpAlgorithm) => {
-                  this.chipOption(value, this.algorithm === value, () => {
-                    this.algorithm = value;
+                  this.chipOption({
+                    label: value,
+                    active: this.algorithm === value,
+                    onSelect: () => {
+                      this.algorithm = value;
+                    }
                   })
                 })
               }
@@ -322,13 +363,21 @@ export struct AddTotpSheet {
             .alignItems(HorizontalAlign.Start)
 
             Column({ space: 6 }) {
-              this.fieldLabel('位数', false)
+              this.fieldLabel({ label: $r('app.string.add_digits_label') })
               Row({ space: 8 }) {
-                this.chipOption('6 位', this.digits === 6, () => {
-                  this.digits = 6;
+                this.chipOption({
+                  label: $r('app.string.add_digits_option', 6),
+                  active: this.digits === 6,
+                  onSelect: () => {
+                    this.digits = 6;
+                  }
                 })
-                this.chipOption('8 位', this.digits === 8, () => {
-                  this.digits = 8;
+                this.chipOption({
+                  label: $r('app.string.add_digits_option', 8),
+                  active: this.digits === 8,
+                  onSelect: () => {
+                    this.digits = 8;
+                  }
                 })
               }
               .width('100%')
@@ -337,7 +386,7 @@ export struct AddTotpSheet {
             .alignItems(HorizontalAlign.Start)
 
             Column({ space: 6 }) {
-              this.fieldLabel('周期（秒）', false)
+              this.fieldLabel({ label: $r('app.string.add_period_label') })
               SheetField({ value: $periodText, placeholder: '30', numeric: true })
             }
             .width('100%')
@@ -366,11 +415,11 @@ export struct AddTotpSheet {
     Scroll() {
       Column({ space: 12 }) {
         Column({ space: 2 }) {
-          Text('添加动态口令')
+          Text($r('app.string.add_title'))
             .fontSize(18)
             .fontWeight(FontWeight.Bold)
             .fontColor($r('app.color.text_primary'))
-          Text('扫码或手动录入，数据仅加密保存在本机')
+          Text($r('app.string.add_subtitle'))
             .fontSize(11)
             .fontColor($r('app.color.text_tertiary'))
         }
@@ -379,8 +428,8 @@ export struct AddTotpSheet {
 
         // ---- Segment 分段选择器 ----
         Row({ space: 4 }) {
-          this.segmentOption($r('app.media.ic_scan'), '扫描二维码', 0)
-          this.segmentOption($r('app.media.ic_edit'), '手动输入', 1)
+          this.segmentOption($r('app.media.ic_scan'), $r('app.string.add_segment_scan'), 0)
+          this.segmentOption($r('app.media.ic_edit'), $r('app.string.add_segment_manual'), 1)
         }
         .width('100%')
         .padding(4)
@@ -395,7 +444,7 @@ export struct AddTotpSheet {
           this.manualCard()
 
           // 能量感主色渐变大按钮（Button 不支持 letterSpacing，字距靠文案空格表达）
-          Button(this.saving ? '保存中...' : '保 存 口 令')
+          Button(this.saving ? $r('app.string.add_saving') : $r('app.string.add_save_button'))
             .width('100%')
             .height(46)
             .borderRadius(23)
@@ -409,11 +458,14 @@ export struct AddTotpSheet {
         }
       }
       .width('100%')
+      .constraintSize({ maxWidth: OVERLAY_MAX_WIDTH })
       .padding({ left: 16, right: 16, top: 20, bottom: 20 })
       .alignItems(HorizontalAlign.Start)
     }
     .scrollBar(BarState.Off)
     .edgeEffect(EdgeEffect.Spring)
+    // 内容收窄后居中：宽屏（平板/2in1）下弹层不会被拉成整屏宽
+    .align(Alignment.Top)
   }
 }
 
@@ -428,7 +480,7 @@ export struct AddTotpSheet {
 @Component
 struct SheetField {
   @Link value: string;
-  @Prop placeholder: string = '';
+  @Prop placeholder: ResourceStr = '';
   @Prop numeric: boolean = false;
   @State focused: boolean = false;
 

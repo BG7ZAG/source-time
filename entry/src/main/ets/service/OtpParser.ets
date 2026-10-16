@@ -2,7 +2,7 @@ import { TotpAlgorithm } from '../model/TotpItem';
 import { isValidBase32, normalizeBase32 } from '../utils/Base32Utils';
 import { Result, ok, err } from '../types/Result';
 import { AppErrorCode } from '../types/Errors';
-import { DEFAULT_TOTP_ALGORITHM, DEFAULT_TOTP_DIGITS, DEFAULT_TOTP_PERIOD } from '../constants/AppConstants';
+import { DEFAULT_TOTP_ALGORITHM, DEFAULT_TOTP_DIGITS, DEFAULT_TOTP_PERIOD, MAX_TOTP_PERIOD } from '../constants/AppConstants';
 
 export interface ParsedOtpUri {
   issuer: string;
@@ -20,12 +20,12 @@ export class OtpParser {
   parseUri(uri: string): Result<ParsedOtpUri> {
     try {
       if (uri === undefined || uri === null || uri.trim().length === 0) {
-        return err<ParsedOtpUri>(AppErrorCode.INVALID_TOTP_URI, '二维码内容无效');
+        return err<ParsedOtpUri>(AppErrorCode.INVALID_TOTP_URI, $r('app.string.error_qr_content_invalid'));
       }
       const trimmed: string = uri.trim();
       const schemeMatch: RegExpMatchArray | null = trimmed.match(SCHEME_REGEX);
       if (schemeMatch === null) {
-        return err<ParsedOtpUri>(AppErrorCode.INVALID_TOTP_URI, '不是有效的 TOTP 二维码');
+        return err<ParsedOtpUri>(AppErrorCode.INVALID_TOTP_URI, $r('app.string.error_not_totp_qr'));
       }
       const labelAndQuery: string = trimmed.substring(schemeMatch[0].length);
       let label: string = labelAndQuery;
@@ -52,19 +52,31 @@ export class OtpParser {
       }
       const secretParam: string | undefined = params.get('secret');
       if (secretParam === undefined || !isValidBase32(secretParam)) {
-        return err<ParsedOtpUri>(AppErrorCode.INVALID_TOTP_SECRET, '密钥格式无效');
+        return err<ParsedOtpUri>(AppErrorCode.INVALID_TOTP_SECRET, $r('app.string.error_secret_format'));
+      }
+      const algorithm: TotpAlgorithm | null = this.parseAlgorithm(params.get('algorithm'));
+      if (algorithm === null) {
+        return err<ParsedOtpUri>(AppErrorCode.INVALID_TOTP_CONFIG, $r('app.string.error_qr_algorithm_unsupported'));
+      }
+      const digits: 6 | 8 | null = this.parseDigits(params.get('digits'));
+      if (digits === null) {
+        return err<ParsedOtpUri>(AppErrorCode.INVALID_TOTP_CONFIG, $r('app.string.error_qr_digits_unsupported'));
+      }
+      const period: number | null = this.parsePeriod(params.get('period'));
+      if (period === null) {
+        return err<ParsedOtpUri>(AppErrorCode.INVALID_TOTP_CONFIG, $r('app.string.error_qr_period_invalid'));
       }
       const parsed: ParsedOtpUri = {
         issuer: issuer,
         account: account,
         secret: normalizeBase32(secretParam),
-        algorithm: this.parseAlgorithm(params.get('algorithm')),
-        digits: this.parseDigits(params.get('digits')),
-        period: this.parsePeriod(params.get('period'))
+        algorithm: algorithm,
+        digits: digits,
+        period: period
       };
       return ok(parsed);
     } catch (error) {
-      return err<ParsedOtpUri>(AppErrorCode.INVALID_TOTP_URI, '二维码解析失败');
+      return err<ParsedOtpUri>(AppErrorCode.INVALID_TOTP_URI, $r('app.string.error_qr_parse_failed'));
     }
   }
 
@@ -81,9 +93,10 @@ export class OtpParser {
       }
       const eqIndex: number = pair.indexOf('=');
       if (eqIndex < 0) {
-        params.set(decodeURIComponent(pair), '');
+        // 参数名按 RFC 6238 生态的惯例大小写不敏感：Google/Microsoft 生成的 URI 里出现过 Secret=、Algorithm=
+        params.set(decodeURIComponent(pair).toLowerCase(), '');
       } else {
-        const key: string = decodeURIComponent(pair.substring(0, eqIndex));
+        const key: string = decodeURIComponent(pair.substring(0, eqIndex)).toLowerCase();
         const value: string = decodeURIComponent(pair.substring(eqIndex + 1));
         params.set(key, value);
       }
@@ -91,35 +104,43 @@ export class OtpParser {
     return params;
   }
 
-  private parseAlgorithm(value: string | undefined): TotpAlgorithm {
-    if (value === undefined) {
+  /**
+   * 返回 null 表示「二维码明确给了一个不支持的值」，由调用方报错。
+   * 过去这里静默回落到默认值：条目能录进去，但和服务器算出来的码永远对不上，
+   * 用户只会看到一次次验证失败，完全想不到是录入被悄悄改写过。
+   */
+  private parseAlgorithm(value: string | undefined): TotpAlgorithm | null {
+    if (value === undefined || value.trim().length === 0) {
       return DEFAULT_TOTP_ALGORITHM;
     }
-    const upper: string = value.toUpperCase();
+    const upper: string = value.trim().toUpperCase();
     if (VALID_ALGORITHMS.indexOf(upper) >= 0) {
       return upper as TotpAlgorithm;
     }
-    return DEFAULT_TOTP_ALGORITHM;
+    return null;
   }
 
-  private parseDigits(value: string | undefined): 6 | 8 {
-    if (value === undefined) {
+  private parseDigits(value: string | undefined): 6 | 8 | null {
+    if (value === undefined || value.trim().length === 0) {
       return DEFAULT_TOTP_DIGITS;
     }
-    const parsed: number = Number.parseInt(value, 10);
-    if (parsed === 6 || parsed === 8) {
-      return parsed;
+    const parsed: number = Number.parseInt(value.trim(), 10);
+    if (parsed === 6) {
+      return 6;
     }
-    return DEFAULT_TOTP_DIGITS;
+    if (parsed === 8) {
+      return 8;
+    }
+    return null;
   }
 
-  private parsePeriod(value: string | undefined): number {
-    if (value === undefined) {
+  private parsePeriod(value: string | undefined): number | null {
+    if (value === undefined || value.trim().length === 0) {
       return DEFAULT_TOTP_PERIOD;
     }
-    const parsed: number = Number.parseInt(value, 10);
-    if (Number.isNaN(parsed) || parsed <= 0) {
-      return DEFAULT_TOTP_PERIOD;
+    const parsed: number = Number.parseInt(value.trim(), 10);
+    if (Number.isNaN(parsed) || parsed <= 0 || parsed > MAX_TOTP_PERIOD) {
+      return null;
     }
     return parsed;
   }

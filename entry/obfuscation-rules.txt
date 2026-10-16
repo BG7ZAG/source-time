@@ -16,8 +16,37 @@
 # Keep options:
 # -keep-property-name: specifies property names that you want to keep
 # -keep-global-name: specifies names that you want to keep in the global scope
+# -keep-file-name: specifies file/folder names that must not be obfuscated
 
--enable-property-obfuscation
+# 属性名混淆会改写 DatabaseModel / TotpItem 序列化出来的 JSON 键名：旧密文与云端快照读不出来，
+# 且 ArkUI 的 @State/@StorageProp 依赖属性名，开启后行为无法逐一回归验证，故关闭。
+# -enable-property-obfuscation
+# 导出名混淆需要与属性名混淆配套才有意义，单独开启会切断跨模块引用，故关闭。
+# -enable-export-obfuscation
 -enable-toplevel-obfuscation
 -enable-filename-obfuscation
--enable-export-obfuscation
+
+# 路由是字符串路径跳转（AppRoutes.HOME === 'pages/HomePage'，常量值无法被静态识别），
+# Ability 的 srcEntry 由 module.json5 在运行时加载；这些名称一旦改名就是白屏/启动失败。
+-keep-file-name
+pages
+HomePage
+ScanPage
+SettingsPage
+SecurityPage
+WebDavPage
+PrivacyPolicyPage
+AboutPage
+LogPage
+EntryAbility
+EntryBackupAbility
+
+-keep-global-name
+HomePage
+ScanPage
+SettingsPage
+SecurityPage
+WebDavPage
+PrivacyPolicyPage
+AboutPage
+LogPage

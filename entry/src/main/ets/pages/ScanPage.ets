@@ -5,6 +5,8 @@ import { AddTotpViewModel } from '../viewmodel/AddTotpViewModel';
 import { ParsedOtpUri } from '../service/OtpParser';
 import { Result } from '../types/Result';
 import { AppRoutes } from '../constants/AppConstants';
+import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
+import { UiText } from '../utils/UiText';
 import { AuroraBackground } from '../components/AuroraBackground';
 import {
   avatarGradientColors,
@@ -50,7 +52,7 @@ struct ScanPage {
       const scanResult: scanBarcode.ScanResult = await scanBarcode.startScanForResult(context, options);
       const parsed: Result<ParsedOtpUri> = this.viewModel.parseUri(scanResult.originalValue);
       if (!parsed.success || parsed.data === undefined) {
-        const message: string = parsed.error !== undefined ? parsed.error.message : '二维码无效';
+        const message: ResourceStr = parsed.error !== undefined ? parsed.error.message : $r('app.string.scan_invalid_qr');
         promptAction.showToast({ message: message });
         router.back({ url: AppRoutes.HOME });
         return;
@@ -77,14 +79,14 @@ struct ScanPage {
         this.stage = 'DONE';
         router.back({ url: AppRoutes.HOME });
       } else {
-        const message: string = result.error !== undefined ? result.error.message : '保存失败';
+        const message: ResourceStr = result.error !== undefined ? result.error.message : $r('app.string.scan_save_failed');
         promptAction.showToast({ message: message });
       }
     });
   }
 
   @Builder
-  infoRow(icon: Resource, label: string, value: string, isLast: boolean) {
+  infoRow(icon: Resource, label: ResourceStr, value: string, isLast: boolean) {
     Column() {
       Row({ space: 12 }) {
         Stack({ alignContent: Alignment.Center }) {
@@ -128,11 +130,11 @@ struct ScanPage {
   confirmView() {
     Column({ space: 16 }) {
       Column({ space: 6 }) {
-        Text('确认验证码信息')
+        Text($r('app.string.scan_confirm_title'))
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.text_primary'))
-        Text('确认无误后保存到本地加密数据库')
+        Text($r('app.string.scan_confirm_subtitle'))
           .fontSize(12)
           .fontColor($r('app.color.text_tertiary'))
       }
@@ -152,7 +154,7 @@ struct ScanPage {
           })
 
         Stack({ alignContent: Alignment.Center }) {
-          Text(this.issuer.length > 0 ? this.issuer.substring(0, 1).toUpperCase() : '源')
+          Text(this.issuer.length > 0 ? this.issuer.substring(0, 1).toUpperCase() : $r('app.string.scan_avatar_fallback'))
             .fontSize(26)
             .fontWeight(FontWeight.Medium)
             .fontColor(Color.White)
@@ -172,11 +174,13 @@ struct ScanPage {
       .align(Alignment.Center)
 
       Column() {
-        this.infoRow($r('app.media.ic_tag'), '发行方', this.issuer, false)
-        this.infoRow($r('app.media.ic_person'), '账号', this.account, false)
-        this.infoRow($r('app.media.ic_privacy'), '算法', this.algorithm, false)
-        this.infoRow($r('app.media.ic_digits'), '位数', this.digits.toString() + ' 位', false)
-        this.infoRow($r('app.media.ic_timer'), '周期', this.period.toString() + ' 秒', true)
+        this.infoRow($r('app.media.ic_tag'), $r('app.string.scan_label_issuer'), this.issuer, false)
+        this.infoRow($r('app.media.ic_person'), $r('app.string.scan_label_account'), this.account, false)
+        this.infoRow($r('app.media.ic_privacy'), $r('app.string.scan_label_algorithm'), this.algorithm, false)
+        this.infoRow($r('app.media.ic_digits'), $r('app.string.scan_label_digits'),
+          UiText.of($r('app.string.scan_digits_value'), this.digits), false)
+        this.infoRow($r('app.media.ic_timer'), $r('app.string.scan_label_period'),
+          UiText.of($r('app.string.scan_period_value'), this.period), true)
       }
       .width('100%')
       .borderRadius(20)
@@ -186,7 +190,7 @@ struct ScanPage {
       .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
       .shadow(glassGroupShadow())
 
-      Button(this.saving ? '保存中...' : '保 存 口 令')
+      Button(this.saving ? $r('app.string.scan_saving') : $r('app.string.scan_save_button'))
         .width('100%')
         .height(50)
         .borderRadius(25)
@@ -236,12 +240,12 @@ struct ScanPage {
       .width(104)
       .height(104)
 
-      Text('正在扫描二维码')
+      Text($r('app.string.scan_scanning_title'))
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.text_primary'))
 
-      Text('请将 otpauth 二维码放入取景框')
+      Text($r('app.string.scan_scanning_hint'))
         .fontSize(12.5)
         .fontColor($r('app.color.text_tertiary'))
 
@@ -296,6 +300,7 @@ struct ScanPage {
         }
         .width('100%')
         .height('100%')
+        .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
         .justifyContent(FlexAlign.Center)
       }
     }

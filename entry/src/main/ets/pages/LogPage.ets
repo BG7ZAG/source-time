@@ -5,11 +5,24 @@ import { Logger } from '../utils/Logger';
 import { LogEntry, LogLevel } from '../model/LogEntry';
 import { Result } from '../types/Result';
 import { frostedPillColor, glassCardShadow, glassGroupShadow, glassPillShadow } from '../theme/GlassStyle';
+import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 
 const FILTER_ALL: string = 'ALL';
 const FILTER_INFO: string = 'INFO';
 const FILTER_WARN: string = 'WARN';
 const FILTER_ERROR: string = 'ERROR';
+
+/**
+ * 统计项参数。
+ *
+ * ArkUI 的 @Builder 按值传参时，状态变量变化不会引起其内部 UI 刷新；
+ * 只有传入对象字面量（按引用传参）才会随状态刷新。故参数收敛为一个对象。
+ */
+interface StatItemParams {
+  label: ResourceStr;
+  value: string;
+  color: Resource;
+}
 
 /**
  * 运行日志页：展示本机日志（含历史），支持按级别筛选、复制、清空。
@@ -108,27 +121,26 @@ struct LogPage {
   private onCopyAll(): void {
     const text: string = Logger.toDisplayText();
     if (text.length === 0) {
-      promptAction.showToast({ message: '暂无可复制的日志' });
+      promptAction.showToast({ message: $r('app.string.log_nothing_to_copy') });
       return;
     }
     this.clipboardService.copyText(text).then((result: Result<void>) => {
       if (!result.success || result.error !== undefined) {
-        const message: string = result.error !== undefined ? result.error.message : '复制失败';
+        const message: ResourceStr = result.error !== undefined ? result.error.message : $r('app.string.log_copy_failed');
         promptAction.showToast({ message: message });
         return;
       }
-      promptAction.showToast({ message: '日志已复制到剪贴板' });
+      promptAction.showToast({ message: $r('app.string.log_copied') });
     });
   }
 
   private onClear(): void {
     promptAction.showDialog({
-      title: '清空运行日志？',
-      message: '将删除本机保存的全部日志记录，删除后无法找回。\n\n'
-        + '此操作不影响你的口令数据与 WebDAV 同步配置。',
+      title: $r('app.string.log_clear_dialog_title'),
+      message: $r('app.string.log_clear_dialog_message'),
       buttons: [
-        { text: '取消', color: '#666666' },
-        { text: '确认清空', color: '#E84026' }
+        { text: $r('app.string.common_cancel'), color: '#666666' },
+        { text: $r('app.string.log_clear_confirm'), color: '#E84026' }
       ]
     }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
       if (dialogResult.index !== 1) {
@@ -136,7 +148,7 @@ struct LogPage {
       }
       Logger.clearLogs();
       this.reload();
-      promptAction.showToast({ message: '日志已清空' });
+      promptAction.showToast({ message: $r('app.string.log_cleared') });
     });
   }
 
@@ -160,7 +172,7 @@ struct LogPage {
 
       Blank()
 
-      Text('运行日志')
+      Text($r('app.string.log_title'))
         .fontSize(20)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary'))
@@ -176,13 +188,13 @@ struct LogPage {
   }
 
   @Builder
-  statItem(label: string, value: string, color: Resource) {
+  statItem(params: StatItemParams) {
     Column({ space: 4 }) {
-      Text(value)
+      Text(params.value)
         .fontSize(19)
         .fontWeight(FontWeight.Bold)
-        .fontColor(color)
-      Text(label)
+        .fontColor(params.color)
+      Text(params.label)
         .fontSize(11)
         .fontColor($r('app.color.text_tertiary'))
     }
@@ -191,7 +203,7 @@ struct LogPage {
   }
 
   @Builder
-  filterChip(label: string, value: string) {
+  filterChip(label: ResourceStr, value: string) {
     Text(label)
       .fontSize(12.5)
       .fontWeight(this.filter === value ? FontWeight.Medium : FontWeight.Normal)
@@ -211,7 +223,7 @@ struct LogPage {
 
   /** 动作按钮：用 id 分发而非传入回调，避免 @Builder 参数携带函数带来的响应式不确定性。 */
   @Builder
-  actionButton(label: string, danger: boolean, action: string) {
+  actionButton(label: ResourceStr, danger: boolean, action: string) {
     Text(label)
       .fontSize(12.5)
       .fontWeight(FontWeight.Medium)
@@ -288,10 +300,10 @@ struct LogPage {
         .width(30)
         .height(30)
         .fillColor($r('app.color.text_tertiary'))
-      Text('暂无日志')
+      Text($r('app.string.log_empty_title'))
         .fontSize(14)
         .fontColor($r('app.color.text_secondary'))
-      Text('应用的加密、同步、密钥等运行记录会显示在这里')
+      Text($r('app.string.log_empty_hint'))
         .fontSize(11.5)
         .textAlign(TextAlign.Center)
         .fontColor($r('app.color.text_tertiary'))
@@ -327,31 +339,31 @@ struct LogPage {
             // 统计 + 说明卡片
             Column({ space: 12 }) {
               Row() {
-                this.statItem('总记录', String(this.total), $r('app.color.text_primary'))
-                this.statItem('警告', String(this.warnCount), $r('app.color.warning'))
-                this.statItem('错误', String(this.errorCount), $r('app.color.danger'))
+                this.statItem({ label: $r('app.string.log_stat_total'), value: String(this.total), color: $r('app.color.text_primary') })
+                this.statItem({ label: $r('app.string.log_stat_warn'), value: String(this.warnCount), color: $r('app.color.warning') })
+                this.statItem({ label: $r('app.string.log_stat_error'), value: String(this.errorCount), color: $r('app.color.danger') })
               }
               .width('100%')
 
-              Text('日志仅保存在本机，不会上传；密钥、口令、令牌等敏感信息在保存与展示前已脱敏。')
+              Text($r('app.string.log_privacy_note'))
                 .fontSize(11)
                 .lineHeight(16)
                 .fontColor($r('app.color.text_tertiary'))
                 .width('100%')
 
               Row({ space: 10 }) {
-                this.filterChip('全部', FILTER_ALL)
-                this.filterChip('信息', FILTER_INFO)
-                this.filterChip('警告', FILTER_WARN)
-                this.filterChip('错误', FILTER_ERROR)
+                this.filterChip($r('app.string.log_filter_all'), FILTER_ALL)
+                this.filterChip($r('app.string.log_filter_info'), FILTER_INFO)
+                this.filterChip($r('app.string.log_filter_warn'), FILTER_WARN)
+                this.filterChip($r('app.string.log_filter_error'), FILTER_ERROR)
               }
               .width('100%')
 
               Row({ space: 10 }) {
-                this.actionButton('刷新', false, 'refresh')
-                this.actionButton('复制全部', false, 'copy')
+                this.actionButton($r('app.string.common_refresh'), false, 'refresh')
+                this.actionButton($r('app.string.log_copy_all'), false, 'copy')
                 Blank()
-                this.actionButton('清空', true, 'clear')
+                this.actionButton($r('app.string.common_clear'), true, 'clear')
               }
               .width('100%')
             }
@@ -392,6 +404,7 @@ struct LogPage {
         }
         .width('100%')
         .height('100%')
+        .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
       }
     }
     .width('100%')

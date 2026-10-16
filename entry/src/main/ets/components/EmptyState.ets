@@ -12,8 +12,8 @@ import {
  */
 @Component
 export struct EmptyState {
-  @Prop message: string = '暂无验证码';
-  @Prop hint: string = '点击右下角悬浮球添加';
+  @Prop message: ResourceStr = $r('app.string.empty_message');
+  @Prop hint: ResourceStr = $r('app.string.empty_hint');
   @State breathing: boolean = false;
   /** 点击中央加号触发新增，与右下角悬浮球同一动作。 */
   onTap: () => void = () => {};

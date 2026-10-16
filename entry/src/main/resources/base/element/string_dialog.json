@@ -1,0 +1,60 @@
+{
+  "string": [
+    {
+      "name": "dialog_privacy_title",
+      "value": "源时（SourceTime）隐私政策"
+    },
+    {
+      "name": "dialog_privacy_version",
+      "value": "版本 %s · 本地优先"
+    },
+    {
+      "name": "dialog_section_collection_title",
+      "value": "一、数据收集与使用"
+    },
+    {
+      "name": "dialog_section_collection_body",
+      "value": "源时不收集个人身份信息，不要求注册或登录。你输入的 TOTP 配置、加密密钥与 WebDAV 配置仅存储在设备本地；应用不参与系统备份，除你主动启用的 WebDAV 同步外，不会发送到任何外部服务器。"
+    },
+    {
+      "name": "dialog_section_storage_title",
+      "value": "二、数据存储与安全"
+    },
+    {
+      "name": "dialog_section_storage_body",
+      "value": "所有 TOTP 数据经 AES-256-GCM 加密后存储，加密密钥通过 PBKDF2-HMAC-SHA256（10 万次迭代）派生并托管于系统安全存储，设备解锁后可用。可选的应用锁只保存 PIN 的派生校验值，不保存 PIN 明文。应用会在本地留存运行日志（不上传），并在写盘与打印前按脱敏规则尽力避免记录密钥、密码等敏感信息。"
+    },
+    {
+      "name": "dialog_section_sharing_title",
+      "value": "三、数据共享与传输"
+    },
+    {
+      "name": "dialog_section_sharing_body",
+      "value": "源时不会主动向开发者或第三方上传数据。启用 WebDAV 后，仅加密文件会上传到你自己指定的服务器，服务端只看到密文；默认只允许 https 地址，开发者不运营任何接收服务器。"
+    },
+    {
+      "name": "dialog_section_retention_title",
+      "value": "四、数据留存与删除"
+    },
+    {
+      "name": "dialog_section_retention_body",
+      "value": "你可以随时删除 TOTP 数据、修改加密密钥、启用或停用 WebDAV 同步。删除口令数据不可恢复；应用不参与系统备份，卸载或清除应用数据即彻底清除本地数据。"
+    },
+    {
+      "name": "dialog_section_notice_title",
+      "value": "五、重要提示"
+    },
+    {
+      "name": "dialog_section_notice_body",
+      "value": "请妥善保管加密密钥。源时不提供服务器端密钥恢复能力，丢失密钥后已加密数据将无法解密。"
+    },
+    {
+      "name": "dialog_decline",
+      "value": "不同意"
+    },
+    {
+      "name": "dialog_agree",
+      "value": "同意并继续"
+    }
+  ]
+}

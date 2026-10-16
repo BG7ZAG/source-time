@@ -5,7 +5,8 @@
 export const REMOTE_BACKUP_PREFIX: string = 'sourcetime-';
 export const REMOTE_BACKUP_SUFFIX: string = '.enc';
 
-export const SYNC_MAX_RETRY: number = 2;
+/** 快照文件名的完整形态：sourcetime-<8 位日期>-<6 位时间>.enc */
+const BACKUP_NAME_PATTERN: RegExp = /^sourcetime-\d{8}-\d{6}\.enc$/;
 
 /** 云端保留的时间戳快照份数上限（开启「自动清理旧备份」时生效）。 */
 export const REMOTE_BACKUP_KEEP_COUNT: number = 10;
@@ -22,9 +23,14 @@ export function buildBackupFileName(timestamp: number): string {
     + pad2(date.getSeconds()) + REMOTE_BACKUP_SUFFIX;
 }
 
-/** 是否为本应用生成的时间戳快照（严格前缀+后缀，不匹配第三方文件，避免误列/误删）。 */
+/**
+ * 是否为本应用生成的时间戳快照。
+ *
+ * 必须整名匹配：远端目录可能与他人共用，且文件名会原样进入 GET/DELETE 的 URL，
+ * 只校验前后缀会让云端可控的路径（含 / 与 ..）或第三方文件被列出甚至删除。
+ */
 export function isBackupFileName(name: string): boolean {
-  return name.startsWith(REMOTE_BACKUP_PREFIX) && name.endsWith(REMOTE_BACKUP_SUFFIX);
+  return BACKUP_NAME_PATTERN.test(name);
 }
 
 /** 从快照文件名解析时间戳（毫秒）；非快照名或格式不符返回 0。 */

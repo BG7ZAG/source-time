@@ -1,0 +1,52 @@
+{
+  "string": [
+    {
+      "name": "about_title",
+      "value": "关于源时"
+    },
+    {
+      "name": "about_app_name",
+      "value": "源时"
+    },
+    {
+      "name": "about_tagline",
+      "value": "开源鸿蒙 TOTP 动态口令工具"
+    },
+    {
+      "name": "about_version",
+      "value": "V1.0.0 · HarmonyOS Native"
+    },
+    {
+      "name": "about_license",
+      "value": "开源协议"
+    },
+    {
+      "name": "about_license_value",
+      "value": "MIT License"
+    },
+    {
+      "name": "about_repo",
+      "value": "项目仓库"
+    },
+    {
+      "name": "about_thanks",
+      "value": "致谢"
+    },
+    {
+      "name": "about_thanks_value",
+      "value": "感谢每一位使用者"
+    },
+    {
+      "name": "about_usage_title",
+      "value": "使用说明"
+    },
+    {
+      "name": "about_usage_body",
+      "value": "动态口令由「密钥 + 当前时间」计算，要求本机时间与服务器一致。若各站点口令持续校验失败，请在系统设置中开启日期与时间的自动同步后重试。"
+    },
+    {
+      "name": "about_footer",
+      "value": "本地离线优先 · WebDAV 端到端加密同步"
+    }
+  ]
+}

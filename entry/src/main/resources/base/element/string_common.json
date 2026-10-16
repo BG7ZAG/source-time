@@ -1,0 +1,32 @@
+{
+  "string": [
+    {
+      "name": "common_cancel",
+      "value": "取消"
+    },
+    {
+      "name": "common_retry",
+      "value": "重试"
+    },
+    {
+      "name": "common_generate",
+      "value": "生成"
+    },
+    {
+      "name": "common_copy",
+      "value": "复制"
+    },
+    {
+      "name": "common_delete",
+      "value": "删除"
+    },
+    {
+      "name": "common_clear",
+      "value": "清空"
+    },
+    {
+      "name": "common_refresh",
+      "value": "刷新"
+    }
+  ]
+}

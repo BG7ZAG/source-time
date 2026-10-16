@@ -1,5 +1,6 @@
 import { RemoteBackup } from '../model/RemoteBackup';
 import { parseBackupTimestamp } from '../constants/SyncConstants';
+import { DIALOG_MAX_WIDTH } from '../constants/LayoutConstants';
 import { glassCardShadow } from '../theme/GlassStyle';
 
 function pad2(value: number): string {
@@ -12,9 +13,9 @@ function formatStamp(ms: number): string {
     + ' ' + pad2(date.getHours()) + ':' + pad2(date.getMinutes()) + ':' + pad2(date.getSeconds());
 }
 
-function formatSize(bytes: number): string {
+function formatSize(bytes: number): ResourceStr {
   if (bytes <= 0) {
-    return '大小未知';
+    return $r('app.string.webdav_size_unknown');
   }
   if (bytes < 1024) {
     return bytes.toString() + ' B';
@@ -65,20 +66,20 @@ export struct BackupPickerDialog {
     return index === 0;
   }
 
-  private displayTime(item: RemoteBackup): string {
+  private displayTime(item: RemoteBackup): ResourceStr {
     let ms: number = item.lastModified;
     if (ms <= 0) {
       ms = parseBackupTimestamp(item.name);
     }
     if (ms <= 0) {
-      return '时间未知';
+      return $r('app.string.webdav_time_unknown');
     }
     return formatStamp(ms);
   }
 
   /** 列表标题：仅最新一条显示「最新」，其余直接显示时间。 */
-  private displayTitle(item: RemoteBackup, index: number): string {
-    return this.isLatest(index) ? '最新' : this.displayTime(item);
+  private displayTitle(item: RemoteBackup, index: number): ResourceStr {
+    return this.isLatest(index) ? $r('app.string.webdav_latest') : this.displayTime(item);
   }
 
   @Builder
@@ -139,11 +140,11 @@ export struct BackupPickerDialog {
         .backgroundColor($r('app.color.divider'))
 
       Column({ space: 4 }) {
-        Text('选择要恢复的备份')
+        Text($r('app.string.webdav_picker_title'))
           .fontSize(19)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.text_primary'))
-        Text('共 ' + this.backups.length + ' 份 · 默认最新；恢复将覆盖本机数据')
+        Text($r('app.string.webdav_picker_subtitle', this.backups.length))
           .fontSize(11.5)
           .fontColor($r('app.color.text_tertiary'))
       }
@@ -163,7 +164,7 @@ export struct BackupPickerDialog {
       .edgeEffect(EdgeEffect.Spring)
 
       Row({ space: 12 }) {
-        Button('取消')
+        Button($r('app.string.common_cancel'))
           .layoutWeight(1)
           .height(46)
           .borderRadius(23)
@@ -172,7 +173,7 @@ export struct BackupPickerDialog {
           .fontColor($r('app.color.text_secondary'))
           .onClick(() => this.onCancel())
 
-        Button('恢复此备份')
+        Button($r('app.string.webdav_restore_button'))
           .layoutWeight(1)
           .height(46)
           .borderRadius(23)
@@ -190,6 +191,7 @@ export struct BackupPickerDialog {
       .width('100%')
     }
     .width('100%')
+    .constraintSize({ maxWidth: DIALOG_MAX_WIDTH })
     .padding({ left: 18, right: 18, top: 14, bottom: 22 })
     .borderRadius(28)
     .backgroundColor($r('app.color.card_background'))

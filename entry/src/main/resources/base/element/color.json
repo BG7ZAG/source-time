@@ -21,24 +21,8 @@
       "value": "#FBFCFF"
     },
     {
-      "name": "aurora_primary",
-      "value": "#8FC0FF"
-    },
-    {
-      "name": "aurora_secondary",
-      "value": "#A9E4FF"
-    },
-    {
-      "name": "aurora_tertiary",
-      "value": "#C6BFFF"
-    },
-    {
       "name": "card_background",
       "value": "#8CFFFFFF"
-    },
-    {
-      "name": "card_background_pressed",
-      "value": "#B8FFFFFF"
     },
     {
       "name": "card_border",
@@ -69,10 +53,6 @@
       "value": "#1F0A59F7"
     },
     {
-      "name": "track_background",
-      "value": "#1F0A59F7"
-    },
-    {
       "name": "text_primary",
       "value": "#E6000000"
     },
@@ -93,16 +73,8 @@
       "value": "#3892FF"
     },
     {
-      "name": "brand_tertiary",
-      "value": "#64B5F6"
-    },
-    {
       "name": "brand_container",
       "value": "#D9E6FF"
-    },
-    {
-      "name": "brand_container_strong",
-      "value": "#B8D4FF"
     },
     {
       "name": "brand_on_container",
@@ -129,18 +101,6 @@
       "value": "#14000000"
     },
     {
-      "name": "particle_primary",
-      "value": "#0A59F7"
-    },
-    {
-      "name": "particle_secondary",
-      "value": "#64B5F6"
-    },
-    {
-      "name": "particle_accent",
-      "value": "#E3F2FD"
-    },
-    {
       "name": "glow",
       "value": "#00000000"
     },
@@ -155,10 +115,6 @@
     {
       "name": "pill_border",
       "value": "#99FFFFFF"
-    },
-    {
-      "name": "status_idle",
-      "value": "#8C8C93"
     },
     {
       "name": "status_active",

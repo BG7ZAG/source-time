@@ -40,7 +40,8 @@ export class HomeViewModel {
       const result: Result<DatabaseModel> = await this.repository.load(this.encryptionSecret);
       if (!result.success || result.data === undefined) {
         const code: AppErrorCode = result.error !== undefined ? result.error.code : AppErrorCode.STORAGE_READ_FAILED;
-        const message: string = result.error !== undefined ? result.error.message : '加载数据失败';
+        const message: ResourceStr =
+          result.error !== undefined ? result.error.message : $r('app.string.error_load_data_failed');
         return err<void>(code, message);
       }
       this.items = result.data.items;
@@ -55,7 +56,8 @@ export class HomeViewModel {
     if (db === null) {
       const loadResult: Result<DatabaseModel> = await this.repository.load(this.encryptionSecret);
       if (!loadResult.success || loadResult.data === undefined) {
-        const message: string = loadResult.error !== undefined ? loadResult.error.message : '数据加载失败';
+        const message: ResourceStr =
+          loadResult.error !== undefined ? loadResult.error.message : $r('app.string.error_data_load_failed');
         return err<void>(AppErrorCode.STORAGE_WRITE_FAILED, message);
       }
       db = loadResult.data;
@@ -90,7 +92,8 @@ export class HomeViewModel {
   async resetLocalData(): Promise<Result<void>> {
     const result: Result<DatabaseModel> = await this.repository.quarantineUnreadable();
     if (!result.success) {
-      const message: string = result.error !== undefined ? result.error.message : '清除本地数据失败';
+      const message: ResourceStr =
+        result.error !== undefined ? result.error.message : $r('app.string.error_clear_local_data_failed');
       return err<void>(AppErrorCode.STORAGE_WRITE_FAILED, message);
     }
     this.items = [];
@@ -100,9 +103,9 @@ export class HomeViewModel {
   async copyCode(item: TotpItem): Promise<Result<void>> {
     const code: string = this.generateCode(item);
     if (code.length === 0) {
-      return err<void>(AppErrorCode.INVALID_TOTP_CONFIG, '无法生成验证码');
+      return err<void>(AppErrorCode.INVALID_TOTP_CONFIG, $r('app.string.error_cannot_generate_code'));
     }
-    return this.clipboardService.copyText(code);
+    return this.clipboardService.copySensitiveText(code);
   }
 
   generateCode(item: TotpItem): string {

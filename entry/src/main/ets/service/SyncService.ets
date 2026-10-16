@@ -8,6 +8,7 @@ import { SettingsService } from './SettingsService';
 import { Result, ok, err } from '../types/Result';
 import { AppErrorCode } from '../types/Errors';
 import { Logger } from '../utils/Logger';
+import { UiText } from '../utils/UiText';
 import { nowMilliseconds } from '../utils/TimeUtils';
 import { REMOTE_BACKUP_KEEP_COUNT, buildBackupFileName, isBackupFileName }
   from '../constants/SyncConstants';
@@ -68,7 +69,7 @@ export class SyncService {
    */
   async push(): Promise<Result<void>> {
     if (!this.isConfigured()) {
-      return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, '未启用 WebDAV 同步');
+      return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, $r('app.string.error_webdav_sync_not_enabled'));
     }
     if (this.pushing) {
       this.dirty = true;
@@ -101,12 +102,14 @@ export class SyncService {
    */
   async listBackups(): Promise<Result<RemoteBackup[]>> {
     if (this.config === null || !this.config.enabled) {
-      return err<RemoteBackup[]>(AppErrorCode.WEBDAV_CONNECTION_FAILED, '未启用 WebDAV 同步');
+      return err<RemoteBackup[]>(AppErrorCode.WEBDAV_CONNECTION_FAILED, $r('app.string.error_webdav_sync_not_enabled'));
     }
     const listResult: Result<RemoteBackup[]> = await this.webDavService.list(this.config);
     if (!listResult.success || listResult.data === undefined) {
-      const message: string = listResult.error !== undefined ? listResult.error.message : '获取备份列表失败';
-      Logger.error('Sync list backups failed: ' + message + ' | ' + this.describeTarget());
+      const message: ResourceStr =
+        listResult.error !== undefined ? listResult.error.message : $r('app.string.error_backup_list_failed');
+      const logText: string = typeof message === 'string' ? message : UiText.of(message);
+      Logger.error('Sync list backups failed: ' + logText + ' | ' + this.describeTarget());
       return err<RemoteBackup[]>(AppErrorCode.WEBDAV_DOWNLOAD_FAILED, message);
     }
     Logger.info('Sync list backups ok: files=' + listResult.data.length + ' | ' + this.describeTarget());
@@ -130,7 +133,7 @@ export class SyncService {
     const listResult: Result<RemoteBackup[]> = await this.listBackups();
     if (!listResult.success || listResult.data === undefined) {
       return err<void>(AppErrorCode.WEBDAV_DOWNLOAD_FAILED,
-        listResult.error !== undefined ? listResult.error.message : '获取备份列表失败');
+        listResult.error !== undefined ? listResult.error.message : $r('app.string.error_backup_list_failed'));
     }
     if (listResult.data.length === 0) {
       Logger.info('Sync auto pull skipped: no remote backup | ' + this.describeTarget());
@@ -145,7 +148,7 @@ export class SyncService {
    */
   private async pullNamed(fileName: string, protectRollback: boolean): Promise<Result<void>> {
     if (this.config === null || !this.config.enabled) {
-      return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, '未启用 WebDAV 同步');
+      return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, $r('app.string.error_webdav_sync_not_enabled'));
     }
     this.state = { status: SyncStatus.PULLING, lastSyncAt: this.state.lastSyncAt, message: '' };
     const target: string = this.describeTarget() + ' file=' + fileName;
@@ -153,8 +156,10 @@ export class SyncService {
     Logger.info('Sync pull start | ' + target);
     const downloadResult: Result<Uint8Array> = await this.webDavService.download(this.config, fileName);
     if (!downloadResult.success || downloadResult.data === undefined) {
-      const message: string = downloadResult.error !== undefined ? downloadResult.error.message : '拉取失败';
-      Logger.error('Sync pull download failed after ' + (nowMilliseconds() - startedAt) + 'ms: ' + message
+      const message: ResourceStr =
+        downloadResult.error !== undefined ? downloadResult.error.message : $r('app.string.error_pull_failed');
+      const logText: string = typeof message === 'string' ? message : UiText.of(message);
+      Logger.error('Sync pull download failed after ' + (nowMilliseconds() - startedAt) + 'ms: ' + logText
         + ' | ' + target);
       this.state = { status: SyncStatus.FAILED, lastSyncAt: this.state.lastSyncAt, message: message };
       return err<void>(AppErrorCode.WEBDAV_DOWNLOAD_FAILED, message);
@@ -163,8 +168,10 @@ export class SyncService {
     const decodeResult: Result<DatabaseModel> =
       await this.storageService.decodeEncryptedDatabase(downloaded, this.encryptionSecret);
     if (!decodeResult.success || decodeResult.data === undefined) {
-      const message: string = decodeResult.error !== undefined ? decodeResult.error.message : '远程数据无效';
-      Logger.error('Sync pull decode failed: ' + message + ' downloadedBytes=' + downloaded.length
+      const message: ResourceStr =
+        decodeResult.error !== undefined ? decodeResult.error.message : $r('app.string.error_remote_data_invalid');
+      const logText: string = typeof message === 'string' ? message : UiText.of(message);
+      Logger.error('Sync pull decode failed: ' + logText + ' downloadedBytes=' + downloaded.length
         + ' | ' + target);
       this.state = { status: SyncStatus.FAILED, lastSyncAt: this.state.lastSyncAt, message: message };
       return err<void>(AppErrorCode.WEBDAV_INVALID_REMOTE_FILE, message);
@@ -172,7 +179,7 @@ export class SyncService {
     const remoteDb: DatabaseModel = decodeResult.data;
     const localDb: DatabaseModel | null = this.storageService.getDatabase();
     if (protectRollback && localDb !== null && remoteDb.revision < localDb.revision) {
-      const conflictMessage: string = '远程数据不是最新版本';
+      const conflictMessage: ResourceStr = $r('app.string.error_remote_not_latest');
       Logger.warn('Sync pull conflict: remoteRevision=' + remoteDb.revision + ' localRevision=' + localDb.revision
         + ' | ' + target);
       this.state = { status: SyncStatus.FAILED, lastSyncAt: this.state.lastSyncAt, message: conflictMessage };
@@ -180,7 +187,8 @@ export class SyncService {
     }
     const replaceResult: Result<void> = await this.storageService.replaceDatabase(remoteDb, this.encryptionSecret);
     if (!replaceResult.success) {
-      const message: string = replaceResult.error !== undefined ? replaceResult.error.message : '本地替换失败';
+      const message: ResourceStr =
+        replaceResult.error !== undefined ? replaceResult.error.message : $r('app.string.error_local_replace_failed');
       this.state = { status: SyncStatus.FAILED, lastSyncAt: this.state.lastSyncAt, message: message };
       return replaceResult;
     }
@@ -210,8 +218,12 @@ export class SyncService {
 
   private async pushInternal(fileName: string): Promise<Result<void>> {
     if (this.config === null) {
-      this.state = { status: SyncStatus.FAILED, lastSyncAt: this.state.lastSyncAt, message: '未配置 WebDAV' };
-      return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, '未配置 WebDAV');
+      this.state = {
+        status: SyncStatus.FAILED,
+        lastSyncAt: this.state.lastSyncAt,
+        message: $r('app.string.error_webdav_not_configured')
+      };
+      return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, $r('app.string.error_webdav_not_configured'));
     }
     this.state = { status: SyncStatus.PUSHING, lastSyncAt: this.state.lastSyncAt, message: '' };
     const config: WebDavConfig = this.config;
@@ -220,7 +232,7 @@ export class SyncService {
     // 本地还没有加密数据文件（首次安装、刚「忘记密钥」清库、或尚未添加任何口令）：
     // 必须明确告知「无可推送内容」。绝不推空库，否则会覆盖云端已有的备份。
     if (!this.storageService.isInitialized()) {
-      const notReady: string = '本地暂无数据可推送（尚未添加口令）。如需从云端恢复，请改用「拉取」';
+      const notReady: ResourceStr = $r('app.string.error_no_local_data_to_push');
       Logger.warn('Sync push skipped: local database not initialized | ' + target);
       this.state = { status: SyncStatus.FAILED, lastSyncAt: this.state.lastSyncAt, message: notReady };
       return err<void>(AppErrorCode.STORAGE_READ_FAILED, notReady);
@@ -228,14 +240,16 @@ export class SyncService {
     const bytesResult: Result<Uint8Array> = this.storageService.readEncryptedFile();
     if (!bytesResult.success || bytesResult.data === undefined) {
       // 透传底层真实原因（「本地尚无数据」「读取数据失败」等），不再统一改写成模糊的「读取本地数据失败」
-      const readError: string = bytesResult.error !== undefined ? bytesResult.error.message : '读取本地数据失败';
-      Logger.error('Sync push read failed: ' + readError + ' | ' + target);
+      const readError: ResourceStr =
+        bytesResult.error !== undefined ? bytesResult.error.message : $r('app.string.error_read_local_data_failed');
+      const logText: string = typeof readError === 'string' ? readError : UiText.of(readError);
+      Logger.error('Sync push read failed: ' + logText + ' | ' + target);
       this.state = { status: SyncStatus.FAILED, lastSyncAt: this.state.lastSyncAt, message: readError };
       return err<void>(AppErrorCode.STORAGE_READ_FAILED, readError);
     }
     const payload: Uint8Array = bytesResult.data;
     if (payload.length === 0) {
-      const emptyError: string = '本地数据文件为空，已跳过推送（避免覆盖云端备份）';
+      const emptyError: ResourceStr = $r('app.string.error_local_data_empty_skip_push');
       Logger.warn('Sync push skipped: empty payload | ' + target);
       this.state = { status: SyncStatus.FAILED, lastSyncAt: this.state.lastSyncAt, message: emptyError };
       return err<void>(AppErrorCode.STORAGE_READ_FAILED, emptyError);
@@ -244,8 +258,10 @@ export class SyncService {
     Logger.info('Sync push start: bytes=' + payload.length + ' | ' + target);
     const uploadResult: Result<void> = await this.webDavService.upload(config, fileName, payload);
     if (!uploadResult.success) {
-      const message: string = uploadResult.error !== undefined ? uploadResult.error.message : '同步失败';
-      Logger.error('Sync push failed after ' + (nowMilliseconds() - startedAt) + 'ms: ' + message + ' | ' + target);
+      const message: ResourceStr =
+        uploadResult.error !== undefined ? uploadResult.error.message : $r('app.string.error_sync_failed');
+      const logText: string = typeof message === 'string' ? message : UiText.of(message);
+      Logger.error('Sync push failed after ' + (nowMilliseconds() - startedAt) + 'ms: ' + logText + ' | ' + target);
       this.state = { status: SyncStatus.FAILED, lastSyncAt: this.state.lastSyncAt, message: message };
       return uploadResult;
     }
@@ -301,14 +317,14 @@ export class SyncService {
       + ' snapshots=' + snapshots.length + ' | ' + this.describeTarget());
   }
 
-  /** 供日志定位的同步目标：账号 + 服务器地址 + 同步目录（不含密码）。 */
+  /** 供日志定位的同步目标：地址与账号属可识别信息，只记长度，不落明文（不含密码）。 */
   private describeTarget(): string {
     if (this.config === null) {
       return 'remote=<未配置>';
     }
     const path: string = this.config.remotePath.trim();
-    return 'user=' + this.config.username + ' remote=' + this.config.baseUrl.trim()
-      + (path.length > 0 ? '/' + path : '');
+    return 'userLen=' + this.config.username.length + ' urlLen=' + this.config.baseUrl.trim().length
+      + ' pathLen=' + path.length;
   }
 
   private async persistLastSyncAt(lastSyncAt: number): Promise<void> {

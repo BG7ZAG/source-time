@@ -18,5 +18,6 @@ export enum SyncReason {
 export interface SyncState {
   status: SyncStatus;
   lastSyncAt?: number;
-  message?: string;
+  /** 面向用户的同步提示：Resource 走多语言资源，string 仅用于无需翻译的场景。 */
+  message?: ResourceStr;
 }

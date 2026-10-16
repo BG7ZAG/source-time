@@ -1,0 +1,196 @@
+{
+  "string": [
+    {
+      "name": "home_title",
+      "value": "SourceTime"
+    },
+    {
+      "name": "home_subtitle",
+      "value": "TOTP verification codes"
+    },
+    {
+      "name": "home_secure_storage",
+      "value": "Encrypted locally"
+    },
+    {
+      "name": "home_summary_count",
+      "value": "%d codes total"
+    },
+    {
+      "name": "home_empty_message",
+      "value": "No codes yet"
+    },
+    {
+      "name": "home_empty_hint",
+      "value": "Tap the glowing orb at the bottom right to add"
+    },
+    {
+      "name": "home_load_error_fallback",
+      "value": "Unable to read local data"
+    },
+    {
+      "name": "home_decrypt_dialog_title",
+      "value": "Unable to decrypt local data"
+    },
+    {
+      "name": "home_decrypt_dialog_message",
+      "value": "%s\n\nIf you changed the encryption key, existing local data cannot be decrypted with the new key. You can clear local data and start over: clearing keeps an isolated backup of the current encrypted file (it is not deleted), and restoring its content will still require the original key."
+    },
+    {
+      "name": "home_decrypt_stay_button",
+      "value": "Not now"
+    },
+    {
+      "name": "home_decrypt_reset_button",
+      "value": "Clear and restart"
+    },
+    {
+      "name": "home_reset_success_toast",
+      "value": "Local data cleared, you can add codes again"
+    },
+    {
+      "name": "home_reset_error_fallback",
+      "value": "Failed to clear local data"
+    },
+    {
+      "name": "home_copy_success",
+      "value": "Copied"
+    },
+    {
+      "name": "home_copy_failed",
+      "value": "Copy failed"
+    },
+    {
+      "name": "home_delete_failed",
+      "value": "Delete failed"
+    },
+    {
+      "name": "home_item_fallback_label",
+      "value": "This code"
+    },
+    {
+      "name": "card_issuer_unnamed",
+      "value": "Unnamed"
+    },
+    {
+      "name": "card_account_missing",
+      "value": "No account"
+    },
+    {
+      "name": "card_delete_confirm_title",
+      "value": "Delete this code?"
+    },
+    {
+      "name": "card_delete_confirm_message",
+      "value": "%s\nThis cannot be undone."
+    },
+    {
+      "name": "add_title",
+      "value": "Add verification code"
+    },
+    {
+      "name": "add_subtitle",
+      "value": "Scan or enter manually; data is stored encrypted on this device only"
+    },
+    {
+      "name": "add_segment_scan",
+      "value": "Scan QR code"
+    },
+    {
+      "name": "add_segment_manual",
+      "value": "Manual entry"
+    },
+    {
+      "name": "add_scan_start",
+      "value": "Tap to start scanning"
+    },
+    {
+      "name": "add_scan_guide",
+      "value": "Place the otpauth QR code provided by the service in the frame"
+    },
+    {
+      "name": "add_secret_label",
+      "value": "Secret / otpauth link"
+    },
+    {
+      "name": "add_secret_placeholder",
+      "value": "Paste a Base32 secret or otpauth:// link"
+    },
+    {
+      "name": "add_parsed_badge",
+      "value": "Parsed"
+    },
+    {
+      "name": "add_issuer_label",
+      "value": "Issuer"
+    },
+    {
+      "name": "add_issuer_placeholder",
+      "value": "e.g. Google"
+    },
+    {
+      "name": "add_account_label",
+      "value": "Account"
+    },
+    {
+      "name": "add_account_placeholder",
+      "value": "e.g. user@xx.com"
+    },
+    {
+      "name": "add_optional",
+      "value": "Optional"
+    },
+    {
+      "name": "add_advanced_options",
+      "value": "Advanced options"
+    },
+    {
+      "name": "add_algorithm_label",
+      "value": "Algorithm"
+    },
+    {
+      "name": "add_digits_label",
+      "value": "Digits"
+    },
+    {
+      "name": "add_digits_option",
+      "value": "%d digits"
+    },
+    {
+      "name": "add_period_label",
+      "value": "Period (seconds)"
+    },
+    {
+      "name": "add_period_invalid",
+      "value": "Period must be between 1 and 3600 seconds"
+    },
+    {
+      "name": "add_saving",
+      "value": "Saving..."
+    },
+    {
+      "name": "add_save_button",
+      "value": "Save"
+    },
+    {
+      "name": "add_saved_toast",
+      "value": "Added"
+    },
+    {
+      "name": "add_save_failed",
+      "value": "Save failed"
+    },
+    {
+      "name": "add_uri_parsed_toast",
+      "value": "Configuration parsed from link"
+    },
+    {
+      "name": "empty_message",
+      "value": "No verification codes"
+    },
+    {
+      "name": "empty_hint",
+      "value": "Tap the floating orb at the bottom right to add"
+    }
+  ]
+}

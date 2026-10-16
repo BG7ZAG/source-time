@@ -1,0 +1,48 @@
+{
+  "string": [
+    {
+      "name": "settings_title",
+      "value": "Settings"
+    },
+    {
+      "name": "settings_item_security",
+      "value": "Security & encryption key"
+    },
+    {
+      "name": "settings_item_security_note",
+      "value": "App lock, master password and encryption settings"
+    },
+    {
+      "name": "settings_item_webdav",
+      "value": "WebDAV Sync"
+    },
+    {
+      "name": "settings_item_webdav_note",
+      "value": "Cloud backup and multi-device sync"
+    },
+    {
+      "name": "settings_item_logs",
+      "value": "Runtime logs"
+    },
+    {
+      "name": "settings_item_logs_note",
+      "value": "Activity records on this device"
+    },
+    {
+      "name": "settings_item_privacy",
+      "value": "Privacy Policy"
+    },
+    {
+      "name": "settings_item_privacy_note",
+      "value": "How your data is stored locally"
+    },
+    {
+      "name": "settings_item_about",
+      "value": "About SourceTime"
+    },
+    {
+      "name": "settings_footer",
+      "value": "SourceTime · Local and offline first; no network communication except WebDAV"
+    }
+  ]
+}

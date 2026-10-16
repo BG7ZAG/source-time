@@ -1,0 +1,60 @@
+{
+  "string": [
+    {
+      "name": "dialog_privacy_title",
+      "value": "SourceTime Privacy Policy"
+    },
+    {
+      "name": "dialog_privacy_version",
+      "value": "Version %s · Local-first"
+    },
+    {
+      "name": "dialog_section_collection_title",
+      "value": "1. Data collection and use"
+    },
+    {
+      "name": "dialog_section_collection_body",
+      "value": "SourceTime does not collect personally identifiable information and does not require registration or login. The TOTP configurations, encryption key and WebDAV settings you enter are stored on this device only; the app does not participate in system backups and sends nothing to any external server except through the WebDAV sync you explicitly enable."
+    },
+    {
+      "name": "dialog_section_storage_title",
+      "value": "2. Data storage and security"
+    },
+    {
+      "name": "dialog_section_storage_body",
+      "value": "All TOTP data is stored encrypted with AES-256-GCM. The encryption key is derived via PBKDF2-HMAC-SHA256 (100,000 iterations) and kept in system secure storage, usable once the device is unlocked. The optional app lock stores only a derived verification value of the PIN, never the PIN in plaintext. The app keeps runtime logs locally (never uploaded) and, before writing or printing, applies redaction rules to avoid recording sensitive data such as keys and passwords."
+    },
+    {
+      "name": "dialog_section_sharing_title",
+      "value": "3. Data sharing and transfer"
+    },
+    {
+      "name": "dialog_section_sharing_body",
+      "value": "SourceTime does not upload data to the developer or third parties. When WebDAV is enabled, only encrypted files are uploaded to the server you specify, and the server sees ciphertext only; only https addresses are allowed by default, and the developer operates no receiving servers."
+    },
+    {
+      "name": "dialog_section_retention_title",
+      "value": "4. Data retention and deletion"
+    },
+    {
+      "name": "dialog_section_retention_body",
+      "value": "You can delete TOTP data, change the encryption key, and enable or disable WebDAV sync at any time. Deleted code data cannot be recovered; the app does not participate in system backups, so uninstalling it or clearing its data erases all local data."
+    },
+    {
+      "name": "dialog_section_notice_title",
+      "value": "5. Important notice"
+    },
+    {
+      "name": "dialog_section_notice_body",
+      "value": "Keep your encryption key safe. SourceTime offers no server-side key recovery; if the key is lost, encrypted data can no longer be decrypted."
+    },
+    {
+      "name": "dialog_decline",
+      "value": "Decline"
+    },
+    {
+      "name": "dialog_agree",
+      "value": "Agree and continue"
+    }
+  ]
+}

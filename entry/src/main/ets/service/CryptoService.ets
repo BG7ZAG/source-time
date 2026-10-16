@@ -6,6 +6,8 @@ import {
   GCM_NONCE_LENGTH,
   GCM_TAG_LENGTH,
   KDF_ITERATIONS,
+  KDF_ITERATIONS_MAX,
+  KDF_ITERATIONS_MIN,
   KDF_KEY_LENGTH,
   KDF_SALT_LENGTH,
   RANDOM_SECRET_LENGTH
@@ -150,7 +152,7 @@ export class CryptoService {
 
   private parse(encryptedData: Uint8Array): EncryptedFileParts {
     const minimalLength: number = MAGIC_LENGTH + VERSION_LENGTH + ALGORITHM_ID_LENGTH + ITERATIONS_LENGTH
-      + LENGTH_FIELD_SIZE + LENGTH_FIELD_SIZE + GCM_TAG_LENGTH;
+      + LENGTH_FIELD_SIZE + KDF_SALT_LENGTH + LENGTH_FIELD_SIZE + GCM_NONCE_LENGTH + GCM_TAG_LENGTH;
     if (encryptedData.length < minimalLength) {
       throw new Error('INVALID_ENCRYPTED_FILE');
     }
@@ -173,12 +175,23 @@ export class CryptoService {
     }
     const iterations: number = this.readUint32(encryptedData, offset);
     offset += ITERATIONS_LENGTH;
+    // 头部的 iterations 会直接喂给 deriveKeySync，PBKDF2 又跑在调用线程上。
+    // 云端快照里的 iterations 写成 4294967295 就能把解密线程永久占死，所以先卡区间。
+    if (iterations < KDF_ITERATIONS_MIN || iterations > KDF_ITERATIONS_MAX) {
+      throw new Error('INVALID_ENCRYPTED_FILE');
+    }
     const saltLength: number = encryptedData[offset];
     offset += LENGTH_FIELD_SIZE;
+    if (saltLength !== KDF_SALT_LENGTH) {
+      throw new Error('INVALID_ENCRYPTED_FILE');
+    }
     const salt: Uint8Array = encryptedData.slice(offset, offset + saltLength);
     offset += saltLength;
     const nonceLength: number = encryptedData[offset];
     offset += LENGTH_FIELD_SIZE;
+    if (nonceLength !== GCM_NONCE_LENGTH) {
+      throw new Error('INVALID_ENCRYPTED_FILE');
+    }
     const nonce: Uint8Array = encryptedData.slice(offset, offset + nonceLength);
     offset += nonceLength;
     const cipherLength: number = encryptedData.length - offset - GCM_TAG_LENGTH;

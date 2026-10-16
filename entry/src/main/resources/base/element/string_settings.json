@@ -1,0 +1,48 @@
+{
+  "string": [
+    {
+      "name": "settings_title",
+      "value": "设置"
+    },
+    {
+      "name": "settings_item_security",
+      "value": "安全与密钥"
+    },
+    {
+      "name": "settings_item_security_note",
+      "value": "应用锁、主密码与加密配置"
+    },
+    {
+      "name": "settings_item_webdav",
+      "value": "WebDAV 同步"
+    },
+    {
+      "name": "settings_item_webdav_note",
+      "value": "云端数据备份与多端联动"
+    },
+    {
+      "name": "settings_item_logs",
+      "value": "运行日志"
+    },
+    {
+      "name": "settings_item_logs_note",
+      "value": "本机运行记录"
+    },
+    {
+      "name": "settings_item_privacy",
+      "value": "隐私政策"
+    },
+    {
+      "name": "settings_item_privacy_note",
+      "value": "数据本地存储说明"
+    },
+    {
+      "name": "settings_item_about",
+      "value": "关于源时"
+    },
+    {
+      "name": "settings_footer",
+      "value": "源时 · 本地离线优先，除 WebDAV 外不进行任何网络通信"
+    }
+  ]
+}

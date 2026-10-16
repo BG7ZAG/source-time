@@ -5,6 +5,13 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { AppContextHolder } from '../utils/AppContextHolder';
 import { SettingsService } from '../service/SettingsService';
 import { KeyStoreService } from '../service/KeyStoreService';
+import { PinService } from '../service/PinService';
+import { SyncService } from '../service/SyncService';
+import { WebDavConfig } from '../model/WebDavConfig';
+import { Result } from '../types/Result';
+import { Logger } from '../utils/Logger';
+import { UiText } from '../utils/UiText';
+import { APP_LOCK_STORAGE_KEY } from '../constants/AppConstants';
 import { initGlassTheme, initImmersiveMaterialSupport, isDarkMode, supportsImmersive } from '../theme/GlassStyle';
 
 const DOMAIN = 0x0000;
@@ -76,6 +83,7 @@ export default class EntryAbility extends UIAbility {
       hilog.error(DOMAIN, 'SourceTime', 'Encryption secret lost: initialized but KeyStore returned empty');
       initialPage = 'pages/SecurityPage';
     }
+    this.applyLockState();
 
     windowStage.loadContent(initialPage, (err) => {
       if (err.code) {
@@ -83,6 +91,48 @@ export default class EntryAbility extends UIAbility {
         return;
       }
       hilog.info(DOMAIN, 'SourceTime', 'Succeeded in loading the content.');
+    });
+
+    // 同步配置与自动拉取放在首页渲染之后：解密 WebDAV 密码要跑一次 PBKDF2，不能拖慢首帧
+    this.configureSyncOnStart(secret);
+  }
+
+  /**
+   * 应用锁状态：冷启动即置位，由 AuroraBackground 的遮罩拦住口令与密钥内容。
+   * PIN 校验数据不完整时 isLockUsable() 会返回 false，避免把用户永久关在门外。
+   */
+  private applyLockState(): void {
+    const locked: boolean = new PinService().isLockUsable();
+    AppStorage.setOrCreate<boolean>(APP_LOCK_STORAGE_KEY, locked);
+    if (locked) {
+      Logger.info('App lock engaged on start');
+    }
+  }
+
+  /**
+   * 冷启动接通同步：把 WebDAV 配置装进 SyncService 单例，并按开关尝试自动拉取。
+   *
+   * SyncService 是进程内单例，此前只有打开 WebDAV 页才会 configure，
+   * 导致「新增/删除后自动推送」在未进过该页的会话里静默失效。
+   */
+  private configureSyncOnStart(secret: string): void {
+    new SettingsService().loadWebDavConfig(secret).then((config: WebDavConfig) => {
+      const syncService: SyncService = SyncService.getInstance();
+      syncService.configure(config, secret);
+      if (!config.enabled || !config.autoPullOnStart) {
+        return;
+      }
+      syncService.autoPullOnStart().then((result: Result<void>) => {
+        if (result.success) {
+          Logger.info('Auto pull requested on start');
+          return;
+        }
+        const message: ResourceStr = result.error !== undefined ? result.error.message : $r('app.string.app_auto_pull_failed');
+        // 日志正文按当前语言解析后落盘（Logger 只接收 string）
+        Logger.warn('Auto pull on start failed: ' + (typeof message === 'string' ? message : UiText.of(message)));
+      });
+    }).catch((error: BusinessError) => {
+      hilog.error(DOMAIN, 'SourceTime', 'Failed to configure sync on start. Cause: %{public}s', JSON.stringify(error));
     });
   }
 
@@ -98,6 +148,11 @@ export default class EntryAbility extends UIAbility {
       this.mainWindow = mainWindow;
       // 先同步一次，保证页面首帧就能拿到正确的安全区尺寸
       this.syncSafeAreaInsets(mainWindow);
+
+      // 隐私模式：禁止截屏、录屏、投屏，多任务卡片中也隐藏内容（口令属于高敏数据）
+      mainWindow.setWindowPrivacyMode(true).catch((error: BusinessError) => {
+        hilog.error(DOMAIN, 'SourceTime', 'Failed to set window privacy mode. Cause: %{public}s', JSON.stringify(error));
+      });
 
       mainWindow.setWindowLayoutFullScreen(true).then(() => {
         this.syncSafeAreaInsets(mainWindow);
@@ -175,5 +230,9 @@ export default class EntryAbility extends UIAbility {
 
   onBackground(): void {
     hilog.info(DOMAIN, 'SourceTime', '%{public}s', 'Ability onBackground');
+    // 退到后台即重新上锁：口令是高敏数据，回到前台时必须再次验证
+    if (new PinService().isLockUsable()) {
+      AppStorage.setOrCreate<boolean>(APP_LOCK_STORAGE_KEY, true);
+    }
   }
 }

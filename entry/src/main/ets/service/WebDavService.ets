@@ -11,6 +11,16 @@ import { DEFAULT_WEBDAV_DIRECTORY } from '../constants/AppConstants';
 
 const TIMEOUT_MS: number = 15000;
 const URL_PATTERN: RegExp = /^https?:\/\//i;
+const HTTP_PREFIX_PATTERN: RegExp = /^http:\/\//i;
+/** 目录段只接受常规字符，杜绝 . 与 .. 之类的可控路径段。 */
+const SAFE_PATH_SEGMENT_PATTERN: RegExp = /^[^/\\<>:"|?*]+$/;
+
+/** 响应体里的控制字符与空白折叠为单空格，防止换行污染日志行。 */
+const CONTROL_SPACE_PATTERN: RegExp = /[\u0000-\u0020\u007f]+/g;
+
+/** 日志里保留的响应体长度上限，以及参与清洗的原始前缀长度。 */
+const RESPONSE_SNIPPET_LENGTH: number = 160;
+const RESPONSE_SNIPPET_SCAN_LENGTH: number = 320;
 
 /** PROPFIND 响应里单个 <response> 块（兼容带命名空间前缀的标签，如 D:response）。 */
 const RESPONSE_BLOCK_PATTERN: RegExp = /<(?:[\w-]+:)?response\b[^>]*>[\s\S]*?<\/(?:[\w-]+:)?response>/gi;
@@ -24,7 +34,7 @@ export class WebDavService {
   async testConnection(config: WebDavConfig): Promise<Result<void>> {
     const urlResult: Result<string> = this.buildDirectoryUrl(config);
     if (!urlResult.success || urlResult.data === undefined) {
-      return err<void>(AppErrorCode.WEBDAV_INVALID_URL, '服务器地址无效');
+      return err<void>(AppErrorCode.WEBDAV_INVALID_URL, $r('app.string.error_server_url_invalid'));
     }
     const startedAt: number = nowMilliseconds();
     Logger.info('WebDAV PROPFIND ' + urlResult.data, 'WebDAV');
@@ -58,14 +68,14 @@ export class WebDavService {
     } catch (error) {
       Logger.error('WebDAV PROPFIND error after ' + (nowMilliseconds() - startedAt) + 'ms: url='
         + urlResult.data, 'WebDAV');
-      return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, '无法连接 WebDAV 服务器');
+      return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, $r('app.string.error_webdav_connect_failed'));
     }
   }
 
   async upload(config: WebDavConfig, fileName: string, data: Uint8Array): Promise<Result<void>> {
     const urlResult: Result<string> = this.buildFileUrl(config, fileName);
     if (!urlResult.success || urlResult.data === undefined) {
-      return err<void>(AppErrorCode.WEBDAV_INVALID_URL, '服务器地址无效');
+      return err<void>(AppErrorCode.WEBDAV_INVALID_URL, $r('app.string.error_server_url_invalid'));
     }
     // 确保目标目录存在（幂等）。否则首次上传会因目录不存在而 409/404 失败。
     const ensureDir: Result<void> = await this.createDirectory(config);
@@ -99,7 +109,7 @@ export class WebDavService {
       }
     } catch (error) {
       Logger.error('WebDAV PUT error after ' + (nowMilliseconds() - startedAt) + 'ms: url=' + urlResult.data, 'WebDAV');
-      return err<void>(AppErrorCode.WEBDAV_UPLOAD_FAILED, '上传失败（网络异常或服务器无响应）');
+      return err<void>(AppErrorCode.WEBDAV_UPLOAD_FAILED, $r('app.string.error_webdav_upload_failed'));
     }
   }
 
@@ -111,14 +121,15 @@ export class WebDavService {
    * 集合已存在（405）视为成功，因此该方法是幂等的，可安全地在上传/测试连接前调用。
    */
   async createDirectory(config: WebDavConfig): Promise<Result<void>> {
-    const base: string = config.baseUrl.trim();
-    if (base.length === 0 || !URL_PATTERN.test(base)) {
-      return err<void>(AppErrorCode.WEBDAV_INVALID_URL, '服务器地址无效');
+    const checkResult: Result<void> = this.checkBaseUrl(config);
+    if (!checkResult.success) {
+      return checkResult;
     }
+    const base: string = config.baseUrl.trim();
     const segments: string[] = this.buildRemoteSegments(config);
     let current: string = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
     for (let i = 0; i < segments.length; i++) {
-      current = current + '/' + encodeURI(segments[i]);
+      current = current + '/' + encodeURIComponent(segments[i]);
       const result: Result<void> = await this.mkcol(current, config);
       if (!result.success) {
         return result;
@@ -127,7 +138,12 @@ export class WebDavService {
     return ok(undefined);
   }
 
-  /** 将 remotePath 拆分为非空路径段；为空时回退到默认同步目录。 */
+  /**
+   * 将 remotePath 拆分为非空路径段；为空时回退到默认同步目录。
+   *
+   * 丢弃 . 与 .. 以及含 URL 特殊字符的段：远程路径由用户输入，
+   * 若原样拼进 URL 会让同步目录逃逸到服务器上的其他位置。
+   */
   private buildRemoteSegments(config: WebDavConfig): string[] {
     let remotePath: string = config.remotePath.trim();
     if (remotePath.length === 0) {
@@ -137,9 +153,14 @@ export class WebDavService {
     const parts: string[] = remotePath.split('/');
     for (let i = 0; i < parts.length; i++) {
       const part: string = parts[i].trim();
-      if (part.length > 0) {
-        segments.push(part);
+      if (part.length === 0 || part === '.' || part === '..') {
+        continue;
       }
+      if (!SAFE_PATH_SEGMENT_PATTERN.test(part)) {
+        Logger.warn('WebDAV remote path segment rejected: index=' + i, 'WebDAV');
+        continue;
+      }
+      segments.push(part);
     }
     return segments;
   }
@@ -178,14 +199,14 @@ export class WebDavService {
       }
     } catch (error) {
       Logger.error('WebDAV MKCOL error: url=' + url, 'WebDAV');
-      return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, '无法连接 WebDAV 服务器');
+      return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, $r('app.string.error_webdav_connect_failed'));
     }
   }
 
   async download(config: WebDavConfig, fileName: string): Promise<Result<Uint8Array>> {
     const urlResult: Result<string> = this.buildFileUrl(config, fileName);
     if (!urlResult.success || urlResult.data === undefined) {
-      return err<Uint8Array>(AppErrorCode.WEBDAV_INVALID_URL, '服务器地址无效');
+      return err<Uint8Array>(AppErrorCode.WEBDAV_INVALID_URL, $r('app.string.error_server_url_invalid'));
     }
     const startedAt: number = nowMilliseconds();
     Logger.info('WebDAV GET ' + urlResult.data, 'WebDAV');
@@ -205,7 +226,7 @@ export class WebDavService {
         if (code === 404) {
           // 尚未推送过任何备份：视为远端暂无数据，而非「路径不存在」
           Logger.warn('WebDAV GET rejected: status=404（远端暂无备份） cost=' + cost + 'ms', 'WebDAV');
-          return err<Uint8Array>(AppErrorCode.WEBDAV_INVALID_REMOTE_FILE, '远端暂无备份数据');
+          return err<Uint8Array>(AppErrorCode.WEBDAV_INVALID_REMOTE_FILE, $r('app.string.error_no_remote_backup'));
         }
         if (code < 200 || code >= 300) {
           Logger.warn('WebDAV GET rejected: status=' + code + ' cost=' + cost + 'ms body='
@@ -219,13 +240,13 @@ export class WebDavService {
           return ok(bytes);
         }
         Logger.warn('WebDAV GET unexpected payload: status=' + code + ' cost=' + cost + 'ms', 'WebDAV');
-        return err<Uint8Array>(AppErrorCode.WEBDAV_INVALID_REMOTE_FILE, '远程数据格式无效');
+        return err<Uint8Array>(AppErrorCode.WEBDAV_INVALID_REMOTE_FILE, $r('app.string.error_remote_data_format_invalid'));
       } finally {
         request.destroy();
       }
     } catch (error) {
       Logger.error('WebDAV GET error after ' + (nowMilliseconds() - startedAt) + 'ms: url=' + urlResult.data, 'WebDAV');
-      return err<Uint8Array>(AppErrorCode.WEBDAV_DOWNLOAD_FAILED, '下载失败（网络异常或服务器无响应）');
+      return err<Uint8Array>(AppErrorCode.WEBDAV_DOWNLOAD_FAILED, $r('app.string.error_webdav_download_failed'));
     }
   }
 
@@ -236,7 +257,7 @@ export class WebDavService {
   async delete(config: WebDavConfig, fileName: string): Promise<Result<void>> {
     const urlResult: Result<string> = this.buildFileUrl(config, fileName);
     if (!urlResult.success || urlResult.data === undefined) {
-      return err<void>(AppErrorCode.WEBDAV_INVALID_URL, '服务器地址无效');
+      return err<void>(AppErrorCode.WEBDAV_INVALID_URL, $r('app.string.error_server_url_invalid'));
     }
     const startedAt: number = nowMilliseconds();
     Logger.info('WebDAV DELETE ' + urlResult.data, 'WebDAV');
@@ -269,7 +290,7 @@ export class WebDavService {
     } catch (error) {
       Logger.error('WebDAV DELETE error after ' + (nowMilliseconds() - startedAt) + 'ms: url='
         + urlResult.data, 'WebDAV');
-      return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, '删除失败（网络异常或服务器无响应）');
+      return err<void>(AppErrorCode.WEBDAV_CONNECTION_FAILED, $r('app.string.error_webdav_delete_failed'));
     }
   }
 
@@ -282,7 +303,7 @@ export class WebDavService {
   async list(config: WebDavConfig): Promise<Result<RemoteBackup[]>> {
     const urlResult: Result<string> = this.buildDirectoryUrl(config);
     if (!urlResult.success || urlResult.data === undefined) {
-      return err<RemoteBackup[]>(AppErrorCode.WEBDAV_INVALID_URL, '服务器地址无效');
+      return err<RemoteBackup[]>(AppErrorCode.WEBDAV_INVALID_URL, $r('app.string.error_server_url_invalid'));
     }
     const startedAt: number = nowMilliseconds();
     Logger.info('WebDAV PROPFIND (list) ' + urlResult.data, 'WebDAV');
@@ -314,7 +335,7 @@ export class WebDavService {
     } catch (error) {
       Logger.error('WebDAV PROPFIND (list) error after ' + (nowMilliseconds() - startedAt) + 'ms: url='
         + urlResult.data, 'WebDAV');
-      return err<RemoteBackup[]>(AppErrorCode.WEBDAV_CONNECTION_FAILED, '无法连接 WebDAV 服务器');
+      return err<RemoteBackup[]>(AppErrorCode.WEBDAV_CONNECTION_FAILED, $r('app.string.error_webdav_connect_failed'));
     }
   }
 
@@ -410,39 +431,73 @@ export class WebDavService {
     return Number.isNaN(parsed) || parsed < 0 ? 0 : parsed;
   }
 
-  /** 反转义 XML 实体（文件名里可能出现 & 等）。 */
+  /**
+   * 反转义 XML 实体（文件名里可能出现 & 等）。
+   * 顺序要求：&amp; 必须最后处理，否则 &amp;lt; 会被二次解码成 <。
+   */
   private decodeXmlText(text: string): string {
-    return text.replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"')
-      .replace(/'/g, "'").replace(/&/g, '&');
+    let decoded: string = text;
+    decoded = decoded.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'");
+    decoded = decoded.replace(/&#(x?)([0-9A-Fa-f]+);/g, (match: string, hexPrefix: string, code: string): string => {
+      const value: number = Number.parseInt(code, hexPrefix.length > 0 ? 16 : 10);
+      if (Number.isNaN(value) || value <= 0 || value > 0x10FFFF) {
+        return match;
+      }
+      return String.fromCodePoint(value);
+    });
+    return decoded.replace(/&amp;/g, '&');
+  }
+
+  /**
+   * 校验服务器地址：必须是 http(s) URL；明文 http 仅在用户显式允许不安全连接时放行。
+   *
+   * 请求头带 Basic 凭据（用户名 + WebDAV 密码），走明文通道等于把凭据和密文备份一起裸奔，
+   * 所以默认拒绝，自建局域网服务需要在页面上主动确认风险。
+   */
+  private checkBaseUrl(config: WebDavConfig): Result<void> {
+    const base: string = config.baseUrl.trim();
+    if (base.length === 0 || !URL_PATTERN.test(base)) {
+      return err<void>(AppErrorCode.WEBDAV_INVALID_URL, $r('app.string.error_server_url_invalid'));
+    }
+    if (HTTP_PREFIX_PATTERN.test(base) && !config.allowInsecure) {
+      return err<void>(AppErrorCode.WEBDAV_INVALID_URL, $r('app.string.error_webdav_plain_http_blocked'));
+    }
+    return ok(undefined);
   }
 
   private buildDirectoryUrl(config: WebDavConfig): Result<string> {
-    const base: string = config.baseUrl.trim();
-    if (base.length === 0 || !URL_PATTERN.test(base)) {
-      return err<string>(AppErrorCode.WEBDAV_INVALID_URL, '服务器地址无效');
+    const checkResult: Result<void> = this.checkBaseUrl(config);
+    if (!checkResult.success) {
+      return err<string>(AppErrorCode.WEBDAV_INVALID_URL,
+        checkResult.error !== undefined ? checkResult.error.message : $r('app.string.error_server_url_invalid'));
     }
-    let remotePath: string = config.remotePath.trim();
-    if (remotePath.length === 0) {
-      remotePath = DEFAULT_WEBDAV_DIRECTORY;
+    const segments: string[] = this.buildRemoteSegments(config);
+    let url: string = config.baseUrl.trim();
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
     }
-    return ok(this.joinUrl(base, remotePath));
+    for (let i = 0; i < segments.length; i++) {
+      url = url + '/' + encodeURIComponent(segments[i]);
+    }
+    return ok(url);
   }
 
   private buildFileUrl(config: WebDavConfig, fileName: string): Result<string> {
+    // 文件名可能来自云端响应，必须整名命中快照白名单才能拼进 URL，
+    // 否则服务器侧一个 sourcetime-x/../../y.enc 就能让本机带凭据去 GET/DELETE 任意路径
+    if (!isBackupFileName(fileName)) {
+      return err<string>(AppErrorCode.WEBDAV_INVALID_REMOTE_FILE, $r('app.string.error_backup_file_name_invalid'));
+    }
     const directoryResult: Result<string> = this.buildDirectoryUrl(config);
     if (!directoryResult.success || directoryResult.data === undefined) {
-      return err<string>(AppErrorCode.WEBDAV_INVALID_URL, '服务器地址无效');
+      return err<string>(directoryResult.error !== undefined ? directoryResult.error.code
+        : AppErrorCode.WEBDAV_INVALID_URL,
+        directoryResult.error !== undefined ? directoryResult.error.message : $r('app.string.error_server_url_invalid'));
     }
     const directory: string = directoryResult.data;
     const normalizedDirectory: string = directory.endsWith('/') ? directory : directory + '/';
-    return ok(normalizedDirectory + encodeURI(fileName));
-  }
-
-  private joinUrl(base: string, path: string): string {
-    const trimmedBase: string = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
-    const encodedPath: string = encodeURI(path);
-    const normalizedPath: string = encodedPath.startsWith('/') ? encodedPath : '/' + encodedPath;
-    return trimmedBase + normalizedPath;
+    return ok(normalizedDirectory + encodeURIComponent(fileName));
   }
 
   /**
@@ -473,15 +528,22 @@ export class WebDavService {
    * 截取响应体片段用于日志（仅错误路径调用）。
    *
    * WebDAV 的错误响应多为 XML/纯文本（如 401 的鉴权提示、500 的服务器错误详情），
-   * 记录前 200 字符能直接定位「为什么被拒」；二进制或空响应退化为空串。
+   * 记录开头一段能直接定位「为什么被拒」；二进制或空响应退化为空串。
    * 响应体不会包含密码——鉴权信息在请求头，而请求头从不入日志。
+   *
+   * 但响应体是外部可控文本：换行与控制字符会污染日志行与「运行日志」页面，
+   * 因此先截断再折叠空白，避免整段 XML/HTML 原样落盘。
    */
   private responseSnippet(response: http.HttpResponse): string {
     const text: string = `${response.result}`;
-    if (text.length <= 200) {
-      return text;
+    const head: string = text.length > RESPONSE_SNIPPET_SCAN_LENGTH
+      ? text.substring(0, RESPONSE_SNIPPET_SCAN_LENGTH)
+      : text;
+    const clean: string = head.replace(CONTROL_SPACE_PATTERN, ' ').trim();
+    if (clean.length <= RESPONSE_SNIPPET_LENGTH) {
+      return clean;
     }
-    return text.substring(0, 200) + '...';
+    return clean.substring(0, RESPONSE_SNIPPET_LENGTH) + '...';
   }
 
   private mapStatus(code: number): AppErrorCode {
@@ -497,28 +559,29 @@ export class WebDavService {
     return AppErrorCode.WEBDAV_CONNECTION_FAILED;
   }
 
-  private statusMessage(code: number): string {
+  /** HTTP 状态码对应的用户可读文案：返回 Resource，由 err()/调用方按当前语言解析。 */
+  private statusMessage(code: number): Resource {
     if (code === 401) {
-      return '认证失败，请检查用户名或密码';
+      return $r('app.string.error_webdav_auth_failed');
     }
     if (code === 403) {
-      return '权限不足，无法访问该目录';
+      return $r('app.string.error_webdav_permission_denied');
     }
     if (code === 404) {
-      return '远程路径不存在';
+      return $r('app.string.error_remote_path_not_found');
     }
     if (code === 409) {
-      return '上级目录不存在，请检查服务器地址与同步目录层级';
+      return $r('app.string.error_remote_parent_missing');
     }
     if (code === 408) {
-      return '请求超时';
+      return $r('app.string.error_request_timeout');
     }
     if (code === 429) {
-      return '请求过于频繁，请稍后再试';
+      return $r('app.string.error_too_many_requests');
     }
     if (code >= 500) {
-      return '服务器错误';
+      return $r('app.string.error_server_error');
     }
-    return '请求失败（状态码 ' + code + '）';
+    return $r('app.string.error_request_failed_status', code);
   }
 }

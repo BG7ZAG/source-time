@@ -33,6 +33,11 @@
           ],
           "when": "inuse"
         }
+      },
+      {
+        // 关键资产类应用必备：setWindowPrivacyMode 需要该权限（normal 级，安装即授予）。
+        // 缺失时调用返回 201，截屏/录屏/多任务预览将不再被遮蔽。
+        "name": "ohos.permission.PRIVACY_WINDOW"
       }
     ],
     "abilities": [

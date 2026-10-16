@@ -8,8 +8,10 @@ import { HomeViewModel, TotpDisplayItem } from '../viewmodel/HomeViewModel';
 import { TotpItem } from '../model/TotpItem';
 import { Result } from '../types/Result';
 import { AppRoutes, CURRENT_PRIVACY_POLICY_VERSION } from '../constants/AppConstants';
+import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { SettingsService } from '../service/SettingsService';
 import { AppContextHolder } from '../utils/AppContextHolder';
+import { UiText } from '../utils/UiText';
 import {
   cardMaterial,
   frostedPillColor,
@@ -49,7 +51,9 @@ struct HomePage {
 
   aboutToAppear(): void {
     const settings = this.settingsService.getSettings();
-    if (!settings.privacyPolicyAccepted) {
+    // 除「从未同意过」外，还要比对已同意的版本号：政策改版后必须重新弹窗确认，
+    // 否则老用户会在没看到新条款的情况下继续使用（getSettings 对旧数据返回空串，天然会重弹）。
+    if (!settings.privacyPolicyAccepted || settings.privacyPolicyVersion !== CURRENT_PRIVACY_POLICY_VERSION) {
       this.privacyDialog.open();
       return;
     }
@@ -58,7 +62,10 @@ struct HomePage {
 
   onPageShow(): void {
     const settings = this.settingsService.getSettings();
-    if (settings.privacyPolicyAccepted && settings.encryptionInitialized) {
+    // 与 aboutToAppear 同一判据：政策待重新确认时不把口令加载出来，避免遮在弹窗下层可见
+    const consented: boolean = settings.privacyPolicyAccepted
+      && settings.privacyPolicyVersion === CURRENT_PRIVACY_POLICY_VERSION;
+    if (consented && settings.encryptionInitialized) {
       this.viewModel.load().then((result: Result<void>) => {
         if (result.success) {
           this.refreshItems();
@@ -112,14 +119,15 @@ struct HomePage {
       return;
     }
     this.loadErrorShown = true;
-    const message: string = result.error !== undefined ? result.error.message : '无法读取本地数据';
+    const message: ResourceStr = result.error !== undefined ? result.error.message : $r('app.string.home_load_error_fallback');
+    // 弹窗正文需要拼接：ResourceStr 可能是 Resource，先解析成当前语言文本
+    const errorText: string = typeof message === 'string' ? message : UiText.of(message);
     promptAction.showDialog({
-      title: '本地数据无法解密',
-      message: message + '\n\n若你更换过加密密钥，本地旧数据将无法用新密钥解密。可选择清除本地数据后重新开始：'
-        + '清除只会把当前加密文件隔离备份（不删除），之后需用原密钥才能恢复其中内容。',
+      title: $r('app.string.home_decrypt_dialog_title'),
+      message: UiText.of($r('app.string.home_decrypt_dialog_message'), errorText),
       buttons: [
-        { text: '暂不处理', color: '#666666' },
-        { text: '清除并重开', color: '#E84026' }
+        { text: $r('app.string.home_decrypt_stay_button'), color: '#666666' },
+        { text: $r('app.string.home_decrypt_reset_button'), color: '#E84026' }
       ]
     }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
       if (dialogResult.index !== 1) {
@@ -128,10 +136,10 @@ struct HomePage {
       this.viewModel.resetLocalData().then((resetResult: Result<void>) => {
         if (resetResult.success) {
           this.refreshItems();
-          promptAction.showToast({ message: '已清除本地数据，可重新添加口令' });
+          promptAction.showToast({ message: $r('app.string.home_reset_success_toast') });
         } else {
-          const failMessage: string =
-            resetResult.error !== undefined ? resetResult.error.message : '清除本地数据失败';
+          const failMessage: ResourceStr =
+            resetResult.error !== undefined ? resetResult.error.message : $r('app.string.home_reset_error_fallback');
           promptAction.showToast({ message: failMessage });
         }
       });
@@ -235,7 +243,7 @@ struct HomePage {
   header() {
     Row() {
       Column({ space: 3 }) {
-        Text('源时')
+        Text($r('app.string.home_title'))
           .fontSize(27)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.text_primary'))
@@ -244,7 +252,7 @@ struct HomePage {
             angle: 20,
             colors: titleGradientColors()
           }))
-        Text('TOTP 动态口令')
+        Text($r('app.string.home_subtitle'))
           .fontSize(12)
           .letterSpacing(0.6)
           .fontColor($r('app.color.text_secondary'))
@@ -282,7 +290,7 @@ struct HomePage {
           .height(6)
           .borderRadius(3)
           .backgroundColor($r('app.color.status_active'))
-        Text('本地加密存储')
+        Text($r('app.string.home_secure_storage'))
           .fontSize(11.5)
           .fontColor($r('app.color.text_secondary'))
       }
@@ -290,7 +298,7 @@ struct HomePage {
 
       Blank()
 
-      Text('共 ' + this.displayItems.length.toString() + ' 个口令')
+      Text($r('app.string.home_summary_count', this.displayItems.length))
         .fontSize(11.5)
         .fontColor($r('app.color.text_tertiary'))
     }
@@ -312,8 +320,8 @@ struct HomePage {
 
   private onCopy(item: TotpItem): void {
     this.viewModel.copyCode(item).then((result: Result<void>) => {
-      const message: string = result.success ? '复制成功'
-        : (result.error !== undefined ? result.error.message : '复制失败');
+      const message: ResourceStr = result.success ? $r('app.string.home_copy_success')
+        : (result.error !== undefined ? result.error.message : $r('app.string.home_copy_failed'));
       promptAction.showToast({ message: message });
     });
   }
@@ -329,7 +337,7 @@ struct HomePage {
     if (item.account.length > 0) {
       return item.account;
     }
-    return '该口令';
+    return UiText.of($r('app.string.home_item_fallback_label'));
   }
 
   /** 点击左滑删除图标：先弹二次确认，确认后才真正删除（不可恢复）。 */
@@ -338,11 +346,11 @@ struct HomePage {
       return;
     }
     promptAction.showDialog({
-      title: '删除这个口令？',
-      message: this.itemLabel(item) + '\n删除后无法恢复。',
+      title: $r('app.string.card_delete_confirm_title'),
+      message: UiText.of($r('app.string.card_delete_confirm_message'), this.itemLabel(item)),
       buttons: [
-        { text: '取消', color: '#666666' },
-        { text: '删除', color: '#E84026' }
+        { text: $r('app.string.common_cancel'), color: '#666666' },
+        { text: $r('app.string.common_delete'), color: '#E84026' }
       ]
     }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
       if (dialogResult.index === 1) {
@@ -364,7 +372,7 @@ struct HomePage {
         if (removeResult.success) {
           this.refreshItems();
         } else {
-          const message: string = removeResult.error !== undefined ? removeResult.error.message : '删除失败';
+          const message: ResourceStr = removeResult.error !== undefined ? removeResult.error.message : $r('app.string.home_delete_failed');
           promptAction.showToast({ message: message });
         }
         this.deletingId = '';
@@ -386,8 +394,8 @@ struct HomePage {
               // 用普通容器承载 layoutWeight：避免把通用属性挂在自定义组件上
               Column() {
                 EmptyState({
-                  message: '还没有口令',
-                  hint: '点击右下角光球添加',
+                  message: $r('app.string.home_empty_message'),
+                  hint: $r('app.string.home_empty_hint'),
                   onTap: () => this.openAdd()
                 })
               }
@@ -480,10 +488,12 @@ struct HomePage {
           }
           .width('100%')
           .height('100%')
+          .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
         }
         .width('100%')
         .height('100%')
-        .alignContent(Alignment.TopStart)
+        // 水平居中对齐：内容列在宽屏下按最大宽度收窄后由此居中（同 AuroraBackground 内容槽）
+        .alignContent(Alignment.Top)
         // 弹窗采用居中沉浸式气泡卡片，尺寸自适应内容，告别占满屏幕的常规抽屉
         .bindSheet($$this.showAddSheet, this.addSheetBuilder(), {
           height: SheetSize.FIT_CONTENT,

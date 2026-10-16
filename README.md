@@ -39,10 +39,12 @@
 - ✅ 实时倒计时，点击验证码即复制，长按 / 左滑 / 菜单删除
 - ✅ 本地加密单文件存储（`totp.db.enc`）
 - ✅ 用户加密密钥：手动输入、随机生成、一键复制、修改
-- ✅ 首次启动隐私政策弹窗，同意后方可进入
-- ✅ WebDAV 配置、测试连接、手动 Push / Pull
+- ✅ 首次启动隐私政策弹窗，同意后方可进入（政策版本升级会重新征询）
+- ✅ PIN 应用锁：设定后进入后台自动上锁，回到前台需解锁才能查看口令
+- ✅ WebDAV 配置、测试连接、手动 Push / Pull（同步目录自动逐级创建）
 - ✅ 新增 / 删除后自动 Push，启动时自动 Pull（可关闭）
 - ✅ 同步队列防并发竞争，V1 冲突策略 Last Write Wins
+- ✅ 运行日志页：本机诊断记录，密钥与口令等敏感字段落盘前统一脱敏
 - ✅ 离线可用，无常驻后台、无隐私上传
 
 V1 暂不实现：HOTP、密码管理、用户账号体系、自建云服务、分类标签、多文件同步、多版本历史、自动合并冲突、浏览器插件。
@@ -110,7 +112,10 @@ AES-256-GCM（随机 IV，校验 Authentication Tag）
 | WebDAV | GET / PUT / PROPFIND |
 | 同步模式 | Offline First |
 | 冲突策略 | V1 Last Write Wins |
-| 开源协议 | MIT / Apache-2.0 二选一 |
+| 密钥保管 | Asset Store Kit（DEVICE_UNLOCKED 档）+ 可选 PIN 应用锁 |
+| 传输 | WebDAV 默认强制 https，明文 http 需用户在设置中显式开启 |
+| 发布构建 | 代码混淆（顶层名 + 文件名；属性名混淆关闭以保持既有密文兼容） |
+| 开源协议 | MIT（见 `LICENSE`） |
 
 架构分层：
 
@@ -126,21 +131,27 @@ Page → ViewModel → Service → Storage / Crypto / WebDAV
 
 ```text
 entry/src/main/ets/
-├── pages/        HomePage / AddTotpPage / ScanPage / SettingsPage / SecurityPage / WebDavPage / PrivacyPolicyPage / AboutPage
-├── components/   TotpCard / CountDown / SecretInput / PrivacyDialog / EmptyState
-├── model/        TotpItem / DatabaseModel / WebDavConfig / Settings
-├── service/      TotpService / OtpParser / CryptoService / StorageService / SyncService / WebDavService / ClipboardService
-├── viewmodel/    HomeViewModel / AddTotpViewModel / SecurityViewModel / SettingsViewModel
-└── utils/        Base32 / Time / UUID / Logger
+├── pages/            HomePage / ScanPage / SettingsPage / SecurityPage / WebDavPage / PrivacyPolicyPage / AboutPage / LogPage
+├── components/       AuroraBackground / TotpCard / CountDown / AddTotpSheet / BackupPickerDialog / PinLockOverlay / PrivacyDialog / EmptyState
+├── viewmodel/        HomeViewModel / AddTotpViewModel
+├── service/          TotpService / OtpParser / CryptoService / StorageService / SettingsService / SyncService / WebDavService / KeyStoreService / PinService / ClipboardService / LogStore
+├── repository/       LocalRepository（本地加密文件读写）
+├── model/            TotpItem / DatabaseModel / WebDavConfig / SettingsModel / SyncModel / LogEntry / RemoteBackup
+├── constants/        AppConstants / CryptoConstants / SyncConstants
+├── theme/            GlassStyle（冰晶视觉：颜色、阴影、渐变与倒计时状态）
+├── types/            Result / Errors（统一的 success + code + message 返回约定）
+├── utils/            Base32Utils / TimeUtils / UUIDUtils / Logger / Sanitizer / ColorUtils / AppContextHolder
+├── entryability/         EntryAbility（窗口与安全区、冷启动自动同步、前后台上锁）
+└── entrybackupability/   EntryBackupAbility（系统备份恢复入口，当前已在配置中关闭）
 ```
 
 ---
 
 ## 📥 下载安装
 
-目前支持鸿蒙原生安装，后续上架华为应用市场。
+目前支持鸿蒙原生安装（自行构建 `entry-default-signed.hap` 后侧载），后续上架华为应用市场。
 
-正式版、测试版、更新日志请关注本仓库 Release。
+本仓库当前未提供 Release 安装包；正式版、测试版与更新日志将在应用市场上架后统一发布。
 
 ---
 

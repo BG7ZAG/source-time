@@ -1,0 +1,236 @@
+{
+  "string": [
+    {
+      "name": "webdav_title",
+      "value": "WebDAV Sync"
+    },
+    {
+      "name": "webdav_subtitle",
+      "value": "Cloud backup and multi-device sync"
+    },
+    {
+      "name": "webdav_enable_label",
+      "value": "Enable WebDAV sync"
+    },
+    {
+      "name": "webdav_enable_note",
+      "value": "Back up your encrypted data to your own server"
+    },
+    {
+      "name": "webdav_auto_push_label",
+      "value": "Auto push"
+    },
+    {
+      "name": "webdav_auto_push_note",
+      "value": "Upload a timestamped encrypted backup after every change"
+    },
+    {
+      "name": "webdav_auto_pull_label",
+      "value": "Auto pull on startup"
+    },
+    {
+      "name": "webdav_auto_pull_note",
+      "value": "Check for newer remote versions on cold start"
+    },
+    {
+      "name": "webdav_clean_label",
+      "value": "Auto clean old backups"
+    },
+    {
+      "name": "webdav_clean_note",
+      "value": "Keep only the 10 most recent snapshots in the cloud after push (both manual and automatic pushes create timestamped backups)"
+    },
+    {
+      "name": "webdav_insecure_label",
+      "value": "Allow insecure connections"
+    },
+    {
+      "name": "webdav_insecure_note",
+      "value": "Only applies to plain http:// addresses: when on, sync is no longer blocked and your password and backups are sent in the clear"
+    },
+    {
+      "name": "webdav_server_address",
+      "value": "Server address"
+    },
+    {
+      "name": "webdav_server_placeholder",
+      "value": "https://example.com/dav/"
+    },
+    {
+      "name": "webdav_http_blocked_warning",
+      "value": "This address is plain http://, so sync is blocked. Switch to https, or turn on \"Allow insecure connections\" below."
+    },
+    {
+      "name": "webdav_insecure_warning",
+      "value": "Insecure transfer is on: your username, password, and backup files will travel over the network without TLS protection. Use it only on trusted networks."
+    },
+    {
+      "name": "webdav_account_password",
+      "value": "Username and password"
+    },
+    {
+      "name": "webdav_username_placeholder",
+      "value": "Username"
+    },
+    {
+      "name": "webdav_password_placeholder",
+      "value": "Password (saved; enter a new one to change)"
+    },
+    {
+      "name": "webdav_remote_path",
+      "value": "Sync directory"
+    },
+    {
+      "name": "webdav_testing",
+      "value": "Testing..."
+    },
+    {
+      "name": "webdav_test_connection",
+      "value": "Test connection"
+    },
+    {
+      "name": "webdav_saving",
+      "value": "Saving..."
+    },
+    {
+      "name": "webdav_save_config",
+      "value": "Save configuration"
+    },
+    {
+      "name": "webdav_sync_status",
+      "value": "Sync status"
+    },
+    {
+      "name": "webdav_last_sync",
+      "value": "Last sync"
+    },
+    {
+      "name": "webdav_manual_push",
+      "value": "Manual push"
+    },
+    {
+      "name": "webdav_pushing",
+      "value": "Pushing..."
+    },
+    {
+      "name": "webdav_manual_pull",
+      "value": "Manual pull"
+    },
+    {
+      "name": "webdav_pulling",
+      "value": "Pulling..."
+    },
+    {
+      "name": "webdav_encryption_note",
+      "value": "Sync files are encrypted locally with AES-256-GCM before upload; the server only stores ciphertext."
+    },
+    {
+      "name": "webdav_status_idle",
+      "value": "Idle"
+    },
+    {
+      "name": "webdav_status_pushing",
+      "value": "Pushing"
+    },
+    {
+      "name": "webdav_status_pulling",
+      "value": "Pulling"
+    },
+    {
+      "name": "webdav_status_success",
+      "value": "Success"
+    },
+    {
+      "name": "webdav_status_failed",
+      "value": "Failed"
+    },
+    {
+      "name": "webdav_status_unknown",
+      "value": "Unknown"
+    },
+    {
+      "name": "webdav_never_synced",
+      "value": "Never synced"
+    },
+    {
+      "name": "webdav_config_loading",
+      "value": "Configuration is still loading. Please wait before saving."
+    },
+    {
+      "name": "webdav_save_success",
+      "value": "Saved"
+    },
+    {
+      "name": "webdav_save_failed",
+      "value": "Save failed"
+    },
+    {
+      "name": "webdav_test_success",
+      "value": "Connected"
+    },
+    {
+      "name": "webdav_test_failed",
+      "value": "Connection failed"
+    },
+    {
+      "name": "webdav_push_success",
+      "value": "Pushed (timestamped backup created)"
+    },
+    {
+      "name": "webdav_push_failed",
+      "value": "Push failed"
+    },
+    {
+      "name": "webdav_backup_list_failed",
+      "value": "Failed to fetch the backup list"
+    },
+    {
+      "name": "webdav_no_remote_backup",
+      "value": "No backups in the cloud yet. Push first."
+    },
+    {
+      "name": "webdav_pull_success",
+      "value": "Pull succeeded"
+    },
+    {
+      "name": "webdav_pull_failed",
+      "value": "Pull failed"
+    },
+    {
+      "name": "webdav_restore_dialog_title",
+      "value": "Restore this backup?"
+    },
+    {
+      "name": "webdav_restore_dialog_message",
+      "value": "This will overwrite local data with the selected backup; changes not yet pushed will be lost.\n\nSelected file: %s"
+    },
+    {
+      "name": "webdav_restore_confirm",
+      "value": "Overwrite and restore"
+    },
+    {
+      "name": "webdav_picker_title",
+      "value": "Choose a backup to restore"
+    },
+    {
+      "name": "webdav_picker_subtitle",
+      "value": "%d backups · latest selected by default; restoring will overwrite local data"
+    },
+    {
+      "name": "webdav_restore_button",
+      "value": "Restore this backup"
+    },
+    {
+      "name": "webdav_latest",
+      "value": "Latest"
+    },
+    {
+      "name": "webdav_time_unknown",
+      "value": "Time unknown"
+    },
+    {
+      "name": "webdav_size_unknown",
+      "value": "Size unknown"
+    }
+  ]
+}

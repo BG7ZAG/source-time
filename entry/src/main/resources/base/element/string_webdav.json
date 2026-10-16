@@ -1,0 +1,236 @@
+{
+  "string": [
+    {
+      "name": "webdav_title",
+      "value": "WebDAV 同步"
+    },
+    {
+      "name": "webdav_subtitle",
+      "value": "云端数据备份与多端联动"
+    },
+    {
+      "name": "webdav_enable_label",
+      "value": "启用 WebDAV 同步"
+    },
+    {
+      "name": "webdav_enable_note",
+      "value": "开启后可将加密数据备份到你自己的服务器"
+    },
+    {
+      "name": "webdav_auto_push_label",
+      "value": "自动推送"
+    },
+    {
+      "name": "webdav_auto_push_note",
+      "value": "增删改后自动上传带时间戳的加密备份"
+    },
+    {
+      "name": "webdav_auto_pull_label",
+      "value": "启动时自动拉取"
+    },
+    {
+      "name": "webdav_auto_pull_note",
+      "value": "冷启动时检查远端新版本"
+    },
+    {
+      "name": "webdav_clean_label",
+      "value": "自动清理旧备份"
+    },
+    {
+      "name": "webdav_clean_note",
+      "value": "推送后只保留云端最近 10 份快照（手动/自动推送都会新建带时间的备份）"
+    },
+    {
+      "name": "webdav_insecure_label",
+      "value": "允许不安全连接"
+    },
+    {
+      "name": "webdav_insecure_note",
+      "value": "仅在使用 http:// 明文地址时生效：开启后不再阻止同步，密码与备份将裸传"
+    },
+    {
+      "name": "webdav_server_address",
+      "value": "服务器地址"
+    },
+    {
+      "name": "webdav_server_placeholder",
+      "value": "https://example.com/dav/"
+    },
+    {
+      "name": "webdav_http_blocked_warning",
+      "value": "当前地址为 http:// 明文，同步已被阻止。请改用 https，或开启下方「允许不安全连接」。"
+    },
+    {
+      "name": "webdav_insecure_warning",
+      "value": "已允许明文传输：账号、密码与备份文件将未经 TLS 保护地经过网络，请仅在可信网络下使用。"
+    },
+    {
+      "name": "webdav_account_password",
+      "value": "账号与密码"
+    },
+    {
+      "name": "webdav_username_placeholder",
+      "value": "用户名"
+    },
+    {
+      "name": "webdav_password_placeholder",
+      "value": "密码（已保存，如需修改请输入）"
+    },
+    {
+      "name": "webdav_remote_path",
+      "value": "同步目录"
+    },
+    {
+      "name": "webdav_testing",
+      "value": "测试中..."
+    },
+    {
+      "name": "webdav_test_connection",
+      "value": "测试连接"
+    },
+    {
+      "name": "webdav_saving",
+      "value": "保存中..."
+    },
+    {
+      "name": "webdav_save_config",
+      "value": "保存配置"
+    },
+    {
+      "name": "webdav_sync_status",
+      "value": "同步状态"
+    },
+    {
+      "name": "webdav_last_sync",
+      "value": "上次同步"
+    },
+    {
+      "name": "webdav_manual_push",
+      "value": "手动推送"
+    },
+    {
+      "name": "webdav_pushing",
+      "value": "推送中..."
+    },
+    {
+      "name": "webdav_manual_pull",
+      "value": "手动拉取"
+    },
+    {
+      "name": "webdav_pulling",
+      "value": "拉取中..."
+    },
+    {
+      "name": "webdav_encryption_note",
+      "value": "同步文件在上传前已在本地完成 AES-256-GCM 加密，服务端仅保存密文。"
+    },
+    {
+      "name": "webdav_status_idle",
+      "value": "空闲"
+    },
+    {
+      "name": "webdav_status_pushing",
+      "value": "推送中"
+    },
+    {
+      "name": "webdav_status_pulling",
+      "value": "拉取中"
+    },
+    {
+      "name": "webdav_status_success",
+      "value": "成功"
+    },
+    {
+      "name": "webdav_status_failed",
+      "value": "失败"
+    },
+    {
+      "name": "webdav_status_unknown",
+      "value": "未知"
+    },
+    {
+      "name": "webdav_never_synced",
+      "value": "从未同步"
+    },
+    {
+      "name": "webdav_config_loading",
+      "value": "配置读取中，请稍候再保存"
+    },
+    {
+      "name": "webdav_save_success",
+      "value": "保存成功"
+    },
+    {
+      "name": "webdav_save_failed",
+      "value": "保存失败"
+    },
+    {
+      "name": "webdav_test_success",
+      "value": "连接成功"
+    },
+    {
+      "name": "webdav_test_failed",
+      "value": "连接失败"
+    },
+    {
+      "name": "webdav_push_success",
+      "value": "推送成功（已生成时间戳备份）"
+    },
+    {
+      "name": "webdav_push_failed",
+      "value": "推送失败"
+    },
+    {
+      "name": "webdav_backup_list_failed",
+      "value": "获取备份列表失败"
+    },
+    {
+      "name": "webdav_no_remote_backup",
+      "value": "云端暂无备份，请先推送"
+    },
+    {
+      "name": "webdav_pull_success",
+      "value": "拉取成功"
+    },
+    {
+      "name": "webdav_pull_failed",
+      "value": "拉取失败"
+    },
+    {
+      "name": "webdav_restore_dialog_title",
+      "value": "恢复此备份？"
+    },
+    {
+      "name": "webdav_restore_dialog_message",
+      "value": "将用所选备份覆盖本机数据，本机尚未推送的改动会丢失。\n\n所选文件：%s"
+    },
+    {
+      "name": "webdav_restore_confirm",
+      "value": "覆盖并恢复"
+    },
+    {
+      "name": "webdav_picker_title",
+      "value": "选择要恢复的备份"
+    },
+    {
+      "name": "webdav_picker_subtitle",
+      "value": "共 %d 份 · 默认最新；恢复将覆盖本机数据"
+    },
+    {
+      "name": "webdav_restore_button",
+      "value": "恢复此备份"
+    },
+    {
+      "name": "webdav_latest",
+      "value": "最新"
+    },
+    {
+      "name": "webdav_time_unknown",
+      "value": "时间未知"
+    },
+    {
+      "name": "webdav_size_unknown",
+      "value": "大小未知"
+    }
+  ]
+}

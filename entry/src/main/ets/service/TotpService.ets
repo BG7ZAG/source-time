@@ -19,10 +19,10 @@ export class TotpService {
     try {
       const normalized: string = normalizeBase32(options.secret);
       if (!isValidBase32(normalized)) {
-        return err<string>(AppErrorCode.INVALID_TOTP_SECRET, '密钥格式无效');
+        return err<string>(AppErrorCode.INVALID_TOTP_SECRET, $r('app.string.error_secret_format'));
       }
       if (options.period <= 0) {
-        return err<string>(AppErrorCode.INVALID_TOTP_CONFIG, '周期无效');
+        return err<string>(AppErrorCode.INVALID_TOTP_CONFIG, $r('app.string.error_period_invalid'));
       }
       const keyBytes: Uint8Array = base32Decode(normalized);
       const timestamp: number = options.timestamp !== undefined ? options.timestamp : nowSeconds();
@@ -33,7 +33,7 @@ export class TotpService {
       return ok(code);
     } catch (error) {
       Logger.error('TOTP generate failed');
-      return err<string>(AppErrorCode.INVALID_TOTP_CONFIG, '验证码生成失败');
+      return err<string>(AppErrorCode.INVALID_TOTP_CONFIG, $r('app.string.error_code_generation_failed'));
     }
   }
 

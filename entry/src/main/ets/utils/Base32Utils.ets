@@ -14,7 +14,11 @@ export function isValidBase32(input: string): boolean {
       return false;
     }
   }
-  return true;
+  // RFC 4648：未填充长度 mod 8 只能是 0/2/4/5/7。余 1 会让最后一个五元组凑不出一个字节
+  // （'A' 解出 0 字节密钥），余 3、余 6 会丢掉 7 位/6 位尾部比特。
+  // 这类串过去能通过校验，结果是「录入成功但永远出错码」——宁可在录入时就拒绝。
+  const remainder: number = normalized.length % 8;
+  return remainder !== 1 && remainder !== 3 && remainder !== 6;
 }
 
 export function base32Decode(input: string): Uint8Array {

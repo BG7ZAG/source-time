@@ -1,4 +1,5 @@
-import { glassCardShadow, glassGroupShadow } from '../theme/GlassStyle';
+import { glassGroupShadow } from '../theme/GlassStyle';
+import { PinLockOverlay } from './PinLockOverlay';
 
 /** 插槽默认值：@BuilderParam 必须以 @Builder 函数初始化，@Require 会强制父组件传入内容。 */
 @Builder
@@ -36,6 +37,8 @@ export struct AuroraBackground {
   @StorageProp('statusBarHeight') statusBarHeight: number = 0;
   /** 底部导航条 / Home 指示条高度（vp），由 EntryAbility 写入 AppStorage。 */
   @StorageProp('bottomSafeHeight') bottomSafeHeight: number = 0;
+  /** 应用锁是否处于锁定态，由 EntryAbility 与 PinLockOverlay 共同维护。 */
+  @StorageProp('appLocked') appLocked: boolean = false;
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -55,13 +58,19 @@ export struct AuroraBackground {
 
       this.auroraBlooms()
 
-      // 内容区统一压回安全区：顶部让开状态栏、底部让开导航条/Home 指示条
-      Stack({ alignContent: Alignment.TopStart }) {
+      // 内容区统一压回安全区：顶部让开状态栏、底部让开导航条/Home 指示条。
+      // 水平取居中对齐：页面对内容列设了最大宽度（LayoutConstants），宽屏下由此居中。
+      Stack({ alignContent: Alignment.Top }) {
         this.content()
       }
       .width('100%')
       .height('100%')
       .padding({ top: this.statusBarHeight, bottom: this.bottomSafeHeight })
+
+      // 应用锁遮罩置于最上层：锁定期间盖住口令、密钥与配置内容
+      if (this.appLocked) {
+        PinLockOverlay()
+      }
     }
     .width('100%')
     .height('100%')
@@ -129,34 +138,5 @@ export struct AuroraBackground {
     .height('100%')
     .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
     .hitTestBehavior(HitTestMode.Transparent)
-  }
-}
-
-/**
- * 半透明冰晶卡片容器：
- * 24px 大圆角 + 1px 微发光边缘高光 + 高斯模糊材质 + Z 轴柔和空间阴影。
- *
- * 说明：各页面为控制层级与间距，多数直接内联冰晶样式；此容器用于需要统一包裹的场景。
- */
-@Component
-export struct GlassCard {
-  @Prop cornerRadius: number = 24;
-  @Prop paddingSize: number = 16;
-  @Prop compact: boolean = false;
-
-  /** 内容插槽，父组件以尾随闭包传入。 */
-  @Require @BuilderParam content: () => void = emptySlot;
-
-  build() {
-    Column() {
-      this.content()
-    }
-    .width('100%')
-    .padding(this.paddingSize)
-    .borderRadius(this.cornerRadius)
-    .backgroundColor($r('app.color.card_background'))
-    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
-    .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
-    .shadow(this.compact ? glassGroupShadow() : glassCardShadow())
   }
 }

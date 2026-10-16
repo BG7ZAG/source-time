@@ -25,10 +25,13 @@ export enum AppErrorCode {
   WEBDAV_INVALID_REMOTE_FILE = 'WEBDAV_INVALID_REMOTE_FILE',
 
   SYNC_CONFLICT = 'SYNC_CONFLICT',
-  SYNC_BUSY = 'SYNC_BUSY'
+  SYNC_BUSY = 'SYNC_BUSY',
+
+  RATE_LIMITED = 'RATE_LIMITED'
 }
 
 export interface AppError {
   code: AppErrorCode;
-  message: string;
+  /** 面向用户的文案：Resource 走多语言资源，string 仅用于无需翻译的场景。 */
+  message: ResourceStr;
 }

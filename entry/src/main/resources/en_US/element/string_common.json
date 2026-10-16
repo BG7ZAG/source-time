@@ -1,0 +1,32 @@
+{
+  "string": [
+    {
+      "name": "common_cancel",
+      "value": "Cancel"
+    },
+    {
+      "name": "common_retry",
+      "value": "Retry"
+    },
+    {
+      "name": "common_generate",
+      "value": "Generate"
+    },
+    {
+      "name": "common_copy",
+      "value": "Copy"
+    },
+    {
+      "name": "common_delete",
+      "value": "Delete"
+    },
+    {
+      "name": "common_clear",
+      "value": "Clear"
+    },
+    {
+      "name": "common_refresh",
+      "value": "Refresh"
+    }
+  ]
+}

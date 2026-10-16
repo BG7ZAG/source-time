@@ -1,6 +1,7 @@
 import { describe, it, expect } from '@ohos/hypium';
 import { OtpParser, ParsedOtpUri } from '../../../main/ets/service/OtpParser';
 import { Result } from '../../../main/ets/types/Result';
+import { AppError, AppErrorCode } from '../../../main/ets/types/Errors';
 
 const SECRET: string = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
 
@@ -94,6 +95,42 @@ export default function otpParserTest() {
       const result: Result<ParsedOtpUri> = parser.parseUri(uri);
       const parsed: ParsedOtpUri = result.data as ParsedOtpUri;
       expect(parsed.account).assertEqual('a.b+c/d=e');
+    });
+
+    it('queryKeysAreCaseInsensitive', 0, () => {
+      const parser = new OtpParser();
+      const uri: string = 'otpauth://totp/Svc:acc?SECRET=' + SECRET + '&Algorithm=SHA256&DIGITS=8&Period=60';
+      const result: Result<ParsedOtpUri> = parser.parseUri(uri);
+      expect(result.success).assertTrue();
+      const parsed: ParsedOtpUri = result.data as ParsedOtpUri;
+      expect(parsed.secret).assertEqual(SECRET);
+      expect(parsed.algorithm).assertEqual('SHA256');
+      expect(parsed.digits).assertEqual(8);
+      expect(parsed.period).assertEqual(60);
+    });
+
+    it('unsupportedAlgorithmRejected', 0, () => {
+      const parser = new OtpParser();
+      const result: Result<ParsedOtpUri> = parser.parseUri('otpauth://totp/Svc:acc?secret=' + SECRET
+        + '&algorithm=MD5');
+      expect(result.success).assertFalse();
+      const error: AppError = result.error as AppError;
+      expect(error.code).assertEqual(AppErrorCode.INVALID_TOTP_CONFIG);
+    });
+
+    it('unsupportedDigitsRejected', 0, () => {
+      const parser = new OtpParser();
+      const result: Result<ParsedOtpUri> = parser.parseUri('otpauth://totp/Svc:acc?secret=' + SECRET
+        + '&digits=7');
+      expect(result.success).assertFalse();
+    });
+
+    it('invalidPeriodRejected', 0, () => {
+      const parser = new OtpParser();
+      const zero: Result<ParsedOtpUri> = parser.parseUri('otpauth://totp/Svc:acc?secret=' + SECRET + '&period=0');
+      const huge: Result<ParsedOtpUri> = parser.parseUri('otpauth://totp/Svc:acc?secret=' + SECRET + '&period=99999');
+      expect(zero.success).assertFalse();
+      expect(huge.success).assertFalse();
     });
   });
 }

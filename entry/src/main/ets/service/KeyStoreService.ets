@@ -34,20 +34,37 @@ export class KeyStoreService {
       Logger.error('KeyStore save skipped: secret length out of range');
       return false;
     }
-    // 先删后加，避免别名冲突（24000003 / 24000002）
-    await this.remove();
     const attrs: asset.AssetMap = new Map();
     attrs.set(asset.Tag.ALIAS, this.alias());
     attrs.set(asset.Tag.SECRET, secretBytes);
-    attrs.set(asset.Tag.ACCESSIBILITY, asset.Accessibility.DEVICE_FIRST_UNLOCKED);
+    attrs.set(asset.Tag.ACCESSIBILITY, asset.Accessibility.DEVICE_UNLOCKED);
     attrs.set(asset.Tag.DATA_LABEL_NORMAL_1, this.encode(KEY_LABEL));
+    // update 的可改属性白名单只有 SECRET 与 DATA_LABEL_NORMAL_*；
+    // 带上 ALIAS/ACCESSIBILITY 会参数校验失败（401），别名不存在时也永远走不到 add。
+    const updateAttrs: asset.AssetMap = new Map();
+    updateAttrs.set(asset.Tag.SECRET, secretBytes);
+    updateAttrs.set(asset.Tag.DATA_LABEL_NORMAL_1, this.encode(KEY_LABEL));
+    const query: asset.AssetMap = new Map();
+    query.set(asset.Tag.ALIAS, this.alias());
+    try {
+      // 原地更新，别名不存在时才新增：先删后加会在 add 失败时连旧密钥一起丢失
+      await asset.update(query, updateAttrs);
+      Logger.info('Encryption secret updated in asset store');
+      return true;
+    } catch (error) {
+      const err = error as BusinessError;
+      if (err.code !== NOT_FOUND_CODE) {
+        Logger.error('KeyStore update failed, code=' + err.code + ' message=' + err.message);
+        return false;
+      }
+    }
     try {
       await asset.add(attrs);
       Logger.info('Encryption secret stored in asset store');
       return true;
     } catch (error) {
       const err = error as BusinessError;
-      Logger.error('KeyStore save failed, code=' + err.code);
+      Logger.error('KeyStore save failed, code=' + err.code + ' message=' + err.message);
       return false;
     }
   }
@@ -70,7 +87,7 @@ export class KeyStoreService {
     } catch (error) {
       const err = error as BusinessError;
       if (err.code !== NOT_FOUND_CODE) {
-        Logger.error('KeyStore load failed, code=' + err.code);
+        Logger.error('KeyStore load failed, code=' + err.code + ' message=' + err.message);
       }
       return '';
     }
@@ -91,7 +108,7 @@ export class KeyStoreService {
       if (err.code === NOT_FOUND_CODE) {
         return true;
       }
-      Logger.error('KeyStore remove failed, code=' + err.code);
+      Logger.error('KeyStore remove failed, code=' + err.code + ' message=' + err.message);
       return false;
     }
   }

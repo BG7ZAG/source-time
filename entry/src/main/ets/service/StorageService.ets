@@ -9,7 +9,7 @@ import { DatabaseModel } from '../model/DatabaseModel';
 import { TotpItem } from '../model/TotpItem';
 import { Result, ok, err } from '../types/Result';
 import { AppErrorCode } from '../types/Errors';
-import { DATABASE_FILE_NAME, CURRENT_SCHEMA_VERSION } from '../constants/AppConstants';
+import { DATABASE_FILE_NAME, CURRENT_SCHEMA_VERSION, MIN_TOTP_PERIOD, MAX_TOTP_PERIOD } from '../constants/AppConstants';
 
 const OPEN_READ_ONLY: number = 0;
 const OPEN_WRITE_CREATE_TRUNC: number = 0o2 | 0o100 | 0o1000;
@@ -38,6 +38,24 @@ export class StorageService {
     return StorageService.instance;
   }
 
+  /**
+   * 读写串行队列。
+   *
+   * 冷启动载入、同步前后的载入与保存可能并发发起，而每次载入里的解密都会 await 让出执行：
+   * 先发出的请求完全可能后完成，把陈旧的库写回 this.database。此后「读缓存 → 修改 → 写盘」
+   * 就会用旧数据覆盖刚写入的结果（丢条目）。所有载入与保存走同一条 Promise 链即可消除该竞态。
+   */
+  private queueHead: Promise<void> = Promise.resolve();
+
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const run: Promise<T> = this.queueHead.then(() => task());
+    // 队尾吞掉异常：失败由调用方持有的 run 自行处理，否则一次失败会永久断链
+    this.queueHead = run.then(() => {
+    }, () => {
+    });
+    return run;
+  }
+
   isInitialized(): boolean {
     try {
       return fs.accessSync(this.dbPath);
@@ -51,7 +69,11 @@ export class StorageService {
     return ok(undefined);
   }
 
-  async loadDatabase(encryptionSecret: string): Promise<Result<DatabaseModel>> {
+  loadDatabase(encryptionSecret: string): Promise<Result<DatabaseModel>> {
+    return this.enqueue<Result<DatabaseModel>>(() => this.doLoadDatabase(encryptionSecret));
+  }
+
+  private async doLoadDatabase(encryptionSecret: string): Promise<Result<DatabaseModel>> {
     try {
       if (!this.isInitialized()) {
         // 本地还没有密文文件：返回空库（首次使用或刚清库后的正常状态），不视为错误
@@ -72,7 +94,7 @@ export class StorageService {
       const parsed: DatabaseModel = JSON.parse(json) as DatabaseModel;
       if (!this.validateDatabase(parsed)) {
         Logger.error('Storage load: invalid database schema', 'Storage');
-        return err<DatabaseModel>(AppErrorCode.INVALID_ENCRYPTED_FILE, '数据库格式无效');
+        return err<DatabaseModel>(AppErrorCode.INVALID_ENCRYPTED_FILE, $r('app.string.error_database_format_invalid'));
       }
       this.database = parsed;
       Logger.info('Storage load ok: items=' + parsed.items.length + ' revision=' + parsed.revision
@@ -80,11 +102,15 @@ export class StorageService {
       return ok(parsed);
     } catch (error) {
       Logger.error('Storage load failed: decrypt error (key mismatch or corrupted file)', 'Storage');
-      return err<DatabaseModel>(AppErrorCode.DECRYPT_FAILED, '无法解密数据，请确认加密密钥是否正确');
+      return err<DatabaseModel>(AppErrorCode.DECRYPT_FAILED, $r('app.string.error_local_decrypt_failed'));
     }
   }
 
-  async saveDatabase(database: DatabaseModel, encryptionSecret: string): Promise<Result<void>> {
+  saveDatabase(database: DatabaseModel, encryptionSecret: string): Promise<Result<void>> {
+    return this.enqueue<Result<void>>(() => this.doSaveDatabase(database, encryptionSecret));
+  }
+
+  private async doSaveDatabase(database: DatabaseModel, encryptionSecret: string): Promise<Result<void>> {
     try {
       const json: string = JSON.stringify(database);
       const plainBytes: Uint8Array = new util.TextEncoder().encodeInto(json);
@@ -96,7 +122,7 @@ export class StorageService {
       return ok(undefined);
     } catch (error) {
       Logger.error('Storage save failed', 'Storage');
-      return err<void>(AppErrorCode.STORAGE_WRITE_FAILED, '保存数据失败');
+      return err<void>(AppErrorCode.STORAGE_WRITE_FAILED, $r('app.string.error_storage_save_failed'));
     }
   }
 
@@ -125,7 +151,7 @@ export class StorageService {
       return ok(emptyDb);
     } catch (error) {
       Logger.error('Storage quarantine failed');
-      return err<DatabaseModel>(AppErrorCode.STORAGE_WRITE_FAILED, '清除本地数据失败');
+      return err<DatabaseModel>(AppErrorCode.STORAGE_WRITE_FAILED, $r('app.string.error_clear_local_data_failed'));
     }
   }
 
@@ -164,10 +190,14 @@ export class StorageService {
     return ok(undefined);
   }
 
-  async changeEncryptionSecret(oldSecret: string, newSecret: string): Promise<Result<void>> {
+  changeEncryptionSecret(oldSecret: string, newSecret: string): Promise<Result<void>> {
+    return this.enqueue<Result<void>>(() => this.doChangeEncryptionSecret(oldSecret, newSecret));
+  }
+
+  private async doChangeEncryptionSecret(oldSecret: string, newSecret: string): Promise<Result<void>> {
     try {
       if (!this.isInitialized()) {
-        return err<void>(AppErrorCode.KEY_REQUIRED, '尚无加密数据');
+        return err<void>(AppErrorCode.KEY_REQUIRED, $r('app.string.error_no_encrypted_data'));
       }
       const bytes: Uint8Array = this.readFile();
       const plainBytes: Uint8Array = await this.cryptoService.decrypt(bytes, oldSecret);
@@ -176,7 +206,7 @@ export class StorageService {
       return ok(undefined);
     } catch (error) {
       Logger.error('Storage change key failed');
-      return err<void>(AppErrorCode.INVALID_KEY, '当前密钥不正确');
+      return err<void>(AppErrorCode.INVALID_KEY, $r('app.string.error_current_key_incorrect'));
     }
   }
 
@@ -188,14 +218,14 @@ export class StorageService {
     try {
       if (!this.isInitialized()) {
         Logger.warn('Storage read skipped: local database not initialized', 'Storage');
-        return err<Uint8Array>(AppErrorCode.STORAGE_READ_FAILED, '本地尚无数据');
+        return err<Uint8Array>(AppErrorCode.STORAGE_READ_FAILED, $r('app.string.error_no_local_data'));
       }
       const bytes: Uint8Array = this.readFile();
       Logger.debug('Storage read encrypted file: bytes=' + bytes.length, 'Storage');
       return ok(bytes);
     } catch (error) {
       Logger.error('Storage read encrypted file failed', 'Storage');
-      return err<Uint8Array>(AppErrorCode.STORAGE_READ_FAILED, '读取数据失败');
+      return err<Uint8Array>(AppErrorCode.STORAGE_READ_FAILED, $r('app.string.error_read_data_failed'));
     }
   }
 
@@ -206,12 +236,12 @@ export class StorageService {
       const parsed: DatabaseModel = JSON.parse(json) as DatabaseModel;
       if (!this.validateDatabase(parsed)) {
         Logger.error('Storage decode: invalid database schema');
-        return err<DatabaseModel>(AppErrorCode.INVALID_ENCRYPTED_FILE, '数据库格式无效');
+        return err<DatabaseModel>(AppErrorCode.INVALID_ENCRYPTED_FILE, $r('app.string.error_database_format_invalid'));
       }
       return ok(parsed);
     } catch (error) {
       Logger.error('Storage decode encrypted database failed');
-      return err<DatabaseModel>(AppErrorCode.DECRYPT_FAILED, '无法解密远程数据，请确认加密密钥是否正确');
+      return err<DatabaseModel>(AppErrorCode.DECRYPT_FAILED, $r('app.string.error_remote_decrypt_failed'));
     }
   }
 
@@ -297,7 +327,8 @@ export class StorageService {
     if (item.digits !== 6 && item.digits !== 8) {
       return false;
     }
-    if (typeof item.period !== 'number' || item.period <= 0) {
+    if (typeof item.period !== 'number' || !Number.isInteger(item.period) || item.period < MIN_TOTP_PERIOD
+      || item.period > MAX_TOTP_PERIOD) {
       return false;
     }
     return true;

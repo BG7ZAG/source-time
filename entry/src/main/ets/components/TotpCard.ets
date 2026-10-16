@@ -190,13 +190,13 @@ export struct TotpCard {
           .shadow(avatarShadow())
 
           Column({ space: 2 }) {
-            Text(this.issuer.length > 0 ? this.issuer : '未命名')
+            Text(this.issuer.length > 0 ? this.issuer : $r('app.string.card_issuer_unnamed'))
               .fontSize(15)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.text_primary'))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
-            Text(this.account.length > 0 ? this.account : '未填写账号')
+            Text(this.account.length > 0 ? this.account : $r('app.string.card_account_missing'))
               .fontSize(12)
               .fontColor($r('app.color.text_secondary'))
               .maxLines(1)
@@ -234,7 +234,7 @@ export struct TotpCard {
             .layoutWeight(1)
 
           Stack({ alignContent: Alignment.Center }) {
-            Button('复制')
+            Button($r('app.string.common_copy'))
               .fontSize(13)
               .fontWeight(FontWeight.Medium)
               .height(34)

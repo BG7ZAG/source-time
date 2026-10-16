@@ -73,5 +73,59 @@ export default function cryptoServiceTest() {
       }
       expect(identical).assertFalse();
     });
+
+    // 头部布局：magic(0-3) version(4) algorithm(5) iterations(6-9, 大端) saltLength(10) salt(11-26)
+    // nonceLength(27) nonce(28-39) 密文(40..)
+    it('decryptRejectsAbsurdIterations', 0, async () => {
+      const service = new CryptoService();
+      const encrypted: Uint8Array = await service.encrypt(new Uint8Array([1, 2, 3]), 'secret');
+      const huge: Uint8Array = encrypted.slice(0, encrypted.length);
+      huge[6] = 0xFF;
+      huge[7] = 0xFF;
+      huge[8] = 0xFF;
+      huge[9] = 0xFF;
+      const tiny: Uint8Array = encrypted.slice(0, encrypted.length);
+      tiny[6] = 0;
+      tiny[7] = 0;
+      tiny[8] = 0;
+      tiny[9] = 1;
+      let hugeFailed: boolean = false;
+      let tinyFailed: boolean = false;
+      try {
+        await service.decrypt(huge, 'secret');
+      } catch (error) {
+        hugeFailed = true;
+      }
+      try {
+        await service.decrypt(tiny, 'secret');
+      } catch (error) {
+        tinyFailed = true;
+      }
+      expect(hugeFailed).assertTrue();
+      expect(tinyFailed).assertTrue();
+    });
+
+    it('decryptRejectsUnexpectedSaltOrNonceLength', 0, async () => {
+      const service = new CryptoService();
+      const encrypted: Uint8Array = await service.encrypt(new Uint8Array([1, 2, 3]), 'secret');
+      const badSalt: Uint8Array = encrypted.slice(0, encrypted.length);
+      badSalt[10] = 20;
+      const badNonce: Uint8Array = encrypted.slice(0, encrypted.length);
+      badNonce[27] = 8;
+      let saltFailed: boolean = false;
+      let nonceFailed: boolean = false;
+      try {
+        await service.decrypt(badSalt, 'secret');
+      } catch (error) {
+        saltFailed = true;
+      }
+      try {
+        await service.decrypt(badNonce, 'secret');
+      } catch (error) {
+        nonceFailed = true;
+      }
+      expect(saltFailed).assertTrue();
+      expect(nonceFailed).assertTrue();
+    });
   });
 }

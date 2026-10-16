@@ -21,30 +21,35 @@ const SOURCE_PREFIXES: string[] = [
  * 统一日志入口：hilog 输出 + 本地持久化（供「运行日志」页面查看）。
  *
  * 约定：
- * - 消息正文应写「可诊断的上下文」：目标地址/目录、HTTP 状态码、字节数、耗时、错误原因等，
+ * - 消息正文应写「可诊断的上下文」：目标长度/形状、HTTP 状态码、字节数、耗时、错误原因等，
  *   让日志能直接定位问题；密码、密钥、令牌、Basic 凭据等机密一律不写明文（只可记长度或「是否已设置」）；
- * - 落盘与展示前统一过 maskSensitive() 脱敏，作为最后一道兜底；
+ *   服务器地址与账号同属可识别信息，一律不写明文（出口 maskSensitive 会兜底抹掉 URL）；
+ * - 落盘与 hilog 输出前统一过 maskSensitive() 脱敏，避免 hdc hilog 旁路；
  * - 日志写入失败绝不影响业务主流程。
  */
 export class Logger {
   static debug(message: string, source: string = ''): void {
-    hilog.debug(DOMAIN, TAG, '%{public}s', message);
-    Logger.record(LogLevel.DEBUG, source, message);
+    const safe: string = maskSensitive(message);
+    hilog.debug(DOMAIN, TAG, '%{public}s', safe);
+    Logger.record(LogLevel.DEBUG, source, safe);
   }
 
   static info(message: string, source: string = ''): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', message);
-    Logger.record(LogLevel.INFO, source, message);
+    const safe: string = maskSensitive(message);
+    hilog.info(DOMAIN, TAG, '%{public}s', safe);
+    Logger.record(LogLevel.INFO, source, safe);
   }
 
   static warn(message: string, source: string = ''): void {
-    hilog.warn(DOMAIN, TAG, '%{public}s', message);
-    Logger.record(LogLevel.WARN, source, message);
+    const safe: string = maskSensitive(message);
+    hilog.warn(DOMAIN, TAG, '%{public}s', safe);
+    Logger.record(LogLevel.WARN, source, safe);
   }
 
   static error(message: string, source: string = ''): void {
-    hilog.error(DOMAIN, TAG, '%{public}s', message);
-    Logger.record(LogLevel.ERROR, source, message);
+    const safe: string = maskSensitive(message);
+    hilog.error(DOMAIN, TAG, '%{public}s', safe);
+    Logger.record(LogLevel.ERROR, source, safe);
   }
 
   /** 本地日志（含历史），按时间升序。 */
@@ -94,7 +99,7 @@ export class Logger {
       time: nowMilliseconds(),
       level: level,
       tag: source.length > 0 ? source : Logger.inferSource(message),
-      message: maskSensitive(message)
+      message: message
     };
     try {
       LogStore.getInstance().append(entry);

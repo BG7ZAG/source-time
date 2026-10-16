@@ -1,0 +1,52 @@
+{
+  "string": [
+    {
+      "name": "about_title",
+      "value": "About SourceTime"
+    },
+    {
+      "name": "about_app_name",
+      "value": "SourceTime"
+    },
+    {
+      "name": "about_tagline",
+      "value": "Open-source TOTP authenticator for HarmonyOS"
+    },
+    {
+      "name": "about_version",
+      "value": "V1.0.0 · HarmonyOS Native"
+    },
+    {
+      "name": "about_license",
+      "value": "License"
+    },
+    {
+      "name": "about_license_value",
+      "value": "MIT License"
+    },
+    {
+      "name": "about_repo",
+      "value": "Repository"
+    },
+    {
+      "name": "about_thanks",
+      "value": "Credits"
+    },
+    {
+      "name": "about_thanks_value",
+      "value": "Thanks to everyone who uses it"
+    },
+    {
+      "name": "about_usage_title",
+      "value": "How to use"
+    },
+    {
+      "name": "about_usage_body",
+      "value": "Codes are derived from your secret and the current time, so this device must stay in sync with the server clock. If verification keeps failing, enable automatic date & time in system settings and try again."
+    },
+    {
+      "name": "about_footer",
+      "value": "Local-first · end-to-end encrypted WebDAV sync"
+    }
+  ]
+}

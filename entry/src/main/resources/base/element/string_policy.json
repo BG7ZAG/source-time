@@ -1,0 +1,484 @@
+{
+  "string": [
+    {
+      "name": "policy_title",
+      "value": "隐私政策"
+    },
+    {
+      "name": "policy_heading",
+      "value": "源时（SourceTime）隐私政策"
+    },
+    {
+      "name": "policy_version_label",
+      "value": "版本 %s"
+    },
+    {
+      "name": "policy_effective_date",
+      "value": "生效日期：2026年10月16日"
+    },
+    {
+      "name": "policy_section_intro_title",
+      "value": "一、引言与适用范围"
+    },
+    {
+      "name": "policy_section_intro_body_1",
+      "value": "源时（SourceTime）是一款本地优先的鸿蒙（HarmonyOS）TOTP 动态口令工具，基于 RFC 6238 在设备本地生成一次性验证码。"
+    },
+    {
+      "name": "policy_section_intro_body_2",
+      "value": "本政策适用于应用内的全部数据处理行为，包括数据收集、本地加密存储、运行日志、WebDAV 同步、剪贴板使用与数据删除。"
+    },
+    {
+      "name": "policy_section_intro_body_3",
+      "value": "本政策仅涵盖源时应用自身；你在应用中自行配置的 WebDAV 服务器，以及操作系统提供的剪贴板等系统级能力不在本政策范围内，其数据处理适用相应服务方的规则。"
+    },
+    {
+      "name": "policy_section_intro_body_4",
+      "value": "源时是开源应用（MIT 协议），源代码可供审查，你可以通过审查代码验证本政策的各项声明。"
+    },
+    {
+      "name": "policy_section_purpose_title",
+      "value": "二、数据处理的目的与依据"
+    },
+    {
+      "name": "policy_section_purpose_body_1",
+      "value": "源时仅处理为提供其核心功能所必需的数据，不进行与功能无关的用户画像、精准营销或行为分析。"
+    },
+    {
+      "name": "policy_section_purpose_body_2",
+      "value": "处理目的包括：在设备本地生成 TOTP 验证码；加密保存你录入的口令配置与 WebDAV 配置；在你主动启用时进行加密备份同步；以及留存本地日志用于故障排查与问题定位。"
+    },
+    {
+      "name": "policy_section_purpose_body_3",
+      "value": "处理依据为你在首次启动时对隐私政策的明示同意，以及为向你提供所请求功能所必需；你可以随时停止使用并删除相关数据。"
+    },
+    {
+      "name": "policy_section_purpose_body_4",
+      "value": "源时不将你的数据用于本政策未载明的任何其它目的。"
+    },
+    {
+      "name": "policy_section_data_title",
+      "value": "三、我们收集与处理的数据"
+    },
+    {
+      "name": "policy_section_data_body_1",
+      "value": "源时不向我们收集或上传你的个人身份信息，不要求注册、登录，也不关联手机号或邮箱。你主动输入的数据仅在你的设备本地处理，开发者不持有任何副本。"
+    },
+    {
+      "name": "policy_section_data_body_2",
+      "value": "源时不自发采集设备硬件标识（如 IMEI、OAID）、位置、通讯录、通话记录、应用使用统计或崩溃上报信息。"
+    },
+    {
+      "name": "policy_section_data_body_3",
+      "value": "你主动输入并保存在本地的数据包括：TOTP 配置（发行方、账号、密钥、算法、位数、周期）、加密密钥、应用锁 PIN 的校验值与盐（仅在你开启应用锁时）、WebDAV 连接配置（服务器地址、用户名、密码、远程路径与同步开关）。"
+    },
+    {
+      "name": "policy_section_data_body_4",
+      "value": "为标识本地数据库实例，应用会在加密库中保存一个由应用自行生成的随机 UUID（deviceId）；它不是任何系统硬件标识，也不用于追踪你的设备或身份，仅在加密库内保存（启用同步时随密文备份），不单独上传给开发者或任何第三方。"
+    },
+    {
+      "name": "policy_section_data_body_5",
+      "value": "应用不参与操作系统的备份与恢复流程（已在配置中关闭 allowToBackupRestore），因此上述数据不会被纳入系统级备份。除你主动启用的 WebDAV 同步外，数据不会发送到任何外部服务器。"
+    },
+    {
+      "name": "policy_section_permissions_title",
+      "value": "四、权限说明"
+    },
+    {
+      "name": "policy_section_permissions_body_1",
+      "value": "源时仅申请两项系统权限：网络权限（ohos.permission.INTERNET）与相机权限（ohos.permission.CAMERA）。"
+    },
+    {
+      "name": "policy_section_permissions_body_2",
+      "value": "网络权限仅用于你主动配置并启用的 WebDAV 同步；不启用 WebDAV 时应用不进行网络通信。"
+    },
+    {
+      "name": "policy_section_permissions_body_3",
+      "value": "相机权限仅在你主动进入扫码页时、在前台使用（when: inuse），用于扫描 otpauth 二维码以录入 TOTP 配置。"
+    },
+    {
+      "name": "policy_section_permissions_body_4",
+      "value": "扫码调用系统提供的扫描组件（ScanKit）完成取景与识别，应用仅接收识别出的二维码文本，不保存相机图像，也不在后台调用相机。"
+    },
+    {
+      "name": "policy_section_permissions_body_5",
+      "value": "源时不申请存储读写、位置、麦克风、电话、短信、通讯录等其它权限。"
+    },
+    {
+      "name": "policy_section_storage_title",
+      "value": "五、数据的本地存储与加密"
+    },
+    {
+      "name": "policy_section_storage_body_1",
+      "value": "全部口令数据以单个加密文件 totp.db.enc 的形式保存在应用私有目录中。"
+    },
+    {
+      "name": "policy_section_storage_body_2",
+      "value": "数据在落盘前经 AES-256-GCM 加密：使用随机 12 字节 Nonce 与 16 字节认证标签，读取时必须校验认证标签。"
+    },
+    {
+      "name": "policy_section_storage_body_3",
+      "value": "加密密钥由你的主密钥经 PBKDF2-HMAC-SHA256 派生：随机 16 字节 Salt、迭代 100,000 次、生成 256 位密钥。"
+    },
+    {
+      "name": "policy_section_storage_body_4",
+      "value": "写入采用原子写：先写入临时文件、同步到磁盘、校验尺寸后再重命名覆盖，失败时保留原文件。"
+    },
+    {
+      "name": "policy_section_storage_body_5",
+      "value": "应用设置保存在应用私有存储中；其中 WebDAV 密码经加密后保存，而 WebDAV 服务器地址、用户名、远程路径与各项开关以明文形式保存在应用私有空间内。"
+    },
+    {
+      "name": "policy_section_storage_body_6",
+      "value": "若你开启应用锁，应用只保存 PIN 的 PBKDF2-HMAC-SHA256 校验值与随机盐，不保存 PIN 明文；校验值仅在本机比对，不进入任何网络请求。"
+    },
+    {
+      "name": "policy_section_storage_body_7",
+      "value": "应用不会在文件中以明文形式保存加密密钥、TOTP 密钥、应用锁 PIN 或 WebDAV 密码。"
+    },
+    {
+      "name": "policy_section_secret_title",
+      "value": "六、加密密钥与安全"
+    },
+    {
+      "name": "policy_section_secret_body_1",
+      "value": "加密密钥由系统关键资产存储（Asset Store Kit）托管，应用不以明文文件方式保存该密钥。"
+    },
+    {
+      "name": "policy_section_secret_body_2",
+      "value": "托管密钥在设备解锁后可用（DEVICE_UNLOCKED）：设备锁定时无法读取，因此在锁屏状态下即使设备被他人取得也无法静默取回密钥。"
+    },
+    {
+      "name": "policy_section_secret_body_3",
+      "value": "应用会在启动时从系统关键资产存储取回密钥，用于本地数据的静默加解密。"
+    },
+    {
+      "name": "policy_section_secret_body_4",
+      "value": "开启应用锁后，冷启动与从后台回到前台时会遮住口令列表，需输入本机 PIN 才能查看；应用锁不能替代加密密钥，也无法在忘记密钥时恢复数据。"
+    },
+    {
+      "name": "policy_section_secret_body_5",
+      "value": "源时不提供服务器端密钥找回能力；密钥一旦丢失，已加密数据将无法解密。"
+    },
+    {
+      "name": "policy_section_notice_title",
+      "value": "七、重要提示"
+    },
+    {
+      "name": "policy_section_notice_body_1",
+      "value": "7.1 请妥善保管加密密钥。源时不提供服务器端密钥恢复能力，丢失密钥后将无法解密已加密的数据。"
+    },
+    {
+      "name": "policy_section_notice_body_2",
+      "value": "7.2 建议在设置密钥后立即备份到安全位置（如密码管理器或离线存储）。"
+    },
+    {
+      "name": "policy_section_notice_body_3",
+      "value": "7.3 WebDAV 同步传输的是加密文件，应用默认只允许 https:// 地址以防中间人攻击；开启「允许不安全连接」改用 http:// 时，凭据与密文在传输中不受保护。"
+    },
+    {
+      "name": "policy_section_logs_title",
+      "value": "八、运行日志与诊断信息"
+    },
+    {
+      "name": "policy_section_logs_body_1",
+      "value": "源时会在本地留存运行日志，用于故障排查与问题诊断，并同时输出到系统日志（hilog）。"
+    },
+    {
+      "name": "policy_section_logs_body_2",
+      "value": "日志以 NDJSON 文件（sourcetime_logs.ndjson）形式保存在应用私有目录，最多保留 500 条，超出后丢弃最旧条目。"
+    },
+    {
+      "name": "policy_section_logs_body_3",
+      "value": "日志仅保存在本地，不会上传到任何服务器。"
+    },
+    {
+      "name": "policy_section_logs_body_4",
+      "value": "为便于定位问题，日志会记录必要的连接上下文，例如 WebDAV 服务器地址、同步目录与备份文件名、HTTP 状态码、数据字节数与耗时等；这些信息不包含账号名、密码、密钥或 Basic 凭据。"
+    },
+    {
+      "name": "policy_section_logs_body_5",
+      "value": "本地日志文件（sourcetime_logs.ndjson）与系统日志（hilog）输出在落盘与打印前都会经过同一套脱敏处理，将密钥、密码、令牌、授权信息等敏感字段替换为 ***；该脱敏基于规则匹配，属尽力而为，不构成对敏感信息绝不出现的绝对保证。"
+    },
+    {
+      "name": "policy_section_logs_body_6",
+      "value": "请注意：同样的（已脱敏）日志内容也会输出到系统日志（hilog），同设备上其它拥有权限的应用或调试工具可能读取到它。如你计划将日志提供给他人或第三方，请自行检查并清理其中的地址等信息。"
+    },
+    {
+      "name": "policy_section_logs_body_7",
+      "value": "你可以在「设置 > 运行日志」中查看、按级别过滤、复制（内容为本地已脱敏日志）或清空日志。"
+    },
+    {
+      "name": "policy_section_logs_body_8",
+      "value": "清空日志只删除日志文件，不影响你的口令数据与 WebDAV 同步配置。"
+    },
+    {
+      "name": "policy_section_webdav_title",
+      "value": "九、WebDAV 同步与远程备份"
+    },
+    {
+      "name": "policy_section_webdav_body_1",
+      "value": "仅当你自行配置并启用 WebDAV 时，源时才会通过你指定的服务器地址进行网络通信。"
+    },
+    {
+      "name": "policy_section_webdav_body_2",
+      "value": "上传的内容是你本地已完成 AES-256-GCM 加密的库文件（密文），服务器方只能看到密文，无法直接读取你的 TOTP 数据。"
+    },
+    {
+      "name": "policy_section_webdav_body_3",
+      "value": "每次推送都会生成一个带时间戳的快照文件（sourcetime-YYYYMMDD-HHMMSS.enc），不覆盖历史快照。"
+    },
+    {
+      "name": "policy_section_webdav_body_4",
+      "value": "应用默认在远端保留最近 10 份快照并自动清理更旧的快照，只会删除应用自身命名的备份文件，不影响服务器上的其它文件。"
+    },
+    {
+      "name": "policy_section_webdav_body_5",
+      "value": "同步触发时机包括：你手动发布或拉取、新增或删除口令后、设置变更后、加密密钥变更后，以及应用启动时自动拉取（后两项自动行为可在设置中关闭）。"
+    },
+    {
+      "name": "policy_section_webdav_body_6",
+      "value": "手动拉取时，你可以从远端备份列表中选择要恢复的快照，经二次确认后以该快照覆盖本地数据；手动拉取不提供回滚保护，请谨慎操作。"
+    },
+    {
+      "name": "policy_section_webdav_body_7",
+      "value": "启动时的自动拉取带有回滚保护：若远端数据版本低于本地，应用会拒绝覆盖。"
+    },
+    {
+      "name": "policy_section_webdav_body_8",
+      "value": "若同步失败，应用不会回滚你本地的操作。"
+    },
+    {
+      "name": "policy_section_webdav_body_9",
+      "value": "为写入备份，应用会在你指定的服务器上按需创建同步目录（MKCOL）；当服务器返回错误时，应用会把响应片段（最多 200 字符）记入本地日志用于定位问题。"
+    },
+    {
+      "name": "policy_section_webdav_body_10",
+      "value": "网络请求使用 HTTP Basic 鉴权，凭据仅放在请求头中、不写入日志。"
+    },
+    {
+      "name": "policy_section_webdav_body_11",
+      "value": "默认仅允许 https:// 地址：若你把服务器地址写成 http://，应用会阻止同步并提示改用 https；你也可以在 WebDAV 设置页显式开启「允许不安全连接」，此时账号密码与密文文件将以未经 TLS 保护的形式传输，该风险由你自行承担，请仅在可信网络下使用。"
+    },
+    {
+      "name": "policy_section_webdav_body_12",
+      "value": "WebDAV 服务器由你自行搭建与管理，开发者不运营任何用于接收你数据的服务器，也不对其安全性与可用性负责。"
+    },
+    {
+      "name": "policy_section_clipboard_title",
+      "value": "十、剪贴板与会话数据"
+    },
+    {
+      "name": "policy_section_clipboard_body_1",
+      "value": "当你点击验证码卡片时，当前验证码会被复制到系统剪贴板。"
+    },
+    {
+      "name": "policy_section_clipboard_body_2",
+      "value": "生成加密密钥后，应用支持将密钥一键复制到系统剪贴板。"
+    },
+    {
+      "name": "policy_section_clipboard_body_3",
+      "value": "在运行日志页，应用支持将（已脱敏的）日志复制到系统剪贴板。"
+    },
+    {
+      "name": "policy_section_clipboard_body_4",
+      "value": "系统剪贴板为系统级共享区域，其它应用可能读取其中的内容；复制加密密钥后请留意此风险，并在使用后及时清除剪贴板。"
+    },
+    {
+      "name": "policy_section_clipboard_body_5",
+      "value": "复制验证码或加密密钥时，应用会将剪贴板数据标记为仅限本机使用，不参与系统的跨设备剪贴板同步。"
+    },
+    {
+      "name": "policy_section_clipboard_body_6",
+      "value": "复制已脱敏的日志时，应用使用系统剪贴板的默认共享方式；若你已在系统中开启跨设备剪贴板同步，日志内容可能被同步至你登录同一账号的其他设备。请在复制后及时清除剪贴板。"
+    },
+    {
+      "name": "policy_section_transfer_title",
+      "value": "十一、数据出境"
+    },
+    {
+      "name": "policy_section_transfer_body_1",
+      "value": "源时自身不向开发者或任何第三方传输你的数据，开发者不运营任何用于接收你数据的服务器。"
+    },
+    {
+      "name": "policy_section_transfer_body_2",
+      "value": "当你自行配置 WebDAV 服务器时，加密后的备份文件会被传输到你指定的该服务器；若该服务器位于你所在国家/地区之外，则相应数据会由你自主选择并传输至境外。"
+    },
+    {
+      "name": "policy_section_transfer_body_3",
+      "value": "该境外的接收方、存储位置与其数据处理规则由你自行选择的服务提供方决定，开发者不参与、也无法控制。请在配置前确认服务器所在地及你适用的法律要求。"
+    },
+    {
+      "name": "policy_section_backup_title",
+      "value": "十二、系统备份与恢复"
+    },
+    {
+      "name": "policy_section_backup_body_1",
+      "value": "源时不参与操作系统的备份与恢复流程：应用已在配置中关闭 allowToBackupRestore，因此你的应用数据不会被纳入系统级备份，也不会通过厂商云服务在设备间恢复。"
+    },
+    {
+      "name": "policy_section_backup_body_2",
+      "value": "如需在多台设备间同步，请自行启用 WebDAV 同步（仅传输密文）；这是本应用唯一提供的数据传输途径。"
+    },
+    {
+      "name": "policy_section_sharing_title",
+      "value": "十三、数据共享与第三方组件"
+    },
+    {
+      "name": "policy_section_sharing_body_1",
+      "value": "源时不会向开发者或任何第三方服务器上传你的数据；你自行配置的 WebDAV 服务器是唯一的外部数据接收方。"
+    },
+    {
+      "name": "policy_section_sharing_body_2",
+      "value": "应用不集成任何第三方统计、广告或崩溃上报 SDK，不进行数据埋点。"
+    },
+    {
+      "name": "policy_section_sharing_body_3",
+      "value": "应用所使用的均为鸿蒙系统能力，包括网络（NetworkKit）、扫码（ScanKit）、加密（CryptoArchitectureKit）、系统关键资产存储（AssetStoreKit）与系统剪贴板，不涉及第三方数据处理服务。"
+    },
+    {
+      "name": "policy_section_retention_title",
+      "value": "十四、数据留存与删除"
+    },
+    {
+      "name": "policy_section_retention_body_1",
+      "value": "各类型数据的保存期限如下：TOTP 口令数据保存至你主动删除；运行日志最多保留 500 条，超出后自动丢弃最旧条目；WebDAV 配置随卸载或清除数据移除；远端快照默认保留最近 10 份。"
+    },
+    {
+      "name": "policy_section_retention_body_2",
+      "value": "本地加密库（totp.db.enc）会一直保留，直至你主动删除。"
+    },
+    {
+      "name": "policy_section_retention_body_3",
+      "value": "运行日志最多保留 500 条，你可随时在运行日志页清空。"
+    },
+    {
+      "name": "policy_section_retention_body_4",
+      "value": "远端快照由你的 WebDAV 服务器保存，应用默认保留最近 10 份；你也可以在服务器侧自行删除。"
+    },
+    {
+      "name": "policy_section_retention_body_5",
+      "value": "应用设置（含隐私政策确认状态、同步配置等）保存在应用私有存储中，随卸载或清除数据移除。"
+    },
+    {
+      "name": "policy_section_retention_body_6",
+      "value": "在应用内删除口令数据后不可恢复。"
+    },
+    {
+      "name": "policy_section_retention_body_7",
+      "value": "当本地加密文件无法被当前密钥解密时，应用会将其隔离重命名（.orphan-<时间戳>）后保留，而不是物理删除；只有「忘记密钥」流程会在你确认后物理删除本地密文。"
+    },
+    {
+      "name": "policy_section_retention_body_8",
+      "value": "卸载应用通常会清除应用的私有数据；应用不参与系统备份，因此不会有数据被系统从备份中恢复。"
+    },
+    {
+      "name": "policy_section_rights_title",
+      "value": "十五、你的权利"
+    },
+    {
+      "name": "policy_section_rights_body_1",
+      "value": "查询：你可以随时在应用内查看已保存的口令与各项配置。"
+    },
+    {
+      "name": "policy_section_rights_body_2",
+      "value": "更正：你可以编辑或重新录入任意 TOTP 项、修改 WebDAV 配置。"
+    },
+    {
+      "name": "policy_section_rights_body_3",
+      "value": "删除：你可以删除口令数据、清空运行日志、清除 WebDAV 配置。"
+    },
+    {
+      "name": "policy_section_rights_body_4",
+      "value": "撤回同意：你可以在首次启动时选择「不同意」；已同意后，可通过卸载应用或清除应用数据来撤回同意，撤回后应用将不再处理你的数据。"
+    },
+    {
+      "name": "policy_section_rights_body_5",
+      "value": "密钥与同步控制：你可以随时更改加密密钥、启用或停用 WebDAV 同步。"
+    },
+    {
+      "name": "policy_section_minors_title",
+      "value": "十六、未成年人保护"
+    },
+    {
+      "name": "policy_section_minors_body_1",
+      "value": "源时面向具备完全民事行为能力的用户，不面向未满 14 周岁的儿童提供独立服务。"
+    },
+    {
+      "name": "policy_section_minors_body_2",
+      "value": "应用不收集、不处理不满 14 周岁未成年人的个人信息。如监护人发现未成年人未经同意使用了本应用，可通过下方渠道联系我们，我们将采取措施删除相关信息。"
+    },
+    {
+      "name": "policy_section_security_title",
+      "value": "十七、信息安全与事件应对"
+    },
+    {
+      "name": "policy_section_security_body_1",
+      "value": "源时采取本地加密存储、密钥交由系统关键资产托管、原子写入与日志脱敏等技术措施，降低数据被未授权访问或损坏的风险。"
+    },
+    {
+      "name": "policy_section_security_body_2",
+      "value": "由于数据以密文形式保存在你的设备与你自己配置的服务器上，开发者不持有你的数据副本，也不运营用于接收你数据的服务器。"
+    },
+    {
+      "name": "policy_section_security_body_3",
+      "value": "如你发现或怀疑密钥、密文或账号凭据泄露，建议立即更换加密密钥、停用 WebDAV 同步，并在你的 WebDAV 服务器与相关 2FA 服务方处轮换凭据。"
+    },
+    {
+      "name": "policy_section_security_body_4",
+      "value": "如涉及应用代码层面的安全问题，可通过项目仓库反馈，我们会在核实后尽快修复。"
+    },
+    {
+      "name": "policy_section_updates_title",
+      "value": "十八、隐私政策的更新与同意机制"
+    },
+    {
+      "name": "policy_section_updates_body_1",
+      "value": "本政策可能随应用版本更新而修订。"
+    },
+    {
+      "name": "policy_section_updates_body_2",
+      "value": "政策版本号记录在应用设置中，你可以在本页顶部与「设置 > 隐私政策」中随时查看当前版本与生效日期。"
+    },
+    {
+      "name": "policy_section_updates_body_3",
+      "value": "当政策发生重大变更时，应用会在下次启动时重新展示隐私确认弹窗，要求你再次明确同意。"
+    },
+    {
+      "name": "policy_section_updates_body_4",
+      "value": "当你不同意更新后的政策时，可以停止使用并卸载应用。"
+    },
+    {
+      "name": "policy_section_law_title",
+      "value": "十九、适用法律与争议解决"
+    },
+    {
+      "name": "policy_section_law_body_1",
+      "value": "本政策适用中华人民共和国法律。"
+    },
+    {
+      "name": "policy_section_law_body_2",
+      "value": "因本政策产生的争议，双方应首先友好协商解决；协商不成的，可向有管辖权的人民法院提起诉讼。"
+    },
+    {
+      "name": "policy_section_contact_title",
+      "value": "二十、联系我们"
+    },
+    {
+      "name": "policy_section_contact_body_1",
+      "value": "源时由个人开发者维护，不设专门的数据保护官。"
+    },
+    {
+      "name": "policy_section_contact_body_2",
+      "value": "如对本政策或你的数据处理有任何疑问、请求或投诉，请通过项目仓库提交 Issue：https://github.com/BG7ZAG/source-time/issues"
+    },
+    {
+      "name": "policy_section_contact_body_3",
+      "value": "你也可以通过审查开源代码（MIT 协议）进一步了解数据处理细节。"
+    },
+    {
+      "name": "policy_footer_note",
+      "value": "如对本政策有任何疑问，请通过项目仓库提交 Issue 反馈。"
+    }
+  ]
+}

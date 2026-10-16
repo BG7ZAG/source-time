@@ -4,11 +4,15 @@ import { KeyStoreService } from '../service/KeyStoreService';
 import { SettingsService } from '../service/SettingsService';
 import { StorageService } from '../service/StorageService';
 import { SyncService } from '../service/SyncService';
+import { PinService } from '../service/PinService';
 import { ClipboardService } from '../service/ClipboardService';
 import { DatabaseModel } from '../model/DatabaseModel';
 import { WebDavConfig } from '../model/WebDavConfig';
 import { Result } from '../types/Result';
 import { Logger } from '../utils/Logger';
+import { UiText } from '../utils/UiText';
+import { USER_SECRET_MAX_LENGTH, USER_SECRET_MIN_LENGTH } from '../constants/CryptoConstants';
+import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { AuroraBackground } from '../components/AuroraBackground';
 import {
   focusGlowShadow,
@@ -21,6 +25,18 @@ import {
 } from '../theme/GlassStyle';
 
 const SECRET_STORAGE_KEY: string = 'encryptionSecret';
+
+/**
+ * 主操作按钮参数。
+ *
+ * ArkUI 的 @Builder 按值传参时，状态变量变化不会引起其内部 UI 刷新；
+ * 只有传入对象字面量（按引用传参）才会随状态刷新。故按钮参数收敛为一个对象。
+ */
+interface PrimaryButtonParams {
+  label: ResourceStr;
+  enabled: boolean;
+  onTap: () => void;
+}
 
 /**
  * 安全与密钥页（鸿蒙 7 版）：冰晶卡片 + 聚焦发光输入框 + 双色柔光步骤指示。
@@ -39,16 +55,28 @@ struct SecurityPage {
   @State step: number = 0;
   @State verifyingOld: boolean = false;
   @State copied: boolean = false;
-  @State error: string = '';
+  /** 最近一次失败的用户可读文案：Resource 走多语言资源。 */
+  @State error: ResourceStr = '';
   @State focusedField: string = '';
+  @State appLockEnabled: boolean = false;
+  @State lockPin: string = '';
+  @State lockPinNew: string = '';
+  @State lockPinConfirm: string = '';
+  /** 应用锁区的错误提示：Resource 走多语言资源。 */
+  @State lockError: ResourceStr = '';
+  @State lockSaving: boolean = false;
 
   private cryptoService: CryptoService = new CryptoService();
   private settingsService: SettingsService = new SettingsService();
   private storageService: StorageService = StorageService.getInstance();
   private clipboardService: ClipboardService = new ClipboardService();
+  private pinService: PinService = new PinService();
 
   aboutToAppear(): void {
     const settings = this.settingsService.getSettings();
+    // 用 isLockUsable() 而非 appLockEnabled：校验值缺失（写入被中断）时锁其实并不会生效，
+    // 若按标记显示「已开启」会让用户误以为口令已受保护；此时按未开启展示，重新录入 PIN 即可修复。
+    this.appLockEnabled = this.pinService.isLockUsable();
     this.isFirstSetup = !settings.encryptionInitialized;
     if (!this.isFirstSetup) {
       const secret: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
@@ -64,11 +92,11 @@ struct SecurityPage {
   private onGenerate(): void {
     if (this.hasGenerated && !this.isFirstSetup) {
       promptAction.showDialog({
-        title: '重新生成密钥？',
-        message: '重新生成将覆盖当前输入的密钥。已加密的数据需要用旧密钥才能解密。',
+        title: $r('app.string.security_regen_title'),
+        message: $r('app.string.security_regen_message'),
         buttons: [
-          { text: '取消', color: '#666666' },
-          { text: '确认重新生成', color: '#E84026' }
+          { text: $r('app.string.common_cancel'), color: '#666666' },
+          { text: $r('app.string.security_regen_confirm'), color: '#E84026' }
         ]
       }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
         if (dialogResult.index === 1) {
@@ -85,12 +113,12 @@ struct SecurityPage {
   }
 
   private onCopy(): void {
-    this.clipboardService.copyText(this.encryptionSecret).then((result: Result<void>) => {
+    this.clipboardService.copySensitiveText(this.encryptionSecret).then((result: Result<void>) => {
       if (result.success) {
         this.copied = true;
-        promptAction.showToast({ message: '密钥已复制' });
+        promptAction.showToast({ message: $r('app.string.security_key_copied') });
       } else {
-        promptAction.showToast({ message: '复制失败' });
+        promptAction.showToast({ message: $r('app.string.security_copy_failed') });
       }
     });
   }
@@ -109,12 +137,11 @@ struct SecurityPage {
         return;
       }
       promptAction.showDialog({
-        title: '密钥未写入系统安全存储',
-        message: '源时无法把加密密钥交给系统关键资产托管。\n\n'
-          + '不重试的话，下次启动将无法自动解锁，需要手动输入密钥。',
+        title: $r('app.string.security_keystore_failed_title'),
+        message: $r('app.string.security_keystore_failed_message'),
         buttons: [
-          { text: '稍后再说', color: '#666666' },
-          { text: '重试', color: '#0A59F7' }
+          { text: $r('app.string.security_later'), color: '#666666' },
+          { text: $r('app.string.common_retry'), color: '#0A59F7' }
         ]
       }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
         if (dialogResult.index === 1) {
@@ -127,13 +154,21 @@ struct SecurityPage {
   }
 
   private onSaveFirstSetup(): void {
-    if (this.encryptionSecret.trim().length === 0) {
-      this.error = '请输入或生成加密密钥';
+    const secret: string = this.encryptionSecret.trim();
+    if (secret.length === 0) {
+      this.error = $r('app.string.security_secret_required');
       return;
     }
+    if (!this.isSecretLengthValid(secret)) {
+      this.error = $r('app.string.security_secret_length_invalid');
+      return;
+    }
+    this.saveFirstSetupSecret(secret);
+  }
+
+  private saveFirstSetupSecret(secret: string): void {
     this.saving = true;
     this.error = '';
-    const secret: string = this.encryptionSecret.trim();
     AppStorage.setOrCreate<string>(SECRET_STORAGE_KEY, secret);
     const settings = this.settingsService.getSettings();
     settings.encryptionInitialized = true;
@@ -146,9 +181,13 @@ struct SecurityPage {
           router.replaceUrl({ url: 'pages/HomePage' });
         });
       } else {
-        this.error = '保存失败';
+        this.error = $r('app.string.security_save_failed');
       }
     });
+  }
+
+  private isSecretLengthValid(secret: string): boolean {
+    return secret.length >= USER_SECRET_MIN_LENGTH && secret.length <= USER_SECRET_MAX_LENGTH;
   }
 
   private onVerifyOldSecret(): void {
@@ -156,7 +195,7 @@ struct SecurityPage {
     this.error = '';
     const oldSecret: string = this.oldSecret.trim();
     if (oldSecret.length === 0) {
-      this.error = '请输入旧密钥';
+      this.error = $r('app.string.security_old_secret_required');
       this.verifyingOld = false;
       return;
     }
@@ -165,13 +204,13 @@ struct SecurityPage {
     if (!this.storageService.isInitialized()) {
       this.verifyingOld = false;
       this.step = 1;
-      promptAction.showToast({ message: '本地暂无加密数据，可直接设置新密钥' });
+      promptAction.showToast({ message: $r('app.string.security_no_local_data') });
       return;
     }
     const bytesResult: Result<Uint8Array> = this.storageService.readEncryptedFile();
     if (!bytesResult.success || bytesResult.data === undefined) {
       this.verifyingOld = false;
-      this.error = bytesResult.error !== undefined ? bytesResult.error.message : '读取本地数据失败';
+      this.error = bytesResult.error !== undefined ? bytesResult.error.message : $r('app.string.security_read_local_failed');
       return;
     }
     this.storageService.decodeEncryptedDatabase(bytesResult.data, oldSecret).then((decodeResult: Result<DatabaseModel>) => {
@@ -180,19 +219,23 @@ struct SecurityPage {
         this.step = 1;
         this.error = '';
       } else {
-        this.error = '旧密钥错误';
+        this.error = $r('app.string.security_old_secret_incorrect');
       }
     });
   }
 
   private onSaveNewSecret(): void {
-    if (this.newSecret.trim().length === 0) {
-      this.error = '请输入新密钥';
+    const newSecret: string = this.newSecret.trim();
+    if (newSecret.length === 0) {
+      this.error = $r('app.string.security_new_secret_required');
+      return;
+    }
+    if (!this.isSecretLengthValid(newSecret)) {
+      this.error = $r('app.string.security_secret_length_invalid');
       return;
     }
     this.saving = true;
     this.error = '';
-    const newSecret: string = this.newSecret.trim();
     const oldSecret: string = this.oldSecret.trim();
     // 本地无加密数据：没有密文需要重加密，直接切换密钥（否则会误报「读取本地数据失败」）
     if (!this.storageService.isInitialized()) {
@@ -202,13 +245,13 @@ struct SecurityPage {
     const bytesResult: Result<Uint8Array> = this.storageService.readEncryptedFile();
     if (!bytesResult.success || bytesResult.data === undefined) {
       this.saving = false;
-      this.error = bytesResult.error !== undefined ? bytesResult.error.message : '读取本地数据失败';
+      this.error = bytesResult.error !== undefined ? bytesResult.error.message : $r('app.string.security_read_local_failed');
       return;
     }
     this.storageService.decodeEncryptedDatabase(bytesResult.data, oldSecret).then((decodeResult: Result<DatabaseModel>) => {
       if (!decodeResult.success || decodeResult.data === undefined) {
         this.saving = false;
-        this.error = '解密失败';
+        this.error = $r('app.string.security_decrypt_failed');
         return;
       }
       const db: DatabaseModel = decodeResult.data;
@@ -227,14 +270,14 @@ struct SecurityPage {
               this.triggerSyncAfterKeyChange(newSecret);
             }
           });
-          // 更新系统关键资产存储里的密钥（save 内部先删后加）；写入失败弹窗可重试
+          // 更新系统关键资产存储里的密钥（存在则原地更新，不存在才新增）；写入失败弹窗可重试
           this.persistSecretToKeyStore(newSecret, () => {
             Logger.info('Encryption key changed');
-            promptAction.showToast({ message: '密钥已更新' });
+            promptAction.showToast({ message: $r('app.string.security_key_updated') });
             router.back();
           });
         } else {
-          this.error = '保存失败';
+          this.error = $r('app.string.security_save_failed');
         }
       });
     });
@@ -250,8 +293,9 @@ struct SecurityPage {
         Logger.info('Sync after key change requested');
         return;
       }
-      const message: string = result.error !== undefined ? result.error.message : '同步失败';
-      Logger.error('Sync after key change failed: ' + message);
+      const message: ResourceStr = result.error !== undefined ? result.error.message : $r('app.string.security_sync_failed');
+      // 日志正文保持英文不变；拼接的错误详情需要纯文本，Resource 先解析为当前语言文案
+      Logger.error('Sync after key change failed: ' + (typeof message === 'string' ? message : UiText.of(message)));
     });
   }
 
@@ -276,7 +320,7 @@ struct SecurityPage {
     this.persistSecretToKeyStore(newSecret, () => {
       this.saving = false;
       Logger.info('Encryption key changed (no local encrypted data)');
-      promptAction.showToast({ message: '密钥已更新' });
+      promptAction.showToast({ message: $r('app.string.security_key_updated') });
       router.back();
     });
   }
@@ -290,13 +334,11 @@ struct SecurityPage {
    */
   private onForgetKey(): void {
     promptAction.showDialog({
-      title: '忘记加密密钥？',
-      message: '确认后将删除系统安全存储中的旧密钥，并从本地永久删除已加密的数据文件'
-        + '（TOTP 条目、历史备份）及 WebDAV 密码。\n\n'
-        + '源时不提供密钥恢复能力，删除后数据无法找回，需要重新设置新密钥并从零开始录入口令。',
+      title: $r('app.string.security_forget_title'),
+      message: $r('app.string.security_forget_message'),
       buttons: [
-        { text: '取消', color: '#666666' },
-        { text: '确认删除', color: '#E84026' }
+        { text: $r('app.string.common_cancel'), color: '#666666' },
+        { text: $r('app.string.security_forget_confirm'), color: '#E84026' }
       ]
     }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
       if (dialogResult.index !== 1) {
@@ -322,18 +364,18 @@ struct SecurityPage {
       }
       this.saving = false;
       promptAction.showDialog({
-        title: '旧密钥删除失败',
-        message: '系统安全存储中的加密密钥未能删除。为避免旧密钥残留，本地加密数据暂未清除，请重试。',
+        title: $r('app.string.security_delete_old_key_failed_title'),
+        message: $r('app.string.security_delete_old_key_failed_message'),
         buttons: [
-          { text: '取消', color: '#666666' },
-          { text: '重试', color: '#E84026' }
+          { text: $r('app.string.common_cancel'), color: '#666666' },
+          { text: $r('app.string.common_retry'), color: '#E84026' }
         ]
       }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
         if (dialogResult.index === 1) {
           this.saving = true;
           this.removeOldKeyThenReset();
         } else {
-          promptAction.showToast({ message: '已取消，数据未删除' });
+          promptAction.showToast({ message: $r('app.string.security_forget_cancelled') });
         }
       });
     });
@@ -353,12 +395,12 @@ struct SecurityPage {
       this.settingsService.saveSettings(settings).then(() => {
         this.saving = false;
         if (!resetResult.success) {
-          const message: string = resetResult.error !== undefined ? resetResult.error.message : '清除本地数据失败';
+          const message: ResourceStr = resetResult.error !== undefined ? resetResult.error.message : $r('app.string.security_clear_local_failed');
           promptAction.showToast({ message: message });
           return;
         }
         this.enterSetupAfterReset();
-        promptAction.showToast({ message: '旧密钥与加密数据已清除，请设置新密钥' });
+        promptAction.showToast({ message: $r('app.string.security_cleared') });
       });
     });
   }
@@ -376,6 +418,104 @@ struct SecurityPage {
     this.copied = false;
     this.focusedField = '';
     this.error = '';
+  }
+
+  /**
+   * 开启应用锁：校验值写进设置成功后才把界面状态置为「已开启」。
+   * 开启动作本身不弹锁定遮罩——用户此刻正在页内操作，锁只在冷启动与退后台后生效。
+   */
+  private async onEnableAppLock(): Promise<void> {
+    if (this.lockSaving) {
+      return;
+    }
+    this.lockError = '';
+    if (!PinService.isValidPin(this.lockPinNew)) {
+      this.lockError = $r('app.string.pin_invalid_format');
+      return;
+    }
+    if (this.lockPinNew !== this.lockPinConfirm) {
+      this.lockError = $r('app.string.pin_mismatch');
+      return;
+    }
+    this.lockSaving = true;
+    const result: Result<void> = await this.pinService.setPin(this.lockPinNew);
+    this.lockSaving = false;
+    if (!result.success) {
+      this.lockError = result.error !== undefined ? result.error.message : $r('app.string.pin_enable_failed');
+      return;
+    }
+    this.appLockEnabled = true;
+    this.lockPin = '';
+    this.lockPinNew = '';
+    this.lockPinConfirm = '';
+    promptAction.showToast({ message: $r('app.string.security_app_lock_on') });
+  }
+
+  /** 更换 PIN：先验旧 PIN 再覆盖校验值，中途任一步失败都保留原锁不被动摇。 */
+  private async onChangeAppLockPin(): Promise<void> {
+    if (this.lockSaving) {
+      return;
+    }
+    this.lockError = '';
+    if (!PinService.isValidPin(this.lockPin)) {
+      this.lockError = $r('app.string.pin_current_required');
+      return;
+    }
+    if (!PinService.isValidPin(this.lockPinNew)) {
+      this.lockError = $r('app.string.pin_new_invalid_format');
+      return;
+    }
+    if (this.lockPinNew !== this.lockPinConfirm) {
+      this.lockError = $r('app.string.pin_new_mismatch');
+      return;
+    }
+    this.lockSaving = true;
+    const verified: Result<boolean> = await this.pinService.verify(this.lockPin);
+    if (!verified.success) {
+      this.lockSaving = false;
+      this.lockError = verified.error !== undefined ? verified.error.message : $r('app.string.pin_verify_failed');
+      return;
+    }
+    if (verified.data !== true) {
+      this.lockSaving = false;
+      this.lockPin = '';
+      this.lockError = $r('app.string.pin_current_incorrect');
+      return;
+    }
+    const result: Result<void> = await this.pinService.setPin(this.lockPinNew);
+    this.lockSaving = false;
+    if (!result.success) {
+      this.lockError = result.error !== undefined ? result.error.message : $r('app.string.pin_change_failed');
+      return;
+    }
+    this.lockPin = '';
+    this.lockPinNew = '';
+    this.lockPinConfirm = '';
+    promptAction.showToast({ message: $r('app.string.security_pin_updated') });
+  }
+
+  /** 关闭应用锁：PinService.disable 内部会先校验 PIN，校验通过才清除校验值。 */
+  private async onDisableAppLock(): Promise<void> {
+    if (this.lockSaving) {
+      return;
+    }
+    this.lockError = '';
+    if (!PinService.isValidPin(this.lockPin)) {
+      this.lockError = $r('app.string.pin_current_required_before_disable');
+      return;
+    }
+    this.lockSaving = true;
+    const result: Result<void> = await this.pinService.disable(this.lockPin);
+    this.lockSaving = false;
+    if (!result.success) {
+      this.lockError = result.error !== undefined ? result.error.message : $r('app.string.pin_disable_failed');
+      return;
+    }
+    this.appLockEnabled = false;
+    this.lockPin = '';
+    this.lockPinNew = '';
+    this.lockPinConfirm = '';
+    promptAction.showToast({ message: $r('app.string.security_app_lock_off') });
   }
 
   @Builder
@@ -401,11 +541,11 @@ struct SecurityPage {
       Blank()
 
       Column({ space: 1 }) {
-        Text('安全与密钥')
+        Text($r('app.string.security_title'))
           .fontSize(19)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.text_primary'))
-        Text('保护你的数据')
+        Text($r('app.string.security_subtitle'))
           .fontSize(10.5)
           .fontColor($r('app.color.text_tertiary'))
       }
@@ -437,7 +577,7 @@ struct SecurityPage {
         .borderRadius(3)
         .backgroundColor(this.step >= 1 ? $r('app.color.brand') : $r('app.color.glass_track'))
         .opacity(this.step >= 1 ? 1.0 : 0.7)
-      Text(this.step >= 1 ? '第 2 / 2 步' : '第 1 / 2 步')
+      Text(this.step >= 1 ? $r('app.string.security_step_2') : $r('app.string.security_step_1'))
         .fontSize(11)
         .fontColor($r('app.color.text_tertiary'))
         .margin({ left: 4 })
@@ -449,8 +589,8 @@ struct SecurityPage {
 
   /** 主操作：渐变高光填充 + 能量光晕（Button 不支持 letterSpacing）。 */
   @Builder
-  primaryButton(label: string, enabled: boolean, onTap: () => void) {
-    Button(label)
+  primaryButton(params: PrimaryButtonParams) {
+    Button(params.label)
       .width('100%')
       .height(50)
       .borderRadius(25)
@@ -459,27 +599,12 @@ struct SecurityPage {
       .linearGradient({ angle: 90, colors: trackGradientColors(0) })
       .fontColor($r('app.color.fab_foreground'))
       .shadow(glowButtonShadow())
-      .enabled(enabled)
-      .onClick(onTap)
-  }
-
-  /** 次级操作：Outlined Glass。 */
-  @Builder
-  outlinedButton(label: string, onTap: () => void) {
-    Button(label)
-      .width(84)
-      .height(48)
-      .borderRadius(14)
-      .fontSize(14)
-      .fontWeight(FontWeight.Medium)
-      .backgroundColor(Color.Transparent)
-      .fontColor($r('app.color.brand'))
-      .border({ width: 1, color: $r('app.color.brand'), style: BorderStyle.Solid })
-      .onClick(onTap)
+      .enabled(params.enabled)
+      .onClick(params.onTap)
   }
 
   @Builder
-  hintCard(icon: Resource, title: string, body: string, danger: boolean) {
+  hintCard(icon: Resource, title: ResourceStr, body: ResourceStr, danger: boolean) {
     Row({ space: 12 }) {
       Stack({ alignContent: Alignment.Center }) {
         Image(icon)
@@ -516,7 +641,8 @@ struct SecurityPage {
 
   @Builder
   errorText() {
-    if (this.error.length > 0) {
+    // 错误文案可能是 Resource 或 string，统一用空串判「无错误」（两种赋值都不会等于 ''）
+    if (this.error !== '') {
       Text(this.error)
         .fontSize(12.5)
         .fontColor($r('app.color.danger'))
@@ -528,20 +654,20 @@ struct SecurityPage {
   firstSetupView() {
     Column({ space: 16 }) {
       if (this.keyLost) {
-        this.hintCard($r('app.media.ic_warning'), '加密密钥丢失',
-          '系统安全存储中的加密密钥已丢失，之前加密的数据（包括 TOTP 条目和 WebDAV 密码）将无法解密。请重新设置密钥，之后需重新输入 WebDAV 密码。', true)
+        this.hintCard($r('app.media.ic_warning'), $r('app.string.security_key_lost_title'),
+          $r('app.string.security_key_lost_body'), true)
       } else {
-        this.hintCard($r('app.media.ic_security'), '本地加密保护',
-          '源时会使用你设置的加密密钥保护本地 TOTP 数据，密钥不会上传到任何服务器。', false)
+        this.hintCard($r('app.media.ic_security'), $r('app.string.security_local_protection_title'),
+          $r('app.string.security_local_protection_body'), false)
       }
 
       Column({ space: 8 }) {
-        Text('加密密钥')
+        Text($r('app.string.security_label_encryption_key'))
           .fontSize(12.5)
           .fontColor($r('app.color.text_secondary'))
           .width('100%')
 
-        TextInput({ placeholder: '输入加密密钥', text: $$this.encryptionSecret })
+        TextInput({ placeholder: $r('app.string.security_placeholder_encryption_key'), text: $$this.encryptionSecret })
           .width('100%')
           .height(40)
           .borderRadius(12)
@@ -560,14 +686,14 @@ struct SecurityPage {
           .shadow(this.focusedField === 'first' ? focusGlowShadow() : noShadow())
           .onFocus(() => { this.focusedField = 'first'; })
           .onBlur(() => { if (this.focusedField === 'first') { this.focusedField = ''; } })
-          .onChange((input: string) => {
-            this.encryptionSecret = input;
+          .onChange(() => {
+            // text 已由 $$this.encryptionSecret 双向同步，这里只需清掉「已生成/已复制」提示
             this.hasGenerated = false;
             this.copied = false;
           })
 
         Row({ space: 10 }) {
-          Button('生成')
+          Button($r('app.string.common_generate'))
             .layoutWeight(1)
             .height(48)
             .borderRadius(14)
@@ -578,7 +704,7 @@ struct SecurityPage {
             .border({ width: 1, color: $r('app.color.brand'), style: BorderStyle.Solid })
             .onClick(() => this.onGenerate())
 
-          Button(this.copied ? '已复制' : '复制密钥')
+          Button(this.copied ? $r('app.string.security_copied') : $r('app.string.security_copy_key'))
             .layoutWeight(1)
             .height(48)
             .borderRadius(14)
@@ -601,7 +727,11 @@ struct SecurityPage {
 
       this.errorText()
 
-      this.primaryButton(this.saving ? '保存中...' : (this.keyLost ? '重新设置密钥' : '完成初始化'), !this.saving, () => this.onSaveFirstSetup())
+      this.primaryButton({
+        label: this.saving ? $r('app.string.security_saving') : (this.keyLost ? $r('app.string.security_reset_key') : $r('app.string.security_finish_setup')),
+        enabled: !this.saving,
+        onTap: () => this.onSaveFirstSetup()
+      })
     }
     .width('100%')
     .padding(18)
@@ -617,26 +747,29 @@ struct SecurityPage {
     Column({ space: 16 }) {
       this.stepIndicator()
 
-      this.hintCard($r('app.media.ic_key'), '验证当前密钥',
-        '修改加密密钥需要先验证当前密钥，验证通过后会用新密钥重新加密全部数据。', false)
+      this.hintCard($r('app.media.ic_key'), $r('app.string.security_verify_current_title'),
+        $r('app.string.security_verify_current_body'), false)
 
       Column({ space: 8 }) {
-        Text('当前加密密钥')
+        Text($r('app.string.security_label_current_key'))
           .fontSize(12.5)
           .fontColor($r('app.color.text_secondary'))
           .width('100%')
-        SecurityField({ value: $oldSecret, placeholder: '输入旧密钥' })
+        SecurityField({ value: $oldSecret, placeholder: $r('app.string.security_placeholder_old_secret') })
       }
       .width('100%')
       .alignItems(HorizontalAlign.Start)
 
       this.errorText()
 
-      this.primaryButton(this.verifyingOld ? '验证中...' : '验证旧密钥', !this.verifyingOld,
-        () => this.onVerifyOldSecret())
+      this.primaryButton({
+        label: this.verifyingOld ? $r('app.string.security_verifying') : $r('app.string.security_verify_old_button'),
+        enabled: !this.verifyingOld,
+        onTap: () => this.onVerifyOldSecret()
+      })
 
       // 忘记密钥：删除旧密钥与本地加密数据，转入「设置新密钥」
-      Button('忘记密钥？')
+      Button($r('app.string.security_forget_button'))
         .width('100%')
         .height(44)
         .borderRadius(14)
@@ -661,16 +794,16 @@ struct SecurityPage {
     Column({ space: 16 }) {
       this.stepIndicator()
 
-      this.hintCard($r('app.media.ic_edit'), '设置新密钥',
-        '旧密钥验证成功。请输入或随机生成新的加密密钥。', false)
+      this.hintCard($r('app.media.ic_edit'), $r('app.string.security_set_new_title'),
+        $r('app.string.security_set_new_body'), false)
 
       Column({ space: 8 }) {
-        Text('新加密密钥')
+        Text($r('app.string.security_label_new_key'))
           .fontSize(12.5)
           .fontColor($r('app.color.text_secondary'))
           .width('100%')
 
-        TextInput({ placeholder: '输入新密钥', text: $$this.newSecret })
+        TextInput({ placeholder: $r('app.string.security_placeholder_new_secret'), text: $$this.newSecret })
           .width('100%')
           .height(40)
           .borderRadius(12)
@@ -695,7 +828,7 @@ struct SecurityPage {
           })
 
         Row({ space: 10 }) {
-          Button('生成')
+          Button($r('app.string.common_generate'))
             .layoutWeight(1)
             .height(48)
             .borderRadius(14)
@@ -709,7 +842,7 @@ struct SecurityPage {
               this.copied = false;
             })
 
-          Button(this.copied ? '已复制' : '复制新密钥')
+          Button(this.copied ? $r('app.string.security_copied') : $r('app.string.security_copy_new_key'))
             .layoutWeight(1)
             .height(48)
             .borderRadius(14)
@@ -724,12 +857,12 @@ struct SecurityPage {
             })
             .enabled(this.newSecret.length > 0)
             .onClick(() => {
-              this.clipboardService.copyText(this.newSecret).then((result: Result<void>) => {
+              this.clipboardService.copySensitiveText(this.newSecret).then((result: Result<void>) => {
                 if (result.success) {
                   this.copied = true;
-                  promptAction.showToast({ message: '密钥已复制' });
+                  promptAction.showToast({ message: $r('app.string.security_key_copied') });
                 } else {
-                  promptAction.showToast({ message: '复制失败' });
+                  promptAction.showToast({ message: $r('app.string.security_copy_failed') });
                 }
               })
             })
@@ -739,12 +872,16 @@ struct SecurityPage {
       .width('100%')
       .alignItems(HorizontalAlign.Start)
 
-      this.hintCard($r('app.media.ic_warning'), '请妥善保管',
-        '源时不提供服务器端密钥恢复能力，丢失密钥后已加密数据将无法解密。', true)
+      this.hintCard($r('app.media.ic_warning'), $r('app.string.security_keep_safe_title'),
+        $r('app.string.security_keep_safe_body'), true)
 
       this.errorText()
 
-      this.primaryButton(this.saving ? '保存中...' : '保存新密钥', !this.saving, () => this.onSaveNewSecret())
+      this.primaryButton({
+        label: this.saving ? $r('app.string.security_saving') : $r('app.string.security_save_new_key'),
+        enabled: !this.saving,
+        onTap: () => this.onSaveNewSecret()
+      })
     }
     .width('100%')
     .padding(18)
@@ -753,6 +890,101 @@ struct SecurityPage {
     .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
     .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
     .shadow(glassGroupShadow())
+  }
+
+  /** 应用锁卡片：未开启时录入 PIN，已开启时可改 PIN 或（验 PIN 后）关闭。 */
+  @Builder
+  appLockView() {
+    Column({ space: 16 }) {
+      // 注意：此处不能把三元表达式（$r 结果）直接作为 @Builder 参数传入 ——
+      // 实测开启/关闭应用锁后，hintCard 内的 Text 不会随状态刷新（残留旧文案），
+      // 必须用 if/else 包裹两次调用，让分支切换重建整个 hintCard 子树。
+      if (this.appLockEnabled) {
+        this.hintCard($r('app.media.ic_security'), $r('app.string.security_app_lock_on'),
+          $r('app.string.security_app_lock_on_body'), false)
+      } else {
+        this.hintCard($r('app.media.ic_warning'), $r('app.string.security_app_lock_off'),
+          $r('app.string.security_app_lock_off_body'), true)
+      }
+
+      if (this.appLockEnabled) {
+        Column({ space: 8 }) {
+          this.fieldLabel($r('app.string.security_label_current_pin'))
+          PinField({ value: $lockPin, placeholder: $r('app.string.security_placeholder_current_pin') })
+
+          this.fieldLabel($r('app.string.security_label_new_pin'))
+          PinField({ value: $lockPinNew, placeholder: $r('app.string.security_placeholder_new_pin') })
+
+          this.fieldLabel($r('app.string.security_label_confirm_pin'))
+          PinField({ value: $lockPinConfirm, placeholder: $r('app.string.security_placeholder_confirm_pin') })
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+      } else {
+        Column({ space: 8 }) {
+          this.fieldLabel($r('app.string.security_label_set_pin'))
+          PinField({ value: $lockPinNew, placeholder: $r('app.string.security_placeholder_set_pin') })
+
+          this.fieldLabel($r('app.string.security_label_confirm_set_pin'))
+          PinField({ value: $lockPinConfirm, placeholder: $r('app.string.security_placeholder_confirm_set_pin') })
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+      }
+
+      if (this.lockError !== '') {
+        Text(this.lockError)
+          .fontSize(12.5)
+          .fontColor($r('app.color.danger'))
+          .width('100%')
+      }
+
+      if (this.appLockEnabled) {
+        this.primaryButton({
+          label: this.lockSaving ? $r('app.string.security_processing') : $r('app.string.security_change_pin'),
+          enabled: !this.lockSaving,
+          onTap: () => {
+            this.onChangeAppLockPin();
+          }
+        })
+
+        Button($r('app.string.security_disable_app_lock'))
+          .width('100%')
+          .height(44)
+          .borderRadius(14)
+          .fontSize(13.5)
+          .fontWeight(FontWeight.Medium)
+          .backgroundColor(Color.Transparent)
+          .fontColor($r('app.color.danger'))
+          .enabled(!this.lockSaving)
+          .onClick(() => {
+            this.onDisableAppLock();
+          })
+      } else {
+        this.primaryButton({
+          label: this.lockSaving ? $r('app.string.security_processing') : $r('app.string.security_enable_app_lock'),
+          enabled: !this.lockSaving,
+          onTap: () => {
+            this.onEnableAppLock();
+          }
+        })
+      }
+    }
+    .width('100%')
+    .padding(18)
+    .borderRadius(24)
+    .backgroundColor($r('app.color.card_background'))
+    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+    .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+    .shadow(glassGroupShadow())
+  }
+
+  @Builder
+  fieldLabel(label: ResourceStr) {
+    Text(label)
+      .fontSize(12.5)
+      .fontColor($r('app.color.text_secondary'))
+      .width('100%')
   }
 
   pageTransition() {
@@ -784,6 +1016,8 @@ struct SecurityPage {
                 } else {
                   this.changeKeyStep1()
                 }
+                // 应用锁只在密钥已初始化后出现：首屏要把注意力留给「设置加密密钥」
+                this.appLockView()
               }
             }
             .width('100%')
@@ -799,6 +1033,7 @@ struct SecurityPage {
         }
         .width('100%')
         .height('100%')
+        .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
       }
     }
     .width('100%')
@@ -817,7 +1052,7 @@ struct SecurityPage {
 @Component
 struct SecurityField {
   @Link value: string;
-  @Prop placeholder: string = '';
+  @Prop placeholder: ResourceStr = '';
   @State focused: boolean = false;
 
   build() {
@@ -839,6 +1074,53 @@ struct SecurityField {
         style: BorderStyle.Solid
       })
       .shadow(this.focused ? focusGlowShadow() : noShadow())
+      .onFocus(() => {
+        this.focused = true;
+      })
+      .onBlur(() => {
+        this.focused = false;
+      })
+  }
+}
+
+/**
+ * 应用锁 PIN 输入框：同样必须用 `$$` 双向绑定（见 SecurityField 的说明）。
+ *
+ * 键盘收数字，但剪贴板粘贴仍可能带入非数字或超长内容，onChange 里再做一次过滤；
+ * 过滤写在组件内部，避免每次按键都触发页面级重渲染。
+ */
+@Component
+struct PinField {
+  @Link value: string;
+  @Prop placeholder: ResourceStr = '';
+  @State focused: boolean = false;
+
+  build() {
+    TextInput({ placeholder: this.placeholder, text: $$this.value })
+      .width('100%')
+      .height(40)
+      .borderRadius(12)
+      .fontSize(16)
+      .letterSpacing(4)
+      .fontColor($r('app.color.text_primary'))
+      .padding({ left: 14, right: 14 })
+      .backgroundColor($r('app.color.field_background'))
+      .placeholderColor($r('app.color.text_tertiary'))
+      .caretColor($r('app.color.brand'))
+      .type(InputType.Number)
+      .maxLength(6)
+      .border({
+        width: 1.5,
+        color: this.focused ? $r('app.color.brand') : $r('app.color.field_border'),
+        style: BorderStyle.Solid
+      })
+      .shadow(this.focused ? focusGlowShadow() : noShadow())
+      .onChange((input: string) => {
+        const digits: string = input.replace(/[^0-9]/g, '').substring(0, 6);
+        if (digits !== input) {
+          this.value = digits;
+        }
+      })
       .onFocus(() => {
         this.focused = true;
       })

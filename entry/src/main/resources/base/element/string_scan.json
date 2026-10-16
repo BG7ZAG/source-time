@@ -1,0 +1,68 @@
+{
+  "string": [
+    {
+      "name": "scan_invalid_qr",
+      "value": "二维码无效"
+    },
+    {
+      "name": "scan_save_failed",
+      "value": "保存失败"
+    },
+    {
+      "name": "scan_confirm_title",
+      "value": "确认验证码信息"
+    },
+    {
+      "name": "scan_confirm_subtitle",
+      "value": "确认无误后保存到本地加密数据库"
+    },
+    {
+      "name": "scan_label_issuer",
+      "value": "发行方"
+    },
+    {
+      "name": "scan_label_account",
+      "value": "账号"
+    },
+    {
+      "name": "scan_label_algorithm",
+      "value": "算法"
+    },
+    {
+      "name": "scan_label_digits",
+      "value": "位数"
+    },
+    {
+      "name": "scan_digits_value",
+      "value": "%d 位"
+    },
+    {
+      "name": "scan_label_period",
+      "value": "周期"
+    },
+    {
+      "name": "scan_period_value",
+      "value": "%d 秒"
+    },
+    {
+      "name": "scan_avatar_fallback",
+      "value": "源"
+    },
+    {
+      "name": "scan_saving",
+      "value": "保存中..."
+    },
+    {
+      "name": "scan_save_button",
+      "value": "保 存 口 令"
+    },
+    {
+      "name": "scan_scanning_title",
+      "value": "正在扫描二维码"
+    },
+    {
+      "name": "scan_scanning_hint",
+      "value": "请将 otpauth 二维码放入取景框"
+    }
+  ]
+}

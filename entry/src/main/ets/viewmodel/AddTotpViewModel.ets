@@ -23,7 +23,8 @@ export class AddTotpViewModel {
   digits: 6 | 8 = DEFAULT_TOTP_DIGITS;
   period: number = DEFAULT_TOTP_PERIOD;
   saving: boolean = false;
-  error: string = '';
+  /** 最近一次失败的用户可读文案：Resource 走多语言资源。 */
+  error: ResourceStr = '';
 
   private repository: LocalRepository = new LocalRepository();
   private parser: OtpParser = new OtpParser();
@@ -52,24 +53,24 @@ export class AddTotpViewModel {
     const account: string = this.account.trim();
     const secret: string = normalizeBase32(this.secret);
     if (secret.length === 0) {
-      this.error = '请输入密钥';
+      this.error = $r('app.string.error_secret_required');
       return err<void>(AppErrorCode.INVALID_INPUT, this.error);
     }
     if (!isValidBase32(secret)) {
-      this.error = '密钥格式无效';
+      this.error = $r('app.string.error_secret_format');
       return err<void>(AppErrorCode.INVALID_TOTP_SECRET, this.error);
     }
     if (this.digits !== 6 && this.digits !== 8) {
-      this.error = '位数无效';
+      this.error = $r('app.string.error_digits_invalid');
       return err<void>(AppErrorCode.INVALID_TOTP_CONFIG, this.error);
     }
     if (this.period <= 0) {
-      this.error = '周期无效';
+      this.error = $r('app.string.error_period_invalid');
       return err<void>(AppErrorCode.INVALID_TOTP_CONFIG, this.error);
     }
     if (this.encryptionSecret.length === 0) {
       // 密钥由 KeyStoreService 在启动时自动取回；为空说明系统安全存储里没有可用密钥
-      this.error = '加密密钥不可用，无法读取本地数据（可在 设置 > 安全 中重新设置密钥）';
+      this.error = $r('app.string.error_encryption_key_unavailable');
       return err<void>(AppErrorCode.KEY_REQUIRED, this.error);
     }
     let db: DatabaseModel | null = this.repository.getDatabase();
@@ -77,7 +78,7 @@ export class AddTotpViewModel {
       const loadResult: Result<DatabaseModel> = await this.repository.load(this.encryptionSecret);
       if (!loadResult.success || loadResult.data === undefined) {
         // 回流底层真实原因（如「无法解密数据，请确认加密密钥是否正确」），避免笼统的「数据加载失败」无从定位
-        this.error = loadResult.error !== undefined ? loadResult.error.message : '数据加载失败';
+        this.error = loadResult.error !== undefined ? loadResult.error.message : $r('app.string.error_data_load_failed');
         return err<void>(AppErrorCode.STORAGE_WRITE_FAILED, this.error);
       }
       db = loadResult.data;
@@ -107,7 +108,7 @@ export class AddTotpViewModel {
       };
       const result: Result<void> = await this.repository.save(nextDb, this.encryptionSecret);
       if (!result.success) {
-        this.error = result.error !== undefined ? result.error.message : '保存失败';
+        this.error = result.error !== undefined ? result.error.message : $r('app.string.error_save_failed');
         return result;
       }
       Logger.info('TOTP added: id=' + item.id);

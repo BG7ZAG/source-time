@@ -2,6 +2,7 @@ import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { AuroraBackground } from '../components/AuroraBackground';
 import { frostedPillColor, glassGroupShadow, glassPillShadow } from '../theme/GlassStyle';
+import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 
 /**
  * 关于页（鸿蒙 7 版）：悬浮 logo + 版本胶囊 + 冰晶信息分组卡片。
@@ -31,7 +32,7 @@ struct AboutPage {
 
       Blank()
 
-      Text('关于源时')
+      Text($r('app.string.about_title'))
         .fontSize(19)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary'))
@@ -47,7 +48,7 @@ struct AboutPage {
   }
 
   @Builder
-  infoRow(icon: Resource, label: string, value: string, clickable: boolean, isLast: boolean) {
+  infoRow(icon: Resource, label: ResourceStr, value: ResourceStr, clickable: boolean, isLast: boolean) {
     Column() {
       Row({ space: 14 }) {
         Stack({ alignContent: Alignment.Center }) {
@@ -154,16 +155,16 @@ struct AboutPage {
                 .width(132)
                 .height(132)
 
-                Text('源时')
+                Text($r('app.string.about_app_name'))
                   .fontSize(25)
                   .fontWeight(FontWeight.Bold)
                   .fontColor($r('app.color.text_primary'))
 
-                Text('开源鸿蒙 TOTP 动态口令工具')
+                Text($r('app.string.about_tagline'))
                   .fontSize(12.5)
                   .fontColor($r('app.color.text_secondary'))
 
-                Text('V1.0.0 · HarmonyOS Native')
+                Text($r('app.string.about_version'))
                   .fontSize(11.5)
                   .fontWeight(FontWeight.Medium)
                   .fontColor($r('app.color.brand_on_container'))
@@ -177,9 +178,9 @@ struct AboutPage {
               .alignItems(HorizontalAlign.Center)
 
               Column() {
-                this.infoRow($r('app.media.ic_doc'), '开源协议', 'MIT License', false, false)
-                this.infoRow($r('app.media.ic_github'), '项目仓库', 'BG7ZAG/source-time', true, false)
-                this.infoRow($r('app.media.ic_heart'), '致谢', '感谢每一位使用者', false, true)
+                this.infoRow($r('app.media.ic_doc'), $r('app.string.about_license'), $r('app.string.about_license_value'), false, false)
+                this.infoRow($r('app.media.ic_github'), $r('app.string.about_repo'), 'BG7ZAG/source-time', true, false)
+                this.infoRow($r('app.media.ic_heart'), $r('app.string.about_thanks'), $r('app.string.about_thanks_value'), false, true)
               }
               .width('100%')
               .borderRadius(22)
@@ -189,7 +190,27 @@ struct AboutPage {
               .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
               .shadow(glassGroupShadow())
 
-              Text('本地离线优先 · WebDAV 端到端加密同步')
+              Column({ space: 8 }) {
+                Text($r('app.string.about_usage_title'))
+                  .fontSize(13)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('app.color.text_primary'))
+                  .width('100%')
+                Text($r('app.string.about_usage_body'))
+                  .fontSize(11.5)
+                  .lineHeight(18)
+                  .fontColor($r('app.color.text_secondary'))
+                  .width('100%')
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+              .borderRadius(22)
+              .backgroundColor($r('app.color.card_background'))
+              .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+              .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+              .shadow(glassGroupShadow())
+
+              Text($r('app.string.about_footer'))
                 .fontSize(11)
                 .textAlign(TextAlign.Center)
                 .fontColor($r('app.color.text_tertiary'))
@@ -209,6 +230,7 @@ struct AboutPage {
         }
         .width('100%')
         .height('100%')
+        .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
       }
     }
     .width('100%')

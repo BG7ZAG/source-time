@@ -38,6 +38,28 @@ export default function base32UtilsTest() {
       expect(isValidBase32('MZXW6')).assertTrue();
     });
 
+    it('lengthRemainderRejected', 0, () => {
+      // 余 1：解出 0 字节；余 3、余 6：尾部比特被丢弃
+      expect(isValidBase32('A')).assertFalse();
+      expect(isValidBase32('ABC')).assertFalse();
+      expect(isValidBase32('ABCDEF')).assertFalse();
+      expect(isValidBase32('JBSWY3DPE')).assertFalse();
+      // 合法余数 0/2/4/5/7
+      expect(isValidBase32('JBSWY3DP')).assertTrue();
+      expect(isValidBase32('MZXU')).assertTrue();
+      expect(isValidBase32('ABCDE')).assertTrue();
+    });
+
+    it('decodeRejectsInvalidRemainder', 0, () => {
+      let thrown: boolean = false;
+      try {
+        base32Decode('A');
+      } catch (error) {
+        thrown = true;
+      }
+      expect(thrown).assertTrue();
+    });
+
     it('decodeInvalidThrows', 0, () => {
       let threw: boolean = false;
       try {

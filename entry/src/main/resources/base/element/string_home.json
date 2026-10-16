@@ -1,0 +1,196 @@
+{
+  "string": [
+    {
+      "name": "home_title",
+      "value": "源时"
+    },
+    {
+      "name": "home_subtitle",
+      "value": "TOTP 动态口令"
+    },
+    {
+      "name": "home_secure_storage",
+      "value": "本地加密存储"
+    },
+    {
+      "name": "home_summary_count",
+      "value": "共 %d 个口令"
+    },
+    {
+      "name": "home_empty_message",
+      "value": "还没有口令"
+    },
+    {
+      "name": "home_empty_hint",
+      "value": "点击右下角光球添加"
+    },
+    {
+      "name": "home_load_error_fallback",
+      "value": "无法读取本地数据"
+    },
+    {
+      "name": "home_decrypt_dialog_title",
+      "value": "本地数据无法解密"
+    },
+    {
+      "name": "home_decrypt_dialog_message",
+      "value": "%s\n\n若你更换过加密密钥，本地旧数据将无法用新密钥解密。可选择清除本地数据后重新开始：清除只会把当前加密文件隔离备份（不删除），之后需用原密钥才能恢复其中内容。"
+    },
+    {
+      "name": "home_decrypt_stay_button",
+      "value": "暂不处理"
+    },
+    {
+      "name": "home_decrypt_reset_button",
+      "value": "清除并重开"
+    },
+    {
+      "name": "home_reset_success_toast",
+      "value": "已清除本地数据，可重新添加口令"
+    },
+    {
+      "name": "home_reset_error_fallback",
+      "value": "清除本地数据失败"
+    },
+    {
+      "name": "home_copy_success",
+      "value": "复制成功"
+    },
+    {
+      "name": "home_copy_failed",
+      "value": "复制失败"
+    },
+    {
+      "name": "home_delete_failed",
+      "value": "删除失败"
+    },
+    {
+      "name": "home_item_fallback_label",
+      "value": "该口令"
+    },
+    {
+      "name": "card_issuer_unnamed",
+      "value": "未命名"
+    },
+    {
+      "name": "card_account_missing",
+      "value": "未填写账号"
+    },
+    {
+      "name": "card_delete_confirm_title",
+      "value": "删除这个口令？"
+    },
+    {
+      "name": "card_delete_confirm_message",
+      "value": "%s\n删除后无法恢复。"
+    },
+    {
+      "name": "add_title",
+      "value": "添加动态口令"
+    },
+    {
+      "name": "add_subtitle",
+      "value": "扫码或手动录入，数据仅加密保存在本机"
+    },
+    {
+      "name": "add_segment_scan",
+      "value": "扫描二维码"
+    },
+    {
+      "name": "add_segment_manual",
+      "value": "手动输入"
+    },
+    {
+      "name": "add_scan_start",
+      "value": "点击开始扫描"
+    },
+    {
+      "name": "add_scan_guide",
+      "value": "将服务方提供的 otpauth 二维码放入取景框"
+    },
+    {
+      "name": "add_secret_label",
+      "value": "密钥 / otpauth 链接"
+    },
+    {
+      "name": "add_secret_placeholder",
+      "value": "粘贴 Base32 密钥或 otpauth:// 链接"
+    },
+    {
+      "name": "add_parsed_badge",
+      "value": "已解析"
+    },
+    {
+      "name": "add_issuer_label",
+      "value": "发行方"
+    },
+    {
+      "name": "add_issuer_placeholder",
+      "value": "如：Google"
+    },
+    {
+      "name": "add_account_label",
+      "value": "账号"
+    },
+    {
+      "name": "add_account_placeholder",
+      "value": "如：user@xx.com"
+    },
+    {
+      "name": "add_optional",
+      "value": "可选"
+    },
+    {
+      "name": "add_advanced_options",
+      "value": "高级选项"
+    },
+    {
+      "name": "add_algorithm_label",
+      "value": "算法"
+    },
+    {
+      "name": "add_digits_label",
+      "value": "位数"
+    },
+    {
+      "name": "add_digits_option",
+      "value": "%d 位"
+    },
+    {
+      "name": "add_period_label",
+      "value": "周期（秒）"
+    },
+    {
+      "name": "add_period_invalid",
+      "value": "周期需在 1~3600 秒之间"
+    },
+    {
+      "name": "add_saving",
+      "value": "保存中..."
+    },
+    {
+      "name": "add_save_button",
+      "value": "保 存 口 令"
+    },
+    {
+      "name": "add_saved_toast",
+      "value": "已添加"
+    },
+    {
+      "name": "add_save_failed",
+      "value": "保存失败"
+    },
+    {
+      "name": "add_uri_parsed_toast",
+      "value": "已从链接解析配置"
+    },
+    {
+      "name": "empty_message",
+      "value": "暂无验证码"
+    },
+    {
+      "name": "empty_hint",
+      "value": "点击右下角悬浮球添加"
+    }
+  ]
+}

@@ -7,7 +7,9 @@ import { RemoteBackup } from '../model/RemoteBackup';
 import { SyncStatus } from '../model/SyncModel';
 import { Result } from '../types/Result';
 import { DEFAULT_WEBDAV_DIRECTORY } from '../constants/AppConstants';
+import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { Logger } from '../utils/Logger';
+import { UiText } from '../utils/UiText';
 import { AuroraBackground } from '../components/AuroraBackground';
 import { BackupPickerDialog } from '../components/BackupPickerDialog';
 import {
@@ -30,7 +32,7 @@ const SECRET_STORAGE_KEY: string = 'encryptionSecret';
  * 只有传入对象字面量（按引用传参）才会随状态刷新。故按钮参数收敛为一个对象。
  */
 interface ActionButtonParams {
-  label: string;
+  label: ResourceStr;
   enabled: boolean;
   onTap: () => void;
   icon?: Resource;
@@ -56,13 +58,15 @@ struct WebDavPage {
   @State autoPullOnStart: boolean = false;
   /** 推送后自动清理云端旧快照，仅保留最近 REMOTE_BACKUP_KEEP_COUNT（10）份。 */
   @State cleanOldBackups: boolean = true;
+  /** 显式允许 http:// 明文同步（默认关闭，由 WebDavService 在请求前拦截）。 */
+  @State allowInsecure: boolean = false;
   @State testing: boolean = false;
   @State saving: boolean = false;
   @State pushing: boolean = false;
   @State pulling: boolean = false;
   @State syncStatus: SyncStatus = SyncStatus.IDLE;
   @State lastSyncAt: number = 0;
-  @State syncMessage: string = '';
+  @State syncMessage: ResourceStr = '';
 
   /** 远端备份列表（已按时间倒序，最新在前），供选择弹窗展示。 */
   @State backups: RemoteBackup[] = [];
@@ -72,6 +76,14 @@ struct WebDavPage {
   private webDavService: WebDavService = new WebDavService();
   private settingsService: SettingsService = new SettingsService();
   private encryptionSecret: string = '';
+  /**
+   * 远端配置是否已读入内存。
+   *
+   * 载入是异步的，而保存会用内存里的 this.password 作为「未重新输入时保留旧密码」的兜底值。
+   * 若在载入完成前就落盘，password 还是空串，SettingsService 会据此删除已存的密码密文——
+   * 用户什么都没做就丢了 WebDAV 密码。故未完成载入前一律拒绝写入。
+   */
+  private configLoaded: boolean = false;
   /** 备份选择弹窗控制器：需等列表返回后才创建，故非初始化字段。 */
   private backupDialog: CustomDialogController | null = null;
 
@@ -97,6 +109,8 @@ struct WebDavPage {
       this.autoPush = config.autoPush;
       this.autoPullOnStart = config.autoPullOnStart;
       this.cleanOldBackups = config.cleanOldBackups;
+      this.allowInsecure = config.allowInsecure;
+      this.configLoaded = true;
       SyncService.getInstance().configure(config, this.encryptionSecret);
     });
     const settings = this.settingsService.getSettings();
@@ -115,7 +129,8 @@ struct WebDavPage {
       remotePath: this.remotePath,
       autoPush: this.autoPush,
       autoPullOnStart: this.autoPullOnStart,
-      cleanOldBackups: this.cleanOldBackups
+      cleanOldBackups: this.cleanOldBackups,
+      allowInsecure: this.allowInsecure
     };
   }
 
@@ -130,6 +145,10 @@ struct WebDavPage {
   }
 
   private persistConfig(): void {
+    if (!this.configLoaded) {
+      Logger.warn('WebDAV config write skipped: remote config not loaded yet');
+      return;
+    }
     const config: WebDavConfig = this.buildConfig();
     this.settingsService.saveWebDavConfig(config, this.encryptionSecret).then((result: Result<void>) => {
       if (result.success) {
@@ -143,7 +162,16 @@ struct WebDavPage {
     return this.baseUrl.trim().length > 0;
   }
 
+  /** 服务器地址是否用了 http:// 明文前缀（仅用于本页提示；真正的拦截在 WebDavService）。 */
+  private isPlainHttpUrl(): boolean {
+    return /^http:\/\//i.test(this.baseUrl.trim());
+  }
+
   private onSave(): void {
+    if (!this.configLoaded) {
+      promptAction.showToast({ message: $r('app.string.webdav_config_loading') });
+      return;
+    }
     this.saving = true;
     const config: WebDavConfig = this.buildConfig();
     this.settingsService.saveWebDavConfig(config, this.encryptionSecret).then((result: Result<void>) => {
@@ -154,9 +182,9 @@ struct WebDavPage {
           this.passwordInput = '';
         }
         SyncService.getInstance().configure(config, this.encryptionSecret);
-        promptAction.showToast({ message: '保存成功' });
+        promptAction.showToast({ message: $r('app.string.webdav_save_success') });
       } else {
-        const message: string = result.error !== undefined ? result.error.message : '保存失败';
+        const message: ResourceStr = result.error !== undefined ? result.error.message : $r('app.string.webdav_save_failed');
         promptAction.showToast({ message: message });
       }
     });
@@ -166,8 +194,8 @@ struct WebDavPage {
     this.testing = true;
     this.webDavService.testConnection(this.buildConfig()).then((result: Result<void>) => {
       this.testing = false;
-      const message: string = result.success ? '连接成功'
-        : (result.error !== undefined ? result.error.message : '连接失败');
+      const message: ResourceStr = result.success ? $r('app.string.webdav_test_success')
+        : (result.error !== undefined ? result.error.message : $r('app.string.webdav_test_failed'));
       promptAction.showToast({ message: message });
     });
   }
@@ -175,8 +203,9 @@ struct WebDavPage {
   private onPush(): void {
     this.syncConfigToService();
     const config: WebDavConfig = this.buildConfig();
-    Logger.info('WebDAV push requested: user=' + this.username + ' url=' + this.baseUrl
-      + ' path=' + this.remotePath + ' enabled=' + this.webDavEnabled + ' autoPush=' + this.autoPush
+    // 账号与地址属于可识别信息，且不记录它们也能定位问题，故只记长度/开关状态
+    Logger.info('WebDAV push requested: urlLen=' + this.baseUrl.length
+      + ' pathLen=' + this.remotePath.length + ' enabled=' + this.webDavEnabled + ' autoPush=' + this.autoPush
       + ' passwordSet=' + (config.password.length > 0), 'WebDAV');
     this.pushing = true;
     SyncService.getInstance().push().then((result: Result<void>) => {
@@ -185,9 +214,10 @@ struct WebDavPage {
       this.syncStatus = state.status;
       this.syncMessage = state.message !== undefined ? state.message : '';
       this.lastSyncAt = state.lastSyncAt !== undefined ? state.lastSyncAt : 0;
-      const message: string = result.success ? '推送成功（已生成时间戳备份）'
-        : (result.error !== undefined ? result.error.message : '推送失败');
-      Logger.info('WebDAV push result: success=' + result.success + ' message=' + message, 'WebDAV');
+      const message: ResourceStr = result.success ? $r('app.string.webdav_push_success')
+        : (result.error !== undefined ? result.error.message : $r('app.string.webdav_push_failed'));
+      const logText: string = typeof message === 'string' ? message : UiText.of(message);
+      Logger.info('WebDAV push result: success=' + result.success + ' message=' + logText, 'WebDAV');
       promptAction.showToast({ message: message });
     });
   }
@@ -198,19 +228,18 @@ struct WebDavPage {
    */
   private onPull(): void {
     this.syncConfigToService();
-    Logger.info('WebDAV pull requested: user=' + this.username + ' url=' + this.baseUrl
-      + ' path=' + this.remotePath, 'WebDAV');
+    Logger.info('WebDAV pull requested: urlLen=' + this.baseUrl.length + ' pathLen=' + this.remotePath.length, 'WebDAV');
     this.pulling = true;
     SyncService.getInstance().listBackups().then((result: Result<RemoteBackup[]>) => {
       this.pulling = false;
       if (!result.success || result.data === undefined) {
-        const message: string = result.error !== undefined ? result.error.message : '获取备份列表失败';
+        const message: ResourceStr = result.error !== undefined ? result.error.message : $r('app.string.webdav_backup_list_failed');
         promptAction.showToast({ message: message });
         return;
       }
       const backups: RemoteBackup[] = result.data;
       if (backups.length === 0) {
-        promptAction.showToast({ message: '云端暂无备份，请先推送' });
+        promptAction.showToast({ message: $r('app.string.webdav_no_remote_backup') });
         return;
       }
       this.backups = backups;
@@ -253,11 +282,11 @@ struct WebDavPage {
   /** 用户选好备份后：二次确认「覆盖本机数据」，再按文件名拉取。 */
   private doPullBackup(fileName: string): void {
     promptAction.showDialog({
-      title: '恢复此备份？',
-      message: '将用所选备份覆盖本机数据，本机尚未推送的改动会丢失。\n\n所选文件：' + fileName,
+      title: $r('app.string.webdav_restore_dialog_title'),
+      message: UiText.of($r('app.string.webdav_restore_dialog_message'), fileName),
       buttons: [
-        { text: '取消', color: '#666666' },
-        { text: '覆盖并恢复', color: '#E84026' }
+        { text: $r('app.string.common_cancel'), color: '#666666' },
+        { text: $r('app.string.webdav_restore_confirm'), color: '#E84026' }
       ]
     }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
       if (dialogResult.index !== 1) {
@@ -270,18 +299,19 @@ struct WebDavPage {
         this.syncStatus = state.status;
         this.syncMessage = state.message !== undefined ? state.message : '';
         this.lastSyncAt = state.lastSyncAt !== undefined ? state.lastSyncAt : 0;
-        const message: string = result.success ? '拉取成功'
-          : (result.error !== undefined ? result.error.message : '拉取失败');
+        const message: ResourceStr = result.success ? $r('app.string.webdav_pull_success')
+          : (result.error !== undefined ? result.error.message : $r('app.string.webdav_pull_failed'));
+        const logText: string = typeof message === 'string' ? message : UiText.of(message);
         Logger.info('WebDAV pull result: file=' + fileName + ' success=' + result.success
-          + ' message=' + message, 'WebDAV');
+          + ' message=' + logText, 'WebDAV');
         promptAction.showToast({ message: message });
       });
     });
   }
 
-  private formatLastSyncAt(): string {
+  private formatLastSyncAt(): ResourceStr {
     if (this.lastSyncAt === 0) {
-      return '从未同步';
+      return $r('app.string.webdav_never_synced');
     }
     const date: Date = new Date(this.lastSyncAt);
     const year: number = date.getFullYear();
@@ -292,20 +322,20 @@ struct WebDavPage {
     return `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day} ${hour < 10 ? '0' + hour : hour}:${minute < 10 ? '0' + minute : minute}`;
   }
 
-  private formatSyncStatus(): string {
+  private formatSyncStatus(): ResourceStr {
     switch (this.syncStatus) {
       case SyncStatus.IDLE:
-        return '空闲';
+        return $r('app.string.webdav_status_idle');
       case SyncStatus.PUSHING:
-        return '推送中';
+        return $r('app.string.webdav_status_pushing');
       case SyncStatus.PULLING:
-        return '拉取中';
+        return $r('app.string.webdav_status_pulling');
       case SyncStatus.SUCCESS:
-        return '成功';
+        return $r('app.string.webdav_status_success');
       case SyncStatus.FAILED:
-        return '失败';
+        return $r('app.string.webdav_status_failed');
       default:
-        return '未知';
+        return $r('app.string.webdav_status_unknown');
     }
   }
 
@@ -325,6 +355,12 @@ struct WebDavPage {
 
   private isBusy(): boolean {
     return this.syncStatus === SyncStatus.PUSHING || this.syncStatus === SyncStatus.PULLING;
+  }
+
+  /** syncMessage 为 Resource（恒视为有内容）或空串：仅在非空时渲染提示行。 */
+  private hasSyncMessage(): boolean {
+    const message: ResourceStr = this.syncMessage;
+    return typeof message === 'string' ? message.length > 0 : true;
   }
 
   @Builder
@@ -348,11 +384,11 @@ struct WebDavPage {
       Blank()
 
       Column({ space: 1 }) {
-        Text('WebDAV 同步')
+        Text($r('app.string.webdav_title'))
           .fontSize(19)
           .fontWeight(FontWeight.Bold)
           .fontColor($r('app.color.text_primary'))
-        Text('云端数据备份与多端联动')
+        Text($r('app.string.webdav_subtitle'))
           .fontSize(10.5)
           .fontColor($r('app.color.text_tertiary'))
       }
@@ -378,14 +414,15 @@ struct WebDavPage {
   }
 
   @Builder
-  toggleRow(label: string, note: string, isOn: boolean, isLast: boolean, onChange: (value: boolean) => void) {
+  toggleRow(label: ResourceStr, note: ResourceStr, isOn: boolean, isLast: boolean, onChange: (value: boolean) => void) {
     Column() {
       Row({ space: 12 }) {
         Column({ space: 3 }) {
           Text(label)
             .fontSize(15)
             .fontColor($r('app.color.text_primary'))
-          if (note.length > 0) {
+          // Resource 副文案恒有内容；string 副文案为空串时不渲染
+          if (note !== '') {
             Text(note)
               .fontSize(11)
               .fontColor($r('app.color.text_tertiary'))
@@ -410,7 +447,7 @@ struct WebDavPage {
   }
 
   @Builder
-  fieldLabel(label: string) {
+  fieldLabel(label: ResourceStr) {
     Text(label)
       .fontSize(12.5)
       .fontColor($r('app.color.text_secondary'))
@@ -498,22 +535,27 @@ struct WebDavPage {
             Column({ space: 14 }) {
               // ---- 开关分组 ----
               Column() {
-                this.toggleRow('启用 WebDAV 同步', '开启后可将加密数据备份到你自己的服务器', this.webDavEnabled, false,
+                this.toggleRow($r('app.string.webdav_enable_label'), $r('app.string.webdav_enable_note'), this.webDavEnabled, false,
                   (value: boolean) => {
                     this.webDavEnabled = value;
                     this.persistConfig();
                   })
-                this.toggleRow('自动推送', '增删改后自动上传带时间戳的加密备份', this.autoPush, false, (value: boolean) => {
+                this.toggleRow($r('app.string.webdav_auto_push_label'), $r('app.string.webdav_auto_push_note'), this.autoPush, false, (value: boolean) => {
                     this.autoPush = value;
                     this.persistConfig();
                 })
-                this.toggleRow('启动时自动拉取', '冷启动时检查远端新版本', this.autoPullOnStart, false, (value: boolean) => {
+                this.toggleRow($r('app.string.webdav_auto_pull_label'), $r('app.string.webdav_auto_pull_note'), this.autoPullOnStart, false, (value: boolean) => {
                     this.autoPullOnStart = value;
                     this.persistConfig();
                 })
-                this.toggleRow('自动清理旧备份', '推送后只保留云端最近 10 份快照（手动/自动推送都会新建带时间的备份）',
-                  this.cleanOldBackups, true, (value: boolean) => {
+                this.toggleRow($r('app.string.webdav_clean_label'), $r('app.string.webdav_clean_note'),
+                  this.cleanOldBackups, false, (value: boolean) => {
                     this.cleanOldBackups = value;
+                    this.persistConfig();
+                })
+                this.toggleRow($r('app.string.webdav_insecure_label'), $r('app.string.webdav_insecure_note'),
+                  this.allowInsecure, true, (value: boolean) => {
+                    this.allowInsecure = value;
                     this.persistConfig();
                 })
               }
@@ -528,22 +570,37 @@ struct WebDavPage {
               // ---- 连接配置 ----
               Column({ space: 14 }) {
                 Column({ space: 8 }) {
-                  this.fieldLabel('服务器地址')
-                  WebDavField({ value: $baseUrl, placeholder: 'https://example.com/dav/', masked: false })
+                  this.fieldLabel($r('app.string.webdav_server_address'))
+                  WebDavField({ value: $baseUrl, placeholder: $r('app.string.webdav_server_placeholder'), masked: false })
+
+                  if (this.isPlainHttpUrl() && !this.allowInsecure) {
+                    Text($r('app.string.webdav_http_blocked_warning'))
+                      .fontSize(11.5)
+                      .lineHeight(17)
+                      .fontColor($r('app.color.danger'))
+                      .width('100%')
+                  }
+                  if (this.isPlainHttpUrl() && this.allowInsecure) {
+                    Text($r('app.string.webdav_insecure_warning'))
+                      .fontSize(11.5)
+                      .lineHeight(17)
+                      .fontColor($r('app.color.warning'))
+                      .width('100%')
+                  }
                 }
                 .width('100%')
                 .alignItems(HorizontalAlign.Start)
 
                 Column({ space: 8 }) {
-                  this.fieldLabel('账号与密码')
-                  WebDavField({ value: $username, placeholder: '用户名', masked: false })
-                  WebDavField({ value: $passwordInput, placeholder: '密码（已保存，如需修改请输入）', masked: true })
+                  this.fieldLabel($r('app.string.webdav_account_password'))
+                  WebDavField({ value: $username, placeholder: $r('app.string.webdav_username_placeholder'), masked: false })
+                  WebDavField({ value: $passwordInput, placeholder: $r('app.string.webdav_password_placeholder'), masked: true })
                 }
                 .width('100%')
                 .alignItems(HorizontalAlign.Start)
 
                 Column({ space: 8 }) {
-                  this.fieldLabel('同步目录')
+                  this.fieldLabel($r('app.string.webdav_remote_path'))
                   WebDavField({ value: $remotePath, placeholder: '/SourceTime/', masked: false })
                 }
                 .width('100%')
@@ -560,12 +617,12 @@ struct WebDavPage {
               // ---- Outlined / Solid 按钮组合 ----
               Row({ space: 12 }) {
                 this.outlinedButton({
-                  label: this.testing ? '测试中...' : '测试连接',
+                  label: this.testing ? $r('app.string.webdav_testing') : $r('app.string.webdav_test_connection'),
                   enabled: !this.testing && !this.saving,
                   onTap: () => this.onTest()
                 })
                 this.solidButton({
-                  label: this.saving ? '保存中...' : '保存配置',
+                  label: this.saving ? $r('app.string.webdav_saving') : $r('app.string.webdav_save_config'),
                   enabled: !this.testing && !this.saving,
                   onTap: () => this.onSave()
                 })
@@ -577,7 +634,7 @@ struct WebDavPage {
                 Row() {
                   Row({ space: 8 }) {
                     this.statusDot()
-                    Text('同步状态')
+                    Text($r('app.string.webdav_sync_status'))
                       .fontSize(15)
                       .fontColor($r('app.color.text_primary'))
                   }
@@ -596,7 +653,7 @@ struct WebDavPage {
                 .alignItems(VerticalAlign.Center)
 
                 Row() {
-                  Text('上次同步')
+                  Text($r('app.string.webdav_last_sync'))
                     .fontSize(12.5)
                     .fontColor($r('app.color.text_secondary'))
                   Blank()
@@ -606,7 +663,7 @@ struct WebDavPage {
                 }
                 .width('100%')
 
-                if (this.syncMessage.length > 0) {
+                if (this.hasSyncMessage()) {
                   Text(this.syncMessage)
                     .fontSize(11.5)
                     .lineHeight(18)
@@ -616,13 +673,13 @@ struct WebDavPage {
 
                 Row({ space: 12 }) {
                   this.outlinedButton({
-                    label: this.pushing ? '推送中...' : '手动推送',
+                    label: this.pushing ? $r('app.string.webdav_pushing') : $r('app.string.webdav_manual_push'),
                     enabled: !this.pushing && !this.pulling && this.webDavEnabled && this.hasConfig(),
                     onTap: () => this.onPush(),
                     icon: $r('app.media.ic_arrow_up')
                   })
                   this.outlinedButton({
-                    label: this.pulling ? '拉取中...' : '手动拉取',
+                    label: this.pulling ? $r('app.string.webdav_pulling') : $r('app.string.webdav_manual_pull'),
                     enabled: !this.pushing && !this.pulling && this.webDavEnabled && this.hasConfig(),
                     onTap: () => this.onPull(),
                     icon: $r('app.media.ic_arrow_down')
@@ -638,7 +695,7 @@ struct WebDavPage {
               .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
               .shadow(glassGroupShadow())
 
-              Text('同步文件在上传前已在本地完成 AES-256-GCM 加密，服务端仅保存密文。')
+              Text($r('app.string.webdav_encryption_note'))
                 .fontSize(11)
                 .lineHeight(17)
                 .fontColor($r('app.color.text_tertiary'))
@@ -659,6 +716,7 @@ struct WebDavPage {
         }
         .width('100%')
         .height('100%')
+        .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
       }
     }
     .width('100%')
@@ -676,7 +734,7 @@ struct WebDavPage {
 @Component
 struct WebDavField {
   @Link value: string;
-  @Prop placeholder: string = '';
+  @Prop placeholder: ResourceStr = '';
   @Prop masked: boolean = false;
   @State focused: boolean = false;
 
