@@ -1,7 +1,9 @@
-import { router, promptAction } from '@kit.ArkUI';
+import { KeyboardAvoidMode, ShowDialogSuccessResponse } from '@kit.ArkUI';
 import { WebDavService } from '../service/WebDavService';
 import { SyncService } from '../service/SyncService';
 import { SettingsService } from '../service/SettingsService';
+import { ConfigSyncService, AppLockBundle, CONFIG_BUNDLE_TTL_MS } from '../service/ConfigSyncService';
+import { DistributedConfigService } from '../service/DistributedConfigService';
 import { WebDavConfig } from '../model/WebDavConfig';
 import { RemoteBackup } from '../model/RemoteBackup';
 import { SyncStatus } from '../model/SyncModel';
@@ -10,6 +12,7 @@ import { DEFAULT_WEBDAV_DIRECTORY } from '../constants/AppConstants';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { Logger } from '../utils/Logger';
 import { UiText } from '../utils/UiText';
+import { DeviceAdapter } from '../utils/DeviceAdapter';
 import { AuroraBackground } from '../components/AuroraBackground';
 import { BackupPickerDialog } from '../components/BackupPickerDialog';
 import {
@@ -64,6 +67,8 @@ struct WebDavPage {
   @State saving: boolean = false;
   @State pushing: boolean = false;
   @State pulling: boolean = false;
+  /** 正在把加密配置推送到手表。 */
+  @State sendingToWatch: boolean = false;
   @State syncStatus: SyncStatus = SyncStatus.IDLE;
   @State lastSyncAt: number = 0;
   @State syncMessage: ResourceStr = '';
@@ -88,11 +93,29 @@ struct WebDavPage {
   private backupDialog: CustomDialogController | null = null;
 
   aboutToAppear(): void {
+    if (DeviceAdapter.isWatch()) {
+      this.getUIContext().getRouter().back();
+      return;
+    }
     const secret: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
     if (secret !== undefined && secret.length > 0) {
       this.encryptionSecret = secret;
     }
     this.loadConfig();
+  }
+
+  /**
+   * 本页是长表单、底部紧跟「保存配置 / 测试连接」：
+   * 默认 OFFSET 会把整页顶上去，顶部标题被推出屏幕；改用 RESIZE 让页面随键盘收缩，
+   * 由内部 Scroll 把焦点框与按钮滚进可视区（与安全与密钥页同一套处理）。
+   */
+  onPageShow(): void {
+    this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.RESIZE);
+  }
+
+  /** 避让模式挂在 UIContext 上、会带到后续页面，离开本页立刻恢复系统默认。 */
+  onPageHide(): void {
+    this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.OFFSET);
   }
 
   aboutToDisappear(): void {
@@ -169,7 +192,7 @@ struct WebDavPage {
 
   private onSave(): void {
     if (!this.configLoaded) {
-      promptAction.showToast({ message: $r('app.string.webdav_config_loading') });
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_config_loading') });
       return;
     }
     this.saving = true;
@@ -182,10 +205,10 @@ struct WebDavPage {
           this.passwordInput = '';
         }
         SyncService.getInstance().configure(config, this.encryptionSecret);
-        promptAction.showToast({ message: $r('app.string.webdav_save_success') });
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_save_success') });
       } else {
         const message: ResourceStr = result.error !== undefined ? result.error.message : $r('app.string.webdav_save_failed');
-        promptAction.showToast({ message: message });
+        this.getUIContext().getPromptAction().showToast({ message: message });
       }
     });
   }
@@ -196,7 +219,7 @@ struct WebDavPage {
       this.testing = false;
       const message: ResourceStr = result.success ? $r('app.string.webdav_test_success')
         : (result.error !== undefined ? result.error.message : $r('app.string.webdav_test_failed'));
-      promptAction.showToast({ message: message });
+      this.getUIContext().getPromptAction().showToast({ message: message });
     });
   }
 
@@ -218,7 +241,7 @@ struct WebDavPage {
         : (result.error !== undefined ? result.error.message : $r('app.string.webdav_push_failed'));
       const logText: string = typeof message === 'string' ? message : UiText.of(message);
       Logger.info('WebDAV push result: success=' + result.success + ' message=' + logText, 'WebDAV');
-      promptAction.showToast({ message: message });
+      this.getUIContext().getPromptAction().showToast({ message: message });
     });
   }
 
@@ -234,12 +257,12 @@ struct WebDavPage {
       this.pulling = false;
       if (!result.success || result.data === undefined) {
         const message: ResourceStr = result.error !== undefined ? result.error.message : $r('app.string.webdav_backup_list_failed');
-        promptAction.showToast({ message: message });
+        this.getUIContext().getPromptAction().showToast({ message: message });
         return;
       }
       const backups: RemoteBackup[] = result.data;
       if (backups.length === 0) {
-        promptAction.showToast({ message: $r('app.string.webdav_no_remote_backup') });
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_no_remote_backup') });
         return;
       }
       this.backups = backups;
@@ -248,9 +271,72 @@ struct WebDavPage {
     });
   }
 
+  /**
+   * 手机端：把当前 WebDAV 配置（含主密钥）用一次性 PIN 加密后推送到可信设备。
+   * 手表端读取密文后输入同一个 PIN 即可零输入完成配置。
+   */
+  private onSendToWatch(): void {
+    if (!this.hasConfig() || !this.webDavEnabled) {
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_send_no_config') });
+      return;
+    }
+    if (this.encryptionSecret.length === 0) {
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_send_failed') });
+      return;
+    }
+    const config: WebDavConfig = this.buildConfig();
+    this.sendingToWatch = true;
+    const distributed: DistributedConfigService = DistributedConfigService.getInstance();
+    distributed.ensurePermission().then((granted: boolean) => {
+      if (!granted) {
+        this.sendingToWatch = false;
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_send_permission_denied') });
+        return;
+      }
+      const settings = this.settingsService.getSettings();
+      const appLock: AppLockBundle = {
+        enabled: settings.appLockEnabled,
+        pinHash: settings.appLockPinHash,
+        pinSalt: settings.appLockPinSalt
+      };
+      ConfigSyncService.getInstance().createBundle(config, this.encryptionSecret, appLock)
+        .then((bundleResult: Result<string>) => {
+          if (!bundleResult.success || bundleResult.data === undefined) {
+            this.sendingToWatch = false;
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_send_failed') });
+            return;
+          }
+          distributed.publish(bundleResult.data).then((publishResult: Result<void>) => {
+            this.sendingToWatch = false;
+            if (!publishResult.success) {
+              const message: ResourceStr = publishResult.error !== undefined
+                ? publishResult.error.message
+                : $r('app.string.webdav_send_failed');
+              this.getUIContext().getPromptAction().showToast({ message: message });
+              return;
+            }
+            // 写库成功 ≠ 已送达：没有在线设备时同步会被跳过，文案不能报「已发送」
+            const reachable: boolean = distributed.hasOnlinePeer();
+            this.getUIContext().getPromptAction().showDialog({
+              title: reachable
+                ? $r('app.string.webdav_send_done_title')
+                : $r('app.string.webdav_send_pending_title'),
+              message: reachable
+                ? $r('app.string.webdav_send_done_message')
+                : $r('app.string.webdav_send_pending_message'),
+              buttons: [{ text: $r('app.string.common_ok'), color: '#0A59F7' }]
+            });
+            // 过期后清掉本机密文，避免一次性配置包长期留在分布式库里
+            setTimeout(() => {
+              distributed.clear();
+            }, CONFIG_BUNDLE_TTL_MS + 1000);
+          });
+        });
+    });
+  }
+
   /** 弹出备份选择列表（默认选中最新一条）。 */
-  private openBackupPicker(): void {
-    const controller: CustomDialogController = new CustomDialogController({
+  private openBackupPicker(): void {    const controller: CustomDialogController = new CustomDialogController({
       builder: BackupPickerDialog({
         backups: this.backups,
         selected: this.selectedBackup,
@@ -281,14 +367,14 @@ struct WebDavPage {
 
   /** 用户选好备份后：二次确认「覆盖本机数据」，再按文件名拉取。 */
   private doPullBackup(fileName: string): void {
-    promptAction.showDialog({
+    this.getUIContext().getPromptAction().showDialog({
       title: $r('app.string.webdav_restore_dialog_title'),
       message: UiText.of($r('app.string.webdav_restore_dialog_message'), fileName),
       buttons: [
         { text: $r('app.string.common_cancel'), color: '#666666' },
         { text: $r('app.string.webdav_restore_confirm'), color: '#E84026' }
       ]
-    }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
+    }).then((dialogResult: ShowDialogSuccessResponse) => {
       if (dialogResult.index !== 1) {
         return;
       }
@@ -304,7 +390,7 @@ struct WebDavPage {
         const logText: string = typeof message === 'string' ? message : UiText.of(message);
         Logger.info('WebDAV pull result: file=' + fileName + ' success=' + result.success
           + ' message=' + logText, 'WebDAV');
-        promptAction.showToast({ message: message });
+        this.getUIContext().getPromptAction().showToast({ message: message });
       });
     });
   }
@@ -379,7 +465,7 @@ struct WebDavPage {
       .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
       .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
       .shadow(glassPillShadow())
-      .onClick(() => router.back())
+      .onClick(() => this.getUIContext().getRouter().back())
 
       Blank()
 
@@ -562,8 +648,7 @@ struct WebDavPage {
               .width('100%')
               .borderRadius(22)
               .clip(true)
-              .backgroundColor($r('app.color.card_background'))
-              .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+              .backgroundColor($r('app.color.card_background_solid'))
               .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
               .shadow(glassGroupShadow())
 
@@ -609,25 +694,9 @@ struct WebDavPage {
               .width('100%')
               .padding(16)
               .borderRadius(22)
-              .backgroundColor($r('app.color.card_background'))
-              .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+              .backgroundColor($r('app.color.card_background_solid'))
               .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
               .shadow(glassGroupShadow())
-
-              // ---- Outlined / Solid 按钮组合 ----
-              Row({ space: 12 }) {
-                this.outlinedButton({
-                  label: this.testing ? $r('app.string.webdav_testing') : $r('app.string.webdav_test_connection'),
-                  enabled: !this.testing && !this.saving,
-                  onTap: () => this.onTest()
-                })
-                this.solidButton({
-                  label: this.saving ? $r('app.string.webdav_saving') : $r('app.string.webdav_save_config'),
-                  enabled: !this.testing && !this.saving,
-                  onTap: () => this.onSave()
-                })
-              }
-              .width('100%')
 
               // ---- 状态卡片 ----
               Column({ space: 12 }) {
@@ -686,12 +755,25 @@ struct WebDavPage {
                   })
                 }
                 .width('100%')
+
+                Button(this.sendingToWatch
+                  ? $r('app.string.webdav_sending_to_watch')
+                  : $r('app.string.webdav_send_to_watch'))
+                  .width('100%')
+                  .height(44)
+                  .borderRadius(22)
+                  .fontSize(14)
+                  .fontWeight(FontWeight.Medium)
+                  .backgroundColor($r('app.color.subtle_brand_background'))
+                  .fontColor($r('app.color.brand'))
+                  .enabled(!this.sendingToWatch && this.webDavEnabled && this.hasConfig())
+                  .margin({ top: 10 })
+                  .onClick(() => this.onSendToWatch())
               }
               .width('100%')
               .padding(16)
               .borderRadius(22)
-              .backgroundColor($r('app.color.card_background'))
-              .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+              .backgroundColor($r('app.color.card_background_solid'))
               .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
               .shadow(glassGroupShadow())
 
@@ -706,13 +788,32 @@ struct WebDavPage {
             // 同设置页：避免内容短于视口时被 Scroll 垂直居中
             .constraintSize({ minHeight: '100%' })
             .justifyContent(FlexAlign.Start)
-            .padding({ left: 16, right: 16, bottom: 28 })
+            .padding({ left: 16, right: 16, bottom: 12 })
             .alignItems(HorizontalAlign.Start)
           }
           .layoutWeight(1)
           .scrollBar(BarState.Off)
           .edgeEffect(EdgeEffect.Spring)
           .align(Alignment.TopStart)  // 内容不足一屏时不被 Scroll 垂直居中
+
+          // 主操作固定在底部：表单较长时「测试连接 / 保存配置」始终可见，
+          // 不再出现首屏只露出按钮顶部的问题。
+          Row({ space: 12 }) {
+            this.outlinedButton({
+              label: this.testing ? $r('app.string.webdav_testing') : $r('app.string.webdav_test_connection'),
+              enabled: !this.testing && !this.saving,
+              onTap: () => this.onTest()
+            })
+            this.solidButton({
+              label: this.saving ? $r('app.string.webdav_saving') : $r('app.string.webdav_save_config'),
+              enabled: !this.testing && !this.saving,
+              onTap: () => this.onSave()
+            })
+          }
+          .width('100%')
+          .padding({ left: 16, right: 16, top: 10, bottom: 16 })
+          .backgroundColor($r('app.color.page_background'))
+          .border({ width: { top: 1 }, color: $r('app.color.divider'), style: BorderStyle.Solid })
         }
         .width('100%')
         .height('100%')

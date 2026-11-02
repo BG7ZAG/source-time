@@ -1,4 +1,3 @@
-import { router } from '@kit.ArkUI';
 import { AuroraBackground } from '../components/AuroraBackground';
 import { CURRENT_PRIVACY_POLICY_VERSION } from '../constants/AppConstants';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
@@ -8,6 +7,7 @@ import {
   glassPillShadow
 } from '../theme/GlassStyle';
 import { UiText } from '../utils/UiText';
+import { DeviceAdapter } from '../utils/DeviceAdapter';
 
 /**
  * 隐私政策页（鸿蒙 7 版）：冰晶章卡片 + 灰色矢量章节图标。
@@ -15,6 +15,13 @@ import { UiText } from '../utils/UiText';
 @Entry
 @Component
 struct PrivacyPolicyPage {
+  aboutToAppear(): void {
+    if (DeviceAdapter.isWatch()) {
+      this.getUIContext().getRouter().back();
+      return;
+    }
+  }
+
   @Builder
   header() {
     Row() {
@@ -31,7 +38,7 @@ struct PrivacyPolicyPage {
       .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
       .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
       .shadow(glassPillShadow())
-      .onClick(() => router.back())
+      .onClick(() => this.getUIContext().getRouter().back())
 
       Blank()
 
@@ -91,8 +98,7 @@ struct PrivacyPolicyPage {
     .width('100%')
     .padding(18)
     .borderRadius(24)
-    .backgroundColor($r('app.color.card_background'))
-    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+    .backgroundColor($r('app.color.card_background_solid'))
     .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
     .shadow(glassGroupShadow())
     .alignItems(HorizontalAlign.Start)
@@ -125,8 +131,7 @@ struct PrivacyPolicyPage {
     .width('100%')
     .padding(18)
     .borderRadius(24)
-    .backgroundColor($r('app.color.card_background'))
-    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+    .backgroundColor($r('app.color.card_background_solid'))
     .border({ width: 1, color: $r('app.color.brand_container'), style: BorderStyle.Solid })
     .shadow(glassGroupShadow())
     .alignItems(HorizontalAlign.Start)

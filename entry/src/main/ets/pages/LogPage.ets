@@ -1,4 +1,3 @@
-import { promptAction, router } from '@kit.ArkUI';
 import { AuroraBackground } from '../components/AuroraBackground';
 import { ClipboardService } from '../service/ClipboardService';
 import { Logger } from '../utils/Logger';
@@ -6,6 +5,8 @@ import { LogEntry, LogLevel } from '../model/LogEntry';
 import { Result } from '../types/Result';
 import { frostedPillColor, glassCardShadow, glassGroupShadow, glassPillShadow } from '../theme/GlassStyle';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
+import { DeviceAdapter } from '../utils/DeviceAdapter';
+import { ShowDialogSuccessResponse } from '@kit.ArkUI';
 
 const FILTER_ALL: string = 'ALL';
 const FILTER_INFO: string = 'INFO';
@@ -43,6 +44,10 @@ struct LogPage {
   private clipboardService: ClipboardService = new ClipboardService();
 
   aboutToAppear(): void {
+    if (DeviceAdapter.isWatch()) {
+      this.getUIContext().getRouter().back();
+      return;
+    }
     // 先把内存中的日志落盘，保证「本机已保存」与页面展示一致
     Logger.flush();
     this.reload();
@@ -121,34 +126,34 @@ struct LogPage {
   private onCopyAll(): void {
     const text: string = Logger.toDisplayText();
     if (text.length === 0) {
-      promptAction.showToast({ message: $r('app.string.log_nothing_to_copy') });
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.log_nothing_to_copy') });
       return;
     }
     this.clipboardService.copyText(text).then((result: Result<void>) => {
       if (!result.success || result.error !== undefined) {
         const message: ResourceStr = result.error !== undefined ? result.error.message : $r('app.string.log_copy_failed');
-        promptAction.showToast({ message: message });
+        this.getUIContext().getPromptAction().showToast({ message: message });
         return;
       }
-      promptAction.showToast({ message: $r('app.string.log_copied') });
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.log_copied') });
     });
   }
 
   private onClear(): void {
-    promptAction.showDialog({
+    this.getUIContext().getPromptAction().showDialog({
       title: $r('app.string.log_clear_dialog_title'),
       message: $r('app.string.log_clear_dialog_message'),
       buttons: [
         { text: $r('app.string.common_cancel'), color: '#666666' },
         { text: $r('app.string.log_clear_confirm'), color: '#E84026' }
       ]
-    }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
+    }).then((dialogResult: ShowDialogSuccessResponse) => {
       if (dialogResult.index !== 1) {
         return;
       }
       Logger.clearLogs();
       this.reload();
-      promptAction.showToast({ message: $r('app.string.log_cleared') });
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.log_cleared') });
     });
   }
 
@@ -168,7 +173,7 @@ struct LogPage {
       .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
       .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
       .shadow(glassPillShadow())
-      .onClick(() => router.back())
+      .onClick(() => this.getUIContext().getRouter().back())
 
       Blank()
 
@@ -287,8 +292,7 @@ struct LogPage {
     .padding({ left: 14, right: 14, top: 12, bottom: 12 })
     .alignItems(HorizontalAlign.Start)
     .borderRadius(16)
-    .backgroundColor($r('app.color.card_background'))
-    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+    .backgroundColor($r('app.color.card_background_solid'))
     .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
     .shadow(glassCardShadow())
   }
@@ -311,8 +315,7 @@ struct LogPage {
     .width('100%')
     .padding({ top: 46, bottom: 46 })
     .borderRadius(18)
-    .backgroundColor($r('app.color.card_background'))
-    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+    .backgroundColor($r('app.color.card_background_solid'))
     .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
     .shadow(glassGroupShadow())
   }
@@ -371,8 +374,7 @@ struct LogPage {
             .padding({ left: 16, right: 16, top: 16, bottom: 16 })
             .alignItems(HorizontalAlign.Start)
             .borderRadius(22)
-            .backgroundColor($r('app.color.card_background'))
-            .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+            .backgroundColor($r('app.color.card_background_solid'))
             .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
             .shadow(glassGroupShadow())
           }

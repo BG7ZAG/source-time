@@ -1,4 +1,3 @@
-import { promptAction } from '@kit.ArkUI';
 import { AddTotpViewModel } from '../viewmodel/AddTotpViewModel';
 import { TotpAlgorithm } from '../model/TotpItem';
 import { OtpParser, ParsedOtpUri } from '../service/OtpParser';
@@ -59,6 +58,8 @@ const SCAN_BODY_MIN_HEIGHT: number = SHEET_BODY_MIN_HEIGHT + ACTION_AREA_HEIGHT;
 export struct AddTotpSheet {
   onSaved: () => void = () => {};
   onScan: () => void = () => {};
+  /** 卡片可用高度（vp，由外层按「可视区 − 键盘」算出）；<=0 表示不限制。 */
+  @Prop contentMaxHeight: number = 0;
   // 默认进入扫码模式（0=扫码 1=手动输入）
   @State mode: number = 0;
   /**
@@ -115,7 +116,7 @@ export struct AddTotpSheet {
         }
         // 仅在「首次解析」时提示，避免用户继续编辑链接时反复弹 toast
         if (!wasParsed) {
-          promptAction.showToast({ message: $r('app.string.add_uri_parsed_toast') });
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.add_uri_parsed_toast') });
         }
         return;
       }
@@ -156,7 +157,7 @@ export struct AddTotpSheet {
   private onSave(): void {
     const period: number | null = this.resolvePeriod();
     if (period === null) {
-      promptAction.showToast({ message: $r('app.string.add_period_invalid') });
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.add_period_invalid') });
       return;
     }
     this.viewModel.issuer = this.issuer;
@@ -169,11 +170,11 @@ export struct AddTotpSheet {
     this.viewModel.save().then((result: Result<void>) => {
       this.saving = false;
       if (result.success) {
-        promptAction.showToast({ message: $r('app.string.add_saved_toast') });
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.add_saved_toast') });
         this.onSaved();
       } else {
         const message: ResourceStr = result.error !== undefined ? result.error.message : $r('app.string.add_save_failed');
-        promptAction.showToast({ message: message });
+        this.getUIContext().getPromptAction().showToast({ message: message });
       }
     });
   }
@@ -464,6 +465,8 @@ export struct AddTotpSheet {
     }
     .scrollBar(BarState.Off)
     .edgeEffect(EdgeEffect.Spring)
+    // 可用高度受限时（手机键盘弹出）内容区变成可滚动，避免「保存口令」落在可视区外
+    .constraintSize({ maxHeight: this.contentMaxHeight > 0 ? this.contentMaxHeight : 10000 })
     // 内容收窄后居中：宽屏（平板/2in1）下弹层不会被拉成整屏宽
     .align(Alignment.Top)
   }
@@ -478,7 +481,7 @@ export struct AddTotpSheet {
  * 任何刷新都不会丢失输入。聚焦光晕状态收敛在组件内部，不再驱动页面级重渲染。
  */
 @Component
-struct SheetField {
+export struct SheetField {
   @Link value: string;
   @Prop placeholder: ResourceStr = '';
   @Prop numeric: boolean = false;

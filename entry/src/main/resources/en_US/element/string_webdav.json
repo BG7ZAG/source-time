@@ -231,6 +231,50 @@
     {
       "name": "webdav_size_unknown",
       "value": "Size unknown"
+    },
+    {
+      "name": "webdav_send_to_watch",
+      "value": "Sync to watch"
+    },
+    {
+      "name": "webdav_sending_to_watch",
+      "value": "Syncing…"
+    },
+    {
+      "name": "webdav_send_no_config",
+      "value": "Fill in and enable the WebDAV settings first"
+    },
+    {
+      "name": "webdav_send_pin_title",
+      "value": "Watch sync PIN"
+    },
+    {
+      "name": "webdav_send_pin_message",
+      "value": "On your watch, choose Sync from phone and enter PIN: %s\nValid for 5 minutes."
+    },
+    {
+      "name": "webdav_send_failed",
+      "value": "Failed to sync to watch"
+    },
+    {
+      "name": "webdav_send_permission_denied",
+      "value": "Multi-device collaboration permission is required"
+    },
+    {
+      "name": "webdav_send_done_title",
+      "value": "Sent to watch"
+    },
+    {
+      "name": "webdav_send_done_message",
+      "value": "On your watch, choose Sync from phone to finish."
+    },
+    {
+      "name": "webdav_send_pending_title",
+      "value": "Config ready"
+    },
+    {
+      "name": "webdav_send_pending_message",
+      "value": "No watch is online right now. The encrypted config is published; choose Sync from phone on your watch to receive it."
     }
   ]
 }

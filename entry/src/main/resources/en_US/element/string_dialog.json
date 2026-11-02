@@ -5,6 +5,14 @@
       "value": "SourceTime Privacy Policy"
     },
     {
+      "name": "dialog_privacy_title_short",
+      "value": "Privacy Policy"
+    },
+    {
+      "name": "dialog_agree_short",
+      "value": "Agree"
+    },
+    {
       "name": "dialog_privacy_version",
       "value": "Version %s · Local-first"
     },

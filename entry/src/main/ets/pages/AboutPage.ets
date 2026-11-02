@@ -1,8 +1,8 @@
-import { router } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { AuroraBackground } from '../components/AuroraBackground';
 import { frostedPillColor, glassGroupShadow, glassPillShadow } from '../theme/GlassStyle';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
+import { DeviceAdapter } from '../utils/DeviceAdapter';
 
 /**
  * 关于页（鸿蒙 7 版）：悬浮 logo + 版本胶囊 + 冰晶信息分组卡片。
@@ -11,6 +11,13 @@ import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 @Component
 struct AboutPage {
   private repoUrl: string = 'https://github.com/BG7ZAG/source-time';
+
+  aboutToAppear(): void {
+    if (DeviceAdapter.isWatch()) {
+      this.getUIContext().getRouter().back();
+      return;
+    }
+  }
 
   @Builder
   header() {
@@ -28,7 +35,7 @@ struct AboutPage {
       .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
       .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
       .shadow(glassPillShadow())
-      .onClick(() => router.back())
+      .onClick(() => this.getUIContext().getRouter().back())
 
       Blank()
 
@@ -101,7 +108,7 @@ struct AboutPage {
 
   private openRepo(): void {
     try {
-      const context = getContext(this) as common.UIAbilityContext;
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       context.openLink(this.repoUrl).catch(() => {
         // 无法拉起浏览器时保持静态展示
       });
@@ -185,8 +192,7 @@ struct AboutPage {
               .width('100%')
               .borderRadius(22)
               .clip(true)
-              .backgroundColor($r('app.color.card_background'))
-              .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+              .backgroundColor($r('app.color.card_background_solid'))
               .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
               .shadow(glassGroupShadow())
 
@@ -205,8 +211,7 @@ struct AboutPage {
               .width('100%')
               .padding({ left: 16, right: 16, top: 14, bottom: 14 })
               .borderRadius(22)
-              .backgroundColor($r('app.color.card_background'))
-              .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+              .backgroundColor($r('app.color.card_background_solid'))
               .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
               .shadow(glassGroupShadow())
 

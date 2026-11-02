@@ -15,6 +15,18 @@
     {
       "name": "camera_reason",
       "value": "Used to scan QR codes and import TOTP secrets"
+    },
+    {
+      "name": "distributed_reason",
+      "value": "Used to sync WebDAV settings between your phone and watch on the same account"
+    },
+    {
+      "name": "home_search_placeholder",
+      "value": "Search issuer or account"
+    },
+    {
+      "name": "home_search_empty",
+      "value": "No matching codes"
     }
   ]
 }

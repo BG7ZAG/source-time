@@ -7,7 +7,8 @@
     "deviceTypes": [
       "phone",
       "tablet",
-      "2in1"
+      "2in1",
+      "wearable"
     ],
     "deliveryWithInstall": true,
     "installationFree": false,
@@ -35,6 +36,17 @@
         }
       },
       {
+        // 手机 → 手表同步 WebDAV 配置：仅在同一账号的可信设备间传输，配置本身再用一次性 PIN 加密
+        "name": "ohos.permission.DISTRIBUTED_DATASYNC",
+        "reason": "$string:distributed_reason",
+        "usedScene": {
+          "abilities": [
+            "EntryAbility"
+          ],
+          "when": "inuse"
+        }
+      },
+      {
         // 关键资产类应用必备：setWindowPrivacyMode 需要该权限（normal 级，安装即授予）。
         // 缺失时调用返回 201，截屏/录屏/多任务预览将不再被遮蔽。
         "name": "ohos.permission.PRIVACY_WINDOW"
@@ -49,6 +61,13 @@
         "label": "$string:EntryAbility_label",
         "startWindowIcon": "$media:startIcon",
         "startWindowBackground": "$color:start_window_background",
+        // 平板上允许分屏与悬浮窗：验证码最常见的用法就是「一边浏览器登录、一边看码」。
+        // 不声明时系统默认只给 fullscreen，平板侧的分屏入口直接不可用。
+        "supportWindowMode": [
+          "fullscreen",
+          "split",
+          "floating"
+        ],
         "exported": true,
         "skills": [
           {

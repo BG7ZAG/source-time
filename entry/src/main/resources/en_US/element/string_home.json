@@ -191,6 +191,282 @@
     {
       "name": "empty_hint",
       "value": "Tap the floating orb at the bottom right to add"
+    },
+    {
+      "name": "home_empty_hint_watch",
+      "value": "The watch app is for viewing codes only"
+    },
+    {
+      "name": "home_empty_hint_watch_key",
+      "value": "Tap to set the encryption key"
+    },
+    {
+      "name": "watch_key_title",
+      "value": "Set encryption key"
+    },
+    {
+      "name": "watch_key_desc",
+      "value": "Protects codes on this watch. To share data with your phone, use the same key."
+    },
+    {
+      "name": "watch_key_placeholder",
+      "value": "Enter or generate a key"
+    },
+    {
+      "name": "watch_key_regenerate",
+      "value": "Random"
+    },
+    {
+      "name": "watch_key_done",
+      "value": "Done"
+    },
+    {
+      "name": "watch_key_length_invalid",
+      "value": "Key must be 12–128 characters"
+    },
+    {
+      "name": "watch_key_copied",
+      "value": "Key copied"
+    },
+    {
+      "name": "watch_key_copy_failed",
+      "value": "Copy failed"
+    },
+    {
+      "name": "watch_sync_entry",
+      "value": "Sync codes"
+    },
+    {
+      "name": "watch_sync_title",
+      "value": "Pull from WebDAV"
+    },
+    {
+      "name": "watch_sync_desc",
+      "value": "Use the same settings as your phone"
+    },
+    {
+      "name": "watch_sync_url_hint",
+      "value": "https://server address"
+    },
+    {
+      "name": "watch_sync_user_hint",
+      "value": "Username"
+    },
+    {
+      "name": "watch_sync_password_hint",
+      "value": "Password"
+    },
+    {
+      "name": "watch_sync_pull",
+      "value": "Pull"
+    },
+    {
+      "name": "watch_sync_connecting",
+      "value": "Connecting…"
+    },
+    {
+      "name": "watch_sync_pulling",
+      "value": "Pulling latest backup…"
+    },
+    {
+      "name": "watch_sync_no_backup",
+      "value": "No backup in the cloud"
+    },
+    {
+      "name": "watch_sync_done",
+      "value": "Sync complete"
+    },
+    {
+      "name": "watch_sync_failed",
+      "value": "Pull failed"
+    },
+    {
+      "name": "watch_sync_url_required",
+      "value": "Server address is required"
+    },
+    {
+      "name": "watch_sync_https_required",
+      "value": "Only https:// is supported"
+    },
+    {
+      "name": "watch_sync_choice_title",
+      "value": "Sync codes"
+    },
+    {
+      "name": "watch_sync_choice_desc",
+      "value": "Sync from phone without typing WebDAV settings"
+    },
+    {
+      "name": "watch_sync_from_phone",
+      "value": "Sync from phone"
+    },
+    {
+      "name": "watch_sync_manual",
+      "value": "Set up WebDAV manually"
+    },
+    {
+      "name": "watch_pin_title",
+      "value": "Enter the PIN from your phone"
+    },
+    {
+      "name": "watch_pin_desc",
+      "value": "Enter the 6-digit PIN shown on your phone. It expires in 5 minutes."
+    },
+    {
+      "name": "watch_pin_hint",
+      "value": "6-digit PIN"
+    },
+    {
+      "name": "watch_pin_confirm",
+      "value": "Confirm"
+    },
+    {
+      "name": "watch_pin_length",
+      "value": "Enter the 6-digit PIN"
+    },
+    {
+      "name": "watch_sync_no_bundle",
+      "value": "No phone settings found. Tap Sync to watch on your phone first."
+    },
+    {
+      "name": "watch_sync_distributed_failed",
+      "value": "Distributed sync unavailable. Check that both devices use the same account and are paired."
+    },
+    {
+      "name": "watch_sync_permission_denied",
+      "value": "Multi-device collaboration permission is required"
+    },
+    {
+      "name": "watch_sync_bundle_failed",
+      "value": "Failed to create the settings bundle"
+    },
+    {
+      "name": "watch_sync_bundle_invalid",
+      "value": "Invalid settings data"
+    },
+    {
+      "name": "watch_sync_bundle_expired",
+      "value": "Settings expired. Sync again from your phone."
+    },
+    {
+      "name": "watch_sync_pin_invalid",
+      "value": "Wrong PIN or expired"
+    },
+    {
+      "name": "watch_view_lock_on",
+      "value": "View lock: on"
+    },
+    {
+      "name": "watch_view_lock_off",
+      "value": "View lock: off"
+    },
+    {
+      "name": "watch_view_lock_need_phone",
+      "value": "Enable app lock on your phone and sync first"
+    },
+    {
+      "name": "watch_view_lock_enabled",
+      "value": "View lock enabled"
+    },
+    {
+      "name": "watch_view_lock_disabled",
+      "value": "View lock disabled"
+    },
+    {
+      "name": "watch_view_lock_verify_title",
+      "value": "Enter PIN"
+    },
+    {
+      "name": "watch_view_lock_verify_desc",
+      "value": "After disabling, codes can be viewed without a PIN."
+    },
+    {
+      "name": "watch_view_lock_verify_confirm",
+      "value": "Disable"
+    },
+    {
+      "name": "watch_sync_received",
+      "value": "Synced from phone"
+    },
+    {
+      "name": "watch_set_pin_title",
+      "value": "Set view PIN"
+    },
+    {
+      "name": "watch_set_pin_desc",
+      "value": "6 digits, required each time you view codes"
+    },
+    {
+      "name": "watch_set_pin_hint",
+      "value": "Enter 6-digit PIN"
+    },
+    {
+      "name": "watch_set_pin_confirm_hint",
+      "value": "Enter again"
+    },
+    {
+      "name": "watch_set_pin_save",
+      "value": "Enable"
+    },
+    {
+      "name": "watch_set_pin_invalid",
+      "value": "Enter a 6-digit PIN"
+    },
+    {
+      "name": "watch_set_pin_mismatch",
+      "value": "PINs do not match"
+    },
+    {
+      "name": "watch_set_pin_failed",
+      "value": "Failed to set PIN"
+    },
+    {
+      "name": "watch_settings_entry",
+      "value": "Sync & protection"
+    },
+    {
+      "name": "menu_rename",
+      "value": "Rename"
+    },
+    {
+      "name": "rename_title",
+      "value": "Rename entry"
+    },
+    {
+      "name": "rename_desc",
+      "value": "Only the label and account change; the secret stays the same"
+    },
+    {
+      "name": "rename_issuer_label",
+      "value": "Name"
+    },
+    {
+      "name": "rename_issuer_hint",
+      "value": "e.g. GitHub"
+    },
+    {
+      "name": "rename_account_label",
+      "value": "Account"
+    },
+    {
+      "name": "rename_account_hint",
+      "value": "Optional, e.g. me@example.com"
+    },
+    {
+      "name": "rename_save",
+      "value": "Save"
+    },
+    {
+      "name": "rename_saved_toast",
+      "value": "Renamed"
+    },
+    {
+      "name": "rename_failed",
+      "value": "Rename failed, please retry"
+    },
+    {
+      "name": "rename_empty_hint",
+      "value": "Enter a name or an account"
     }
   ]
 }

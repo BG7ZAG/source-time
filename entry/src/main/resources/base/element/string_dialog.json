@@ -5,6 +5,14 @@
       "value": "源时（SourceTime）隐私政策"
     },
     {
+      "name": "dialog_privacy_title_short",
+      "value": "隐私政策"
+    },
+    {
+      "name": "dialog_agree_short",
+      "value": "同意"
+    },
+    {
       "name": "dialog_privacy_version",
       "value": "版本 %s · 本地优先"
     },

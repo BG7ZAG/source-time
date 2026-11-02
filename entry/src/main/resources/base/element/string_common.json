@@ -27,6 +27,10 @@
     {
       "name": "common_refresh",
       "value": "刷新"
+    },
+    {
+      "name": "common_ok",
+      "value": "知道了"
     }
   ]
 }

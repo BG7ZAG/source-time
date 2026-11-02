@@ -27,6 +27,10 @@
     {
       "name": "common_refresh",
       "value": "Refresh"
+    },
+    {
+      "name": "common_ok",
+      "value": "OK"
     }
   ]
 }

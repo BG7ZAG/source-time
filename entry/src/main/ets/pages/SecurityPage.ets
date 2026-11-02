@@ -1,4 +1,4 @@
-import { router, promptAction } from '@kit.ArkUI';
+import { KeyboardAvoidMode, ShowDialogSuccessResponse } from '@kit.ArkUI';
 import { CryptoService } from '../service/CryptoService';
 import { KeyStoreService } from '../service/KeyStoreService';
 import { SettingsService } from '../service/SettingsService';
@@ -13,6 +13,7 @@ import { Logger } from '../utils/Logger';
 import { UiText } from '../utils/UiText';
 import { USER_SECRET_MAX_LENGTH, USER_SECRET_MIN_LENGTH } from '../constants/CryptoConstants';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
+import { DeviceAdapter } from '../utils/DeviceAdapter';
 import { AuroraBackground } from '../components/AuroraBackground';
 import {
   focusGlowShadow,
@@ -73,6 +74,10 @@ struct SecurityPage {
   private pinService: PinService = new PinService();
 
   aboutToAppear(): void {
+    if (DeviceAdapter.isWatch()) {
+      this.getUIContext().getRouter().back();
+      return;
+    }
     const settings = this.settingsService.getSettings();
     // 用 isLockUsable() 而非 appLockEnabled：校验值缺失（写入被中断）时锁其实并不会生效，
     // 若按标记显示「已开启」会让用户误以为口令已受保护；此时按未开启展示，重新录入 PIN 即可修复。
@@ -89,16 +94,30 @@ struct SecurityPage {
     }
   }
 
+  /**
+   * 本页表单长、底部有主操作按钮：默认 OFFSET 只把页面顶到「刚好看得见焦点框」，
+   * 键盘仍会压住「开启应用锁 / 修改 PIN」，而内容又不满一屏、Scroll 不可滚。
+   * 本页改用 RESIZE，让页面高度随键盘收缩，Scroll 视口变小后即可把按钮滚进来。
+   */
+  onPageShow(): void {
+    this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.RESIZE);
+  }
+
+  /** 避让模式挂在 UIContext 上、对后续页面同样生效，离开本页立刻恢复系统默认。 */
+  onPageHide(): void {
+    this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.OFFSET);
+  }
+
   private onGenerate(): void {
     if (this.hasGenerated && !this.isFirstSetup) {
-      promptAction.showDialog({
+      this.getUIContext().getPromptAction().showDialog({
         title: $r('app.string.security_regen_title'),
         message: $r('app.string.security_regen_message'),
         buttons: [
           { text: $r('app.string.common_cancel'), color: '#666666' },
           { text: $r('app.string.security_regen_confirm'), color: '#E84026' }
         ]
-      }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
+      }).then((dialogResult: ShowDialogSuccessResponse) => {
         if (dialogResult.index === 1) {
           this.generatedSecret = this.cryptoService.generateRandomEncryptionSecret();
           this.encryptionSecret = this.generatedSecret;
@@ -116,9 +135,9 @@ struct SecurityPage {
     this.clipboardService.copySensitiveText(this.encryptionSecret).then((result: Result<void>) => {
       if (result.success) {
         this.copied = true;
-        promptAction.showToast({ message: $r('app.string.security_key_copied') });
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_key_copied') });
       } else {
-        promptAction.showToast({ message: $r('app.string.security_copy_failed') });
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_copy_failed') });
       }
     });
   }
@@ -136,14 +155,14 @@ struct SecurityPage {
         onDone();
         return;
       }
-      promptAction.showDialog({
+      this.getUIContext().getPromptAction().showDialog({
         title: $r('app.string.security_keystore_failed_title'),
         message: $r('app.string.security_keystore_failed_message'),
         buttons: [
           { text: $r('app.string.security_later'), color: '#666666' },
           { text: $r('app.string.common_retry'), color: '#0A59F7' }
         ]
-      }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
+      }).then((dialogResult: ShowDialogSuccessResponse) => {
         if (dialogResult.index === 1) {
           this.persistSecretToKeyStore(secret, onDone);
         } else {
@@ -178,7 +197,7 @@ struct SecurityPage {
         Logger.info('Encryption key initialized');
         // 交给系统关键资产存储保管，之后启动可静默自动解锁（加密只作用于本地存储与 WebDAV 密文）
         this.persistSecretToKeyStore(secret, () => {
-          router.replaceUrl({ url: 'pages/HomePage' });
+          this.getUIContext().getRouter().replaceUrl({ url: 'pages/HomePage' });
         });
       } else {
         this.error = $r('app.string.security_save_failed');
@@ -204,7 +223,7 @@ struct SecurityPage {
     if (!this.storageService.isInitialized()) {
       this.verifyingOld = false;
       this.step = 1;
-      promptAction.showToast({ message: $r('app.string.security_no_local_data') });
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_no_local_data') });
       return;
     }
     const bytesResult: Result<Uint8Array> = this.storageService.readEncryptedFile();
@@ -273,8 +292,8 @@ struct SecurityPage {
           // 更新系统关键资产存储里的密钥（存在则原地更新，不存在才新增）；写入失败弹窗可重试
           this.persistSecretToKeyStore(newSecret, () => {
             Logger.info('Encryption key changed');
-            promptAction.showToast({ message: $r('app.string.security_key_updated') });
-            router.back();
+            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_key_updated') });
+            this.getUIContext().getRouter().back();
           });
         } else {
           this.error = $r('app.string.security_save_failed');
@@ -320,8 +339,8 @@ struct SecurityPage {
     this.persistSecretToKeyStore(newSecret, () => {
       this.saving = false;
       Logger.info('Encryption key changed (no local encrypted data)');
-      promptAction.showToast({ message: $r('app.string.security_key_updated') });
-      router.back();
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_key_updated') });
+      this.getUIContext().getRouter().back();
     });
   }
 
@@ -333,14 +352,14 @@ struct SecurityPage {
    * totp.db.enc.orphan-<时间戳> 备份），不可恢复；不删除则新密钥会被旧密文挡住。
    */
   private onForgetKey(): void {
-    promptAction.showDialog({
+    this.getUIContext().getPromptAction().showDialog({
       title: $r('app.string.security_forget_title'),
       message: $r('app.string.security_forget_message'),
       buttons: [
         { text: $r('app.string.common_cancel'), color: '#666666' },
         { text: $r('app.string.security_forget_confirm'), color: '#E84026' }
       ]
-    }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
+    }).then((dialogResult: ShowDialogSuccessResponse) => {
       if (dialogResult.index !== 1) {
         return;
       }
@@ -363,19 +382,19 @@ struct SecurityPage {
         return;
       }
       this.saving = false;
-      promptAction.showDialog({
+      this.getUIContext().getPromptAction().showDialog({
         title: $r('app.string.security_delete_old_key_failed_title'),
         message: $r('app.string.security_delete_old_key_failed_message'),
         buttons: [
           { text: $r('app.string.common_cancel'), color: '#666666' },
           { text: $r('app.string.common_retry'), color: '#E84026' }
         ]
-      }).then((dialogResult: promptAction.ShowDialogSuccessResponse) => {
+      }).then((dialogResult: ShowDialogSuccessResponse) => {
         if (dialogResult.index === 1) {
           this.saving = true;
           this.removeOldKeyThenReset();
         } else {
-          promptAction.showToast({ message: $r('app.string.security_forget_cancelled') });
+          this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_forget_cancelled') });
         }
       });
     });
@@ -396,11 +415,11 @@ struct SecurityPage {
         this.saving = false;
         if (!resetResult.success) {
           const message: ResourceStr = resetResult.error !== undefined ? resetResult.error.message : $r('app.string.security_clear_local_failed');
-          promptAction.showToast({ message: message });
+          this.getUIContext().getPromptAction().showToast({ message: message });
           return;
         }
         this.enterSetupAfterReset();
-        promptAction.showToast({ message: $r('app.string.security_cleared') });
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_cleared') });
       });
     });
   }
@@ -448,7 +467,7 @@ struct SecurityPage {
     this.lockPin = '';
     this.lockPinNew = '';
     this.lockPinConfirm = '';
-    promptAction.showToast({ message: $r('app.string.security_app_lock_on') });
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_app_lock_on') });
   }
 
   /** 更换 PIN：先验旧 PIN 再覆盖校验值，中途任一步失败都保留原锁不被动摇。 */
@@ -491,7 +510,7 @@ struct SecurityPage {
     this.lockPin = '';
     this.lockPinNew = '';
     this.lockPinConfirm = '';
-    promptAction.showToast({ message: $r('app.string.security_pin_updated') });
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_pin_updated') });
   }
 
   /** 关闭应用锁：PinService.disable 内部会先校验 PIN，校验通过才清除校验值。 */
@@ -515,7 +534,7 @@ struct SecurityPage {
     this.lockPin = '';
     this.lockPinNew = '';
     this.lockPinConfirm = '';
-    promptAction.showToast({ message: $r('app.string.security_app_lock_off') });
+    this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_app_lock_off') });
   }
 
   @Builder
@@ -535,7 +554,7 @@ struct SecurityPage {
         .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
         .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
         .shadow(glassPillShadow())
-        .onClick(() => router.back())
+        .onClick(() => this.getUIContext().getRouter().back())
       }
 
       Blank()
@@ -591,7 +610,7 @@ struct SecurityPage {
   @Builder
   primaryButton(params: PrimaryButtonParams) {
     Button(params.label)
-      .width('100%')
+      .width(DeviceAdapter.formButtonWidth())
       .height(50)
       .borderRadius(25)
       .fontSize(15)
@@ -634,8 +653,10 @@ struct SecurityPage {
     .width('100%')
     .padding(14)
     .borderRadius(16)
-    .backgroundColor($r('app.color.glass_input_background'))
-    .border({ width: 1, color: $r('app.color.glass_input_border'), style: BorderStyle.Solid })
+    // 卡片改成纯白实底后，半透明白的提示框（glass_input_background）在白底上看不见，
+    // 换成浅灰底 + 常规分隔线描边。
+    .backgroundColor($r('app.color.field_background'))
+    .border({ width: 1, color: $r('app.color.divider'), style: BorderStyle.Solid })
     .alignItems(VerticalAlign.Top)
   }
 
@@ -736,8 +757,7 @@ struct SecurityPage {
     .width('100%')
     .padding(18)
     .borderRadius(24)
-    .backgroundColor($r('app.color.card_background'))
-    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+    .backgroundColor($r('app.color.card_background_solid'))
     .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
     .shadow(glassGroupShadow())
   }
@@ -770,7 +790,7 @@ struct SecurityPage {
 
       // 忘记密钥：删除旧密钥与本地加密数据，转入「设置新密钥」
       Button($r('app.string.security_forget_button'))
-        .width('100%')
+        .width(DeviceAdapter.formButtonWidth())
         .height(44)
         .borderRadius(14)
         .fontSize(13.5)
@@ -783,8 +803,7 @@ struct SecurityPage {
     .width('100%')
     .padding(18)
     .borderRadius(24)
-    .backgroundColor($r('app.color.card_background'))
-    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+    .backgroundColor($r('app.color.card_background_solid'))
     .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
     .shadow(glassGroupShadow())
   }
@@ -860,9 +879,9 @@ struct SecurityPage {
               this.clipboardService.copySensitiveText(this.newSecret).then((result: Result<void>) => {
                 if (result.success) {
                   this.copied = true;
-                  promptAction.showToast({ message: $r('app.string.security_key_copied') });
+                  this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_key_copied') });
                 } else {
-                  promptAction.showToast({ message: $r('app.string.security_copy_failed') });
+                  this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_copy_failed') });
                 }
               })
             })
@@ -886,8 +905,7 @@ struct SecurityPage {
     .width('100%')
     .padding(18)
     .borderRadius(24)
-    .backgroundColor($r('app.color.card_background'))
-    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+    .backgroundColor($r('app.color.card_background_solid'))
     .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
     .shadow(glassGroupShadow())
   }
@@ -949,7 +967,7 @@ struct SecurityPage {
         })
 
         Button($r('app.string.security_disable_app_lock'))
-          .width('100%')
+          .width(DeviceAdapter.formButtonWidth())
           .height(44)
           .borderRadius(14)
           .fontSize(13.5)
@@ -973,8 +991,7 @@ struct SecurityPage {
     .width('100%')
     .padding(18)
     .borderRadius(24)
-    .backgroundColor($r('app.color.card_background'))
-    .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+    .backgroundColor($r('app.color.card_background_solid'))
     .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
     .shadow(glassGroupShadow())
   }

@@ -6,6 +6,7 @@ import {
   supportsImmersive,
   trackGradientColors
 } from '../theme/GlassStyle';
+import { DeviceAdapter } from '../utils/DeviceAdapter';
 
 /**
  * 空状态：冰晶光环 + 柔光提示，替代旧版虚线方框。
@@ -14,6 +15,8 @@ import {
 export struct EmptyState {
   @Prop message: ResourceStr = $r('app.string.empty_message');
   @Prop hint: ResourceStr = $r('app.string.empty_hint');
+  /** 是否响应点击；手表端密钥初始化完成后没有新增能力，置 false 避免无效点击。 */
+  @Prop clickable: boolean = true;
   @State breathing: boolean = false;
   /** 点击中央加号触发新增，与右下角悬浮球同一动作。 */
   onTap: () => void = () => {};
@@ -26,17 +29,64 @@ export struct EmptyState {
     return supportsImmersive();
   }
 
+  /**
+   * 空状态尺寸：手表紧凑、平板/2in1 放大、手机居中。
+   * 132vp 的圆环在手机（360vp 宽）上占 37%，到 13 寸平板（1440vp 宽）只剩 9%，
+   * 不放大就会显得又小又空。
+   */
+  private glowSize(): number {
+    if (DeviceAdapter.isWatch()) {
+      return 80;
+    }
+    return DeviceAdapter.isWideScreen() ? 176 : 132;
+  }
+
+  private ringSize(): number {
+    if (DeviceAdapter.isWatch()) {
+      return 64;
+    }
+    return DeviceAdapter.isWideScreen() ? 140 : 104;
+  }
+
+  private plusFontSize(): number {
+    if (DeviceAdapter.isWatch()) {
+      return 24;
+    }
+    return DeviceAdapter.isWideScreen() ? 48 : 38;
+  }
+
+  private titleFontSize(): number {
+    if (DeviceAdapter.isWatch()) {
+      return 12;
+    }
+    return DeviceAdapter.isWideScreen() ? 17 : 15;
+  }
+
+  private hintFontSize(): number {
+    if (DeviceAdapter.isWatch()) {
+      return 10;
+    }
+    return DeviceAdapter.isWideScreen() ? 13.5 : 12;
+  }
+
+  private contentSpace(): number {
+    if (DeviceAdapter.isWatch()) {
+      return 10;
+    }
+    return DeviceAdapter.isWideScreen() ? 22 : 18;
+  }
+
   build() {
-    Column({ space: 18 }) {
+    Column({ space: this.contentSpace() }) {
       Stack({ alignContent: Alignment.Center }) {
         // 外层弥散光晕
         Column()
-          .width(132)
-          .height(132)
-          .borderRadius(66)
+          .width(this.glowSize())
+          .height(this.glowSize())
+          .borderRadius(this.glowSize() / 2)
           .radialGradient({
             center: ['50%', '50%'],
-            radius: 66,
+            radius: this.glowSize() / 2,
             colors: [['#3D0A59F7', 0.0], ['#000A59F7', 1.0]]
           })
           .scale({ x: this.breathing ? 1.06 : 0.94, y: this.breathing ? 1.06 : 0.94 })
@@ -44,9 +94,9 @@ export struct EmptyState {
 
         // 冰晶光环（优先使用系统沉浸式材质）
         Column()
-          .width(104)
-          .height(104)
-          .borderRadius(52)
+          .width(this.ringSize())
+          .height(this.ringSize())
+          .borderRadius(this.ringSize() / 2)
           .systemMaterial(cardMaterial(this.immersive()))
           .backgroundColor(this.immersive() ? Color.Transparent : $r('app.color.card_background'))
           .backgroundBlurStyle(this.immersive() ? BlurStyle.NONE : BlurStyle.COMPONENT_THICK)
@@ -59,21 +109,25 @@ export struct EmptyState {
 
         // 渐变加号
         Text('＋')
-          .fontSize(38)
+          .fontSize(this.plusFontSize())
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.brand'))
       }
-      .width(132)
-      .height(132)
-      .onClick(() => this.onTap())
+      .width(this.glowSize())
+      .height(this.glowSize())
+      .onClick(() => {
+        if (this.clickable) {
+          this.onTap();
+        }
+      })
 
       Column({ space: 6 }) {
         Text(this.message)
-          .fontSize(15)
+          .fontSize(this.titleFontSize())
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.text_secondary'))
         Text(this.hint)
-          .fontSize(12)
+          .fontSize(this.hintFontSize())
           .fontColor($r('app.color.text_tertiary'))
       }
       .alignItems(HorizontalAlign.Center)
@@ -141,7 +195,7 @@ export struct GlowFab {
         .type(ButtonType.Circle)
         .width(this.diameter)
         .height(this.diameter)
-        .fontSize(26)
+        .fontSize(DeviceAdapter.isWatch() ? 18 : 26)
         .fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.fab_foreground'))
         .linearGradient({ angle: 135, colors: trackGradientColors(0) })

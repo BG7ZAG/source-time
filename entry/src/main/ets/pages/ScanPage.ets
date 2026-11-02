@@ -1,4 +1,3 @@
-import { router, promptAction } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
 import { scanBarcode, scanCore } from '@kit.ScanKit';
 import { AddTotpViewModel } from '../viewmodel/AddTotpViewModel';
@@ -7,11 +6,13 @@ import { Result } from '../types/Result';
 import { AppRoutes } from '../constants/AppConstants';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { UiText } from '../utils/UiText';
+import { DeviceAdapter } from '../utils/DeviceAdapter';
 import { AuroraBackground } from '../components/AuroraBackground';
 import {
   avatarGradientColors,
   avatarShadow,
   glassGroupShadow,
+  glassPillShadow,
   glowButtonShadow,
   trackGradientColors
 } from '../theme/GlassStyle';
@@ -33,9 +34,15 @@ struct ScanPage {
   @State period: number = 30;
   @State saving: boolean = false;
   @State scanPulse: boolean = false;
+  /** 本页是否已经主动离开：防止扫描 Promise 回来时重复退栈。 */
+  private dismissed: boolean = false;
   private viewModel: AddTotpViewModel = new AddTotpViewModel();
 
   aboutToAppear(): void {
+    if (DeviceAdapter.isWatch()) {
+      this.getUIContext().getRouter().back();
+      return;
+    }
     const stored: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
     if (stored !== undefined && stored.length > 0) {
       this.viewModel.setEncryptionSecret(stored);
@@ -45,16 +52,20 @@ struct ScanPage {
 
   private async startScan(): Promise<void> {
     try {
-      const context: common.Context = getContext(this) as common.Context;
+      const context: common.Context = this.getUIContext().getHostContext() as common.Context;
       const options: scanBarcode.ScanOptions = {
         scanTypes: [scanCore.ScanType.QR_CODE]
       };
       const scanResult: scanBarcode.ScanResult = await scanBarcode.startScanForResult(context, options);
+      // 等待期间用户已经点了返回：页面已弹出，这里不能再解析结果或再退一次栈
+      if (this.dismissed) {
+        return;
+      }
       const parsed: Result<ParsedOtpUri> = this.viewModel.parseUri(scanResult.originalValue);
       if (!parsed.success || parsed.data === undefined) {
         const message: ResourceStr = parsed.error !== undefined ? parsed.error.message : $r('app.string.scan_invalid_qr');
-        promptAction.showToast({ message: message });
-        router.back({ url: AppRoutes.HOME });
+        this.getUIContext().getPromptAction().showToast({ message: message });
+        this.leaveToHome();
         return;
       }
       const data: ParsedOtpUri = parsed.data;
@@ -67,8 +78,24 @@ struct ScanPage {
       this.stage = 'CONFIRM';
       this.scanPulse = true;
     } catch (error) {
-      router.back({ url: AppRoutes.HOME });
+      // 系统扫描界面被取消（或相机不可用）会走这里
+      this.leaveToHome();
     }
+  }
+
+  /**
+   * 退出本页并回到首页。
+   *
+   * `dismissed` 同时充当「已经离开」的闸门：用户点左上角返回后，
+   * 系统扫描的 Promise 稍后仍会 resolve/reject，若不加判断会再退一次栈，
+   * 把首页一起退掉。
+   */
+  private leaveToHome(): void {
+    if (this.dismissed) {
+      return;
+    }
+    this.dismissed = true;
+    this.getUIContext().getRouter().back({ url: AppRoutes.HOME });
   }
 
   private onSave(): void {
@@ -77,12 +104,43 @@ struct ScanPage {
       this.saving = false;
       if (result.success) {
         this.stage = 'DONE';
-        router.back({ url: AppRoutes.HOME });
+        this.leaveToHome();
       } else {
         const message: ResourceStr = result.error !== undefined ? result.error.message : $r('app.string.scan_save_failed');
-        promptAction.showToast({ message: message });
+        this.getUIContext().getPromptAction().showToast({ message: message });
       }
     });
+  }
+
+  /**
+   * 左上角返回。
+   *
+   * 之前这里没有返回入口：等待态依赖系统返回手势，而 2in1 没有返回手势，
+   * 一旦系统扫描界面因无相机/权限被拒而不返回，用户就被卡在这一页。
+   * 底色用不透明白（card_background_solid）而不是半透明磨砂：无相机时页面底色是白的，
+   * 半透明白圆在纯白背景上会看不见。
+   */
+  @Builder
+  backButton() {
+    Stack({ alignContent: Alignment.Center }) {
+      Image($r('app.media.ic_back'))
+        .width(21)
+        .height(21)
+        .fillColor($r('app.color.text_primary'))
+    }
+    .width(42)
+    .height(42)
+    .borderRadius(21)
+    .backgroundColor($r('app.color.card_background_solid'))
+    .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+    .shadow(glassPillShadow())
+    .onHover((isHover: boolean) => {
+      DeviceAdapter.applyHoverCursor(this.getUIContext().getCursorController(), isHover);
+    })
+    .onClick(() => {
+      // 只弹本页、回首页：系统扫描界面若还在前台，由它自己的关闭/返回处理
+      this.leaveToHome();
+    })
   }
 
   @Builder
@@ -129,17 +187,23 @@ struct ScanPage {
   @Builder
   confirmView() {
     Column({ space: 16 }) {
-      Column({ space: 6 }) {
-        Text($r('app.string.scan_confirm_title'))
-          .fontSize(20)
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.text_primary'))
-        Text($r('app.string.scan_confirm_subtitle'))
-          .fontSize(12)
-          .fontColor($r('app.color.text_tertiary'))
+      Row({ space: 12 }) {
+        this.backButton()
+
+        Column({ space: 6 }) {
+          Text($r('app.string.scan_confirm_title'))
+            .fontSize(20)
+            .fontWeight(FontWeight.Bold)
+            .fontColor($r('app.color.text_primary'))
+          Text($r('app.string.scan_confirm_subtitle'))
+            .fontSize(12)
+            .fontColor($r('app.color.text_tertiary'))
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
       }
       .width('100%')
-      .alignItems(HorizontalAlign.Start)
+      .alignItems(VerticalAlign.Center)
 
       // 柔光微立体品牌图标
       Stack({ alignContent: Alignment.Center }) {
@@ -248,14 +312,8 @@ struct ScanPage {
       Text($r('app.string.scan_scanning_hint'))
         .fontSize(12.5)
         .fontColor($r('app.color.text_tertiary'))
-
-      Progress({ value: 60, total: 100, type: ProgressType.Linear })
-        .width('52%')
-        .height(4)
-        .color($r('app.color.brand'))
-        .backgroundColor($r('app.color.glass_track'))
-        .borderRadius(2)
-        .margin({ top: 4 })
+      // 原来这里是一条写死 60% 的 Linear Progress，永远不会动，看起来像卡住的进度条；
+      // 扫描本身没有可量化的进度，去掉它，只保留上方脉冲环表达「正在识别」。
     }
     .width('100%')
     .justifyContent(FlexAlign.Center)
@@ -290,12 +348,22 @@ struct ScanPage {
           } else {
             // @Builder 方法返回 void，不能在其调用结果上继续挂属性，
             // 故用普通容器承载 layoutWeight。
-            Column() {
-              this.scanningView()
+            Stack({ alignContent: Alignment.TopStart }) {
+              Column() {
+                this.scanningView()
+              }
+              .width('100%')
+              .height('100%')
+              .justifyContent(FlexAlign.Center)
+
+              // 等待态没有标题栏，返回按钮浮在左上角
+              Row() {
+                this.backButton()
+              }
+              .margin({ left: 16, top: 12 })
             }
             .layoutWeight(1)
             .width('100%')
-            .justifyContent(FlexAlign.Center)
           }
         }
         .width('100%')

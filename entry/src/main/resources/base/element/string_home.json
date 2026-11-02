@@ -191,6 +191,282 @@
     {
       "name": "empty_hint",
       "value": "点击右下角悬浮球添加"
+    },
+    {
+      "name": "home_empty_hint_watch",
+      "value": "手表端仅用于查看口令"
+    },
+    {
+      "name": "home_empty_hint_watch_key",
+      "value": "点击设置加密密钥"
+    },
+    {
+      "name": "watch_key_title",
+      "value": "设置加密密钥"
+    },
+    {
+      "name": "watch_key_desc",
+      "value": "用于加密本机口令。与手机共用数据时请输入同一密钥。"
+    },
+    {
+      "name": "watch_key_placeholder",
+      "value": "输入或生成密钥"
+    },
+    {
+      "name": "watch_key_regenerate",
+      "value": "随机生成"
+    },
+    {
+      "name": "watch_key_done",
+      "value": "完成"
+    },
+    {
+      "name": "watch_key_length_invalid",
+      "value": "密钥长度需为 12–128 位"
+    },
+    {
+      "name": "watch_key_copied",
+      "value": "密钥已复制"
+    },
+    {
+      "name": "watch_key_copy_failed",
+      "value": "复制失败"
+    },
+    {
+      "name": "watch_sync_entry",
+      "value": "同步口令"
+    },
+    {
+      "name": "watch_sync_title",
+      "value": "从 WebDAV 拉取"
+    },
+    {
+      "name": "watch_sync_desc",
+      "value": "填写与手机相同的配置"
+    },
+    {
+      "name": "watch_sync_url_hint",
+      "value": "https://服务器地址"
+    },
+    {
+      "name": "watch_sync_user_hint",
+      "value": "用户名"
+    },
+    {
+      "name": "watch_sync_password_hint",
+      "value": "密码"
+    },
+    {
+      "name": "watch_sync_pull",
+      "value": "拉取"
+    },
+    {
+      "name": "watch_sync_connecting",
+      "value": "正在连接…"
+    },
+    {
+      "name": "watch_sync_pulling",
+      "value": "正在拉取最新备份…"
+    },
+    {
+      "name": "watch_sync_no_backup",
+      "value": "云端没有备份"
+    },
+    {
+      "name": "watch_sync_done",
+      "value": "同步完成"
+    },
+    {
+      "name": "watch_sync_failed",
+      "value": "拉取失败"
+    },
+    {
+      "name": "watch_sync_url_required",
+      "value": "请填写服务器地址"
+    },
+    {
+      "name": "watch_sync_https_required",
+      "value": "仅支持 https:// 地址"
+    },
+    {
+      "name": "watch_sync_choice_title",
+      "value": "同步口令"
+    },
+    {
+      "name": "watch_sync_choice_desc",
+      "value": "从手机同步免填 WebDAV 配置"
+    },
+    {
+      "name": "watch_sync_from_phone",
+      "value": "从手机同步"
+    },
+    {
+      "name": "watch_sync_manual",
+      "value": "手动配置 WebDAV"
+    },
+    {
+      "name": "watch_pin_title",
+      "value": "输入手机上的 PIN"
+    },
+    {
+      "name": "watch_pin_desc",
+      "value": "输入手机端「同步到手表」显示的 6 位数字，5 分钟内有效。"
+    },
+    {
+      "name": "watch_pin_hint",
+      "value": "6 位 PIN"
+    },
+    {
+      "name": "watch_pin_confirm",
+      "value": "确认"
+    },
+    {
+      "name": "watch_pin_length",
+      "value": "请输入 6 位 PIN"
+    },
+    {
+      "name": "watch_sync_no_bundle",
+      "value": "未发现手机配置，请先在手机端点击「同步到手表」"
+    },
+    {
+      "name": "watch_sync_distributed_failed",
+      "value": "分布式同步不可用，请检查设备是否同账号、已组网"
+    },
+    {
+      "name": "watch_sync_permission_denied",
+      "value": "需要「多设备协同」权限才能同步"
+    },
+    {
+      "name": "watch_sync_bundle_failed",
+      "value": "生成配置包失败"
+    },
+    {
+      "name": "watch_sync_bundle_invalid",
+      "value": "配置数据无效"
+    },
+    {
+      "name": "watch_sync_bundle_expired",
+      "value": "配置已过期，请在手机上重新同步"
+    },
+    {
+      "name": "watch_sync_pin_invalid",
+      "value": "PIN 错误或已过期"
+    },
+    {
+      "name": "watch_view_lock_on",
+      "value": "查看保护：开"
+    },
+    {
+      "name": "watch_view_lock_off",
+      "value": "查看保护：关"
+    },
+    {
+      "name": "watch_view_lock_need_phone",
+      "value": "请先在手机端开启应用锁并同步"
+    },
+    {
+      "name": "watch_view_lock_enabled",
+      "value": "查看保护已开启"
+    },
+    {
+      "name": "watch_view_lock_disabled",
+      "value": "查看保护已关闭"
+    },
+    {
+      "name": "watch_view_lock_verify_title",
+      "value": "输入 PIN"
+    },
+    {
+      "name": "watch_view_lock_verify_desc",
+      "value": "关闭查看保护后，每次查看口令不再要求 PIN。"
+    },
+    {
+      "name": "watch_view_lock_verify_confirm",
+      "value": "关闭"
+    },
+    {
+      "name": "watch_sync_received",
+      "value": "已从手机同步"
+    },
+    {
+      "name": "watch_set_pin_title",
+      "value": "设置查看 PIN"
+    },
+    {
+      "name": "watch_set_pin_desc",
+      "value": "6 位数字，每次查看口令时验证"
+    },
+    {
+      "name": "watch_set_pin_hint",
+      "value": "输入 6 位 PIN"
+    },
+    {
+      "name": "watch_set_pin_confirm_hint",
+      "value": "再次输入"
+    },
+    {
+      "name": "watch_set_pin_save",
+      "value": "开启"
+    },
+    {
+      "name": "watch_set_pin_invalid",
+      "value": "请输入 6 位数字"
+    },
+    {
+      "name": "watch_set_pin_mismatch",
+      "value": "两次输入不一致"
+    },
+    {
+      "name": "watch_set_pin_failed",
+      "value": "设置失败，请重试"
+    },
+    {
+      "name": "watch_settings_entry",
+      "value": "同步与保护"
+    },
+    {
+      "name": "menu_rename",
+      "value": "重命名"
+    },
+    {
+      "name": "rename_title",
+      "value": "重命名口令"
+    },
+    {
+      "name": "rename_desc",
+      "value": "只改显示名称与账号，密钥不变"
+    },
+    {
+      "name": "rename_issuer_label",
+      "value": "名称"
+    },
+    {
+      "name": "rename_issuer_hint",
+      "value": "例如 GitHub"
+    },
+    {
+      "name": "rename_account_label",
+      "value": "账号"
+    },
+    {
+      "name": "rename_account_hint",
+      "value": "选填，例如 me@example.com"
+    },
+    {
+      "name": "rename_save",
+      "value": "保存"
+    },
+    {
+      "name": "rename_saved_toast",
+      "value": "已重命名"
+    },
+    {
+      "name": "rename_failed",
+      "value": "重命名失败，请重试"
+    },
+    {
+      "name": "rename_empty_hint",
+      "value": "名称和账号至少填一个"
     }
   ]
 }

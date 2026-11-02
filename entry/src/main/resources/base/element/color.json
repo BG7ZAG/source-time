@@ -25,6 +25,18 @@
       "value": "#8CFFFFFF"
     },
     {
+      "name": "menu_background",
+      "value": "#F1F4FC"
+    },
+    {
+      "name": "subtle_brand_background",
+      "value": "#0F0A59F7"
+    },
+    {
+      "name": "card_background_solid",
+      "value": "#FFFFFF"
+    },
+    {
       "name": "card_border",
       "value": "#290A59F7"
     },
@@ -109,6 +121,10 @@
       "value": "#0F000000"
     },
     {
+      "name": "modal_scrim",
+      "value": "#4D000000"
+    },
+    {
       "name": "pill_background",
       "value": "#66FFFFFF"
     },
@@ -119,6 +135,10 @@
     {
       "name": "status_active",
       "value": "#0A59F7"
+    },
+    {
+      "name": "more_icon",
+      "value": "#99000000"
     }
   ]
 }

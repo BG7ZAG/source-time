@@ -231,6 +231,50 @@
     {
       "name": "webdav_size_unknown",
       "value": "大小未知"
+    },
+    {
+      "name": "webdav_send_to_watch",
+      "value": "同步到手表"
+    },
+    {
+      "name": "webdav_sending_to_watch",
+      "value": "正在同步…"
+    },
+    {
+      "name": "webdav_send_no_config",
+      "value": "请先填写并启用 WebDAV 配置"
+    },
+    {
+      "name": "webdav_send_pin_title",
+      "value": "手表同步 PIN"
+    },
+    {
+      "name": "webdav_send_pin_message",
+      "value": "请在手表端选择「从手机同步」，输入 PIN：%s\n5 分钟内有效。"
+    },
+    {
+      "name": "webdav_send_failed",
+      "value": "同步到手表失败"
+    },
+    {
+      "name": "webdav_send_permission_denied",
+      "value": "需要「多设备协同」权限才能同步"
+    },
+    {
+      "name": "webdav_send_done_title",
+      "value": "已发送到手表"
+    },
+    {
+      "name": "webdav_send_done_message",
+      "value": "请在手表端选择「从手机同步」完成配置。"
+    },
+    {
+      "name": "webdav_send_pending_title",
+      "value": "配置已就绪"
+    },
+    {
+      "name": "webdav_send_pending_message",
+      "value": "当前未发现在线手表，配置已加密发布；在手表端打开「从手机同步」即可接收。"
     }
   ]
 }

@@ -35,3 +35,16 @@ prompt_attachment/
 skills/.workspace
 .team
 .workbuddy
+
+# 签名材料：私钥、证书、Profile、CSR 一律不入库
+# .p12/.jks/.keystore 是私钥，泄露等于把签名权交出去
+# .p7b 是 Profile（调试版含真实设备 UDID，且带有效期）
+*.p12
+*.jks
+*.keystore
+*.csr
+*.cer
+*.p7b
+/signing/
+/signature/
+/signatures/

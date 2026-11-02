@@ -13,6 +13,7 @@ import { Logger } from '../utils/Logger';
 import { UiText } from '../utils/UiText';
 import { APP_LOCK_STORAGE_KEY } from '../constants/AppConstants';
 import { initGlassTheme, initImmersiveMaterialSupport, isDarkMode, supportsImmersive } from '../theme/GlassStyle';
+import { DeviceAdapter, DeviceCategory } from '../utils/DeviceAdapter';
 
 const DOMAIN = 0x0000;
 const SECRET_STORAGE_KEY: string = 'encryptionSecret';
@@ -21,6 +22,8 @@ export default class EntryAbility extends UIAbility {
   private mainWindow: window.Window | undefined = undefined;
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     AppContextHolder.init(this.context);
+    // 将设备类型写入 AppStorage，供全局组件读取响应式参数
+    AppStorage.setOrCreate<string>('deviceCategory', DeviceAdapter.getCategory());
     hilog.info(DOMAIN, 'SourceTime', '%{public}s', 'Ability onCreate');
   }
 

@@ -1,5 +1,6 @@
 import { glassGroupShadow } from '../theme/GlassStyle';
 import { PinLockOverlay } from './PinLockOverlay';
+import { DeviceAdapter } from '../utils/DeviceAdapter';
 
 /** 插槽默认值：@BuilderParam 必须以 @Builder 函数初始化，@Require 会强制父组件传入内容。 */
 @Builder
@@ -39,6 +40,12 @@ export struct AuroraBackground {
   @StorageProp('bottomSafeHeight') bottomSafeHeight: number = 0;
   /** 应用锁是否处于锁定态，由 EntryAbility 与 PinLockOverlay 共同维护。 */
   @StorageProp('appLocked') appLocked: boolean = false;
+  /** 极光光斑缩放比，按设备类型初始化。 */
+  @State auroraScaleValue: number = 1.0;
+
+  aboutToAppear(): void {
+    this.auroraScaleValue = DeviceAdapter.auroraScale();
+  }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -79,18 +86,19 @@ export struct AuroraBackground {
   /**
    * 极光光斑：用多段 alpha 衰减的径向渐变模拟高斯弥散。
    * 相比对超大图层做 blur()，这种做法不产生离屏滤镜开销，中低端机型也能稳住帧率。
+   * 光斑尺寸按设备类型缩放：手表缩小至 0.4 倍，平板/2in1 放大至 1.3 倍。
    */
   @Builder
   auroraBlooms() {
     Stack({ alignContent: Alignment.TopStart }) {
       // 极光光斑一：左上主色弥散
       Column()
-        .width(440)
-        .height(440)
-        .borderRadius(220)
+        .width(440 * this.auroraScaleValue)
+        .height(440 * this.auroraScaleValue)
+        .borderRadius(220 * this.auroraScaleValue)
         .radialGradient({
           center: ['50%', '50%'],
-          radius: 220,
+          radius: 220 * this.auroraScaleValue,
           colors: [
             ['#4D8FC0FF', 0.0],
             ['#338FC0FF', 0.35],
@@ -102,12 +110,12 @@ export struct AuroraBackground {
 
       // 极光光斑二：右上青色弥散
       Column()
-        .width(380)
-        .height(380)
-        .borderRadius(190)
+        .width(380 * this.auroraScaleValue)
+        .height(380 * this.auroraScaleValue)
+        .borderRadius(190 * this.auroraScaleValue)
         .radialGradient({
           center: ['50%', '50%'],
-          radius: 190,
+          radius: 190 * this.auroraScaleValue,
           colors: [
             ['#47A9E4FF', 0.0],
             ['#2EA9E4FF', 0.35],
@@ -119,12 +127,12 @@ export struct AuroraBackground {
 
       // 极光光斑三：中下紫调弥散
       Column()
-        .width(480)
-        .height(480)
-        .borderRadius(240)
+        .width(480 * this.auroraScaleValue)
+        .height(480 * this.auroraScaleValue)
+        .borderRadius(240 * this.auroraScaleValue)
         .radialGradient({
           center: ['50%', '50%'],
-          radius: 240,
+          radius: 240 * this.auroraScaleValue,
           colors: [
             ['#3DC6BFFF', 0.0],
             ['#29C6BFFF', 0.35],

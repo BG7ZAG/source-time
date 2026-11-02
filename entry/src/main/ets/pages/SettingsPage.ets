@@ -1,4 +1,3 @@
-import { router } from '@kit.ArkUI';
 import { AppRoutes } from '../constants/AppConstants';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { AuroraBackground } from '../components/AuroraBackground';
@@ -8,6 +7,7 @@ import {
   glassGroupShadow,
   glassPillShadow
 } from '../theme/GlassStyle';
+import { DeviceAdapter } from '../utils/DeviceAdapter';
 
 /**
  * 设置页：模块化分组冰晶卡片 + 单色图标（本项目禁止彩色图标）。
@@ -16,7 +16,7 @@ import {
 @Component
 struct SettingsPage {
   private navigateTo(route: string): void {
-    router.pushUrl({ url: route });
+    this.getUIContext().getRouter().pushUrl({ url: route });
   }
 
   @Builder
@@ -35,12 +35,15 @@ struct SettingsPage {
       .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
       .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
       .shadow(glassPillShadow())
-      .onClick(() => router.back())
+      .onHover((isHover: boolean) => {
+        DeviceAdapter.applyHoverCursor(this.getUIContext().getCursorController(), isHover);
+      })
+      .onClick(() => this.getUIContext().getRouter().back())
 
       Blank()
 
       Text($r('app.string.settings_title'))
-        .fontSize(20)
+        .fontSize(DeviceAdapter.isWatch() ? 16 : 20)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary'))
 
@@ -55,7 +58,7 @@ struct SettingsPage {
     .alignItems(VerticalAlign.Center)
   }
 
-  /** 单色图标：中性玻璃衬底 + 单色图标（不再使用彩色渐变衬底）。 */
+  /** 单色图标：淡品牌蓝衬底 + 单色图标（不再使用彩色渐变衬底）。 */
   @Builder
   glassIcon(icon: Resource) {
     Stack({ alignContent: Alignment.Center }) {
@@ -67,8 +70,9 @@ struct SettingsPage {
     .width(38)
     .height(38)
     .borderRadius(13)
-    .backgroundColor(frostedPillColor())
-    .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
+    // 卡片改成纯白后，原来的半透明白衬底（frostedPillColor）在白底上几乎看不见，
+    // 换成极淡的品牌蓝，图标块才有轮廓，也延续整体蓝色调。
+    .backgroundColor($r('app.color.subtle_brand_background'))
     .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
     .shadow(avatarShadow())
   }
@@ -76,37 +80,44 @@ struct SettingsPage {
   @Builder
   settingItem(title: ResourceStr, subtitle: ResourceStr, route: string, icon: Resource, isLast: boolean) {
     Column() {
-      Row({ space: 14 }) {
+      Row({ space: DeviceAdapter.isWatch() ? 10 : 14 }) {
         this.glassIcon(icon)
 
         Column({ space: 3 }) {
           Text(title)
-            .fontSize(15.5)
+            .fontSize(DeviceAdapter.isWatch() ? 13 : 15.5)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.text_primary'))
-          Text(subtitle)
-            .fontSize(11.5)
-            .fontColor($r('app.color.text_tertiary'))
+          if (!DeviceAdapter.isWatch()) {
+            Text(subtitle)
+              .fontSize(11.5)
+              .fontColor($r('app.color.text_tertiary'))
+          }
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
 
-        Image($r('app.media.ic_chevron_right'))
-          .width(15)
-          .height(15)
-          .fillColor($r('app.color.text_tertiary'))
+        if (!DeviceAdapter.isWatch()) {
+          Image($r('app.media.ic_chevron_right'))
+            .width(15)
+            .height(15)
+            .fillColor($r('app.color.text_tertiary'))
+        }
       }
       .width('100%')
-      .padding({ left: 16, right: 16, top: 15, bottom: 15 })
+      .padding({ left: DeviceAdapter.isWatch() ? 12 : 16, right: DeviceAdapter.isWatch() ? 12 : 16, top: DeviceAdapter.isWatch() ? 12 : 15, bottom: DeviceAdapter.isWatch() ? 12 : 15 })
       .alignItems(VerticalAlign.Center)
 
       if (!isLast) {
         Divider()
           .color($r('app.color.divider'))
-          .margin({ left: 68, right: 16 })
+          .margin({ left: DeviceAdapter.isWatch() ? 50 : 68, right: 16 })
       }
     }
     .width('100%')
+    .onHover((isHover: boolean) => {
+      DeviceAdapter.applyHoverCursor(this.getUIContext().getCursorController(), isHover);
+    })
     .onClick(() => this.navigateTo(route))
   }
 
@@ -147,8 +158,9 @@ struct SettingsPage {
               .width('100%')
               .borderRadius(22)
               .clip(true)
-              .backgroundColor($r('app.color.card_background'))
-              .backgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+              // 设置页是一整块菜单列表，用纯白实底：半透明白（card_background）叠在淡蓝
+              // 背景上会发灰，整片列表看着脏。纯白后文字对比也更高。
+              .backgroundColor($r('app.color.card_background_solid'))
               .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
               .shadow(glassGroupShadow())
             }
@@ -165,12 +177,14 @@ struct SettingsPage {
           .align(Alignment.TopStart)  // 内容不足一屏时不被 Scroll 垂直居中
 
           // 底部标语固定在页面底部（不再随列表漂浮），与居上的菜单形成上下呼应
-          Text($r('app.string.settings_footer'))
-            .fontSize(11)
-            .textAlign(TextAlign.Center)
-            .fontColor($r('app.color.text_tertiary'))
-            .width('100%')
-            .padding({ top: 6, bottom: 12 })
+          if (!DeviceAdapter.isWatch()) {
+            Text($r('app.string.settings_footer'))
+              .fontSize(11)
+              .textAlign(TextAlign.Center)
+              .fontColor($r('app.color.text_tertiary'))
+              .width('100%')
+              .padding({ top: 6, bottom: 12 })
+          }
         }
         .width('100%')
         .height('100%')

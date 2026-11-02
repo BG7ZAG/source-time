@@ -86,6 +86,58 @@ export class HomeViewModel {
   }
 
   /**
+   * 重命名：只改 issuer / account 两个展示字段，密钥、算法、位数、周期一概不动。
+   *
+   * 不做「删除 + 重新添加」的原因：重新添加会换 id、丢 createdAt，且需要用户重新输入密钥。
+   */
+  async rename(item: TotpItem, issuer: string, account: string): Promise<Result<void>> {
+    let db: DatabaseModel | null = this.repository.getDatabase();
+    if (db === null) {
+      const loadResult: Result<DatabaseModel> = await this.repository.load(this.encryptionSecret);
+      if (!loadResult.success || loadResult.data === undefined) {
+        const message: ResourceStr =
+          loadResult.error !== undefined ? loadResult.error.message : $r('app.string.error_data_load_failed');
+        return err<void>(AppErrorCode.STORAGE_WRITE_FAILED, message);
+      }
+      db = loadResult.data;
+    }
+    const nextItems: TotpItem[] = [];
+    for (let i = 0; i < db.items.length; i++) {
+      const current: TotpItem = db.items[i];
+      if (current.id !== item.id) {
+        nextItems.push(current);
+        continue;
+      }
+      nextItems.push({
+        id: current.id,
+        issuer: issuer,
+        account: account,
+        secret: current.secret,
+        algorithm: current.algorithm,
+        digits: current.digits,
+        period: current.period,
+        createdAt: current.createdAt,
+        updatedAt: nowMilliseconds()
+      });
+    }
+    const nextDb: DatabaseModel = {
+      version: db.version,
+      revision: db.revision + 1,
+      updatedAt: nowMilliseconds(),
+      deviceId: db.deviceId,
+      items: nextItems
+    };
+    const result: Result<void> = await this.repository.save(nextDb, this.encryptionSecret);
+    if (!result.success) {
+      return result;
+    }
+    this.items = nextItems;
+    Logger.info('TOTP renamed: id=' + item.id);
+    SyncService.getInstance().enqueuePush(SyncReason.ADD_TOTP);
+    return ok(undefined);
+  }
+
+  /**
    * 本地文件已无法用当前密钥解密时的自助恢复：隔离旧密文（重命名备份，不删除），
    * 以空库重建内存数据，使应用重新可用。
    */
