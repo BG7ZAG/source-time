@@ -52,3 +52,7 @@ skills/.workspace
 /test_artifacts/
 /.opencode/
 
+
+# 应用商店上架素材（本地生成，不入库）
+/store_assets/
+
