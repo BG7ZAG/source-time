@@ -7,7 +7,6 @@ title: Privacy Policy
 **Version: 2.3**
 **Effective date: October 16, 2026**
 **Product: SourceTime for HarmonyOS**
-**Operator: Huang Guodong**
 
 SourceTime is a local-first TOTP authenticator for HarmonyOS. We take your privacy seriously. This policy explains what information the App processes and how you can exercise your rights.
 
@@ -82,7 +81,6 @@ This policy may be updated as features or regulations change. Updates will be pu
 
 If you have questions, comments or suggestions about this policy, contact us via:
 
-- Developer: Huang Guodong
 - Repository: [BG7ZAG/source-time](https://github.com/BG7ZAG/source-time)
 - Feedback: open an issue in the repository
 
