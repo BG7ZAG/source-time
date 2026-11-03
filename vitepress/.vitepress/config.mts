@@ -25,7 +25,9 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: '首页', link: '/' },
-          { text: '指南', link: '/guide/introduction', activeMatch: '/guide/' }
+          { text: '指南', link: '/guide/introduction', activeMatch: '/guide/' },
+          { text: '用户协议', link: '/agreement' },
+          { text: '隐私政策', link: '/privacy' }
         ],
         sidebar: {
           '/guide/': [
@@ -79,7 +81,9 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: 'Home', link: '/en/' },
-          { text: 'Guide', link: '/en/guide/introduction', activeMatch: '/en/guide/' }
+          { text: 'Guide', link: '/en/guide/introduction', activeMatch: '/en/guide/' },
+          { text: 'Terms', link: '/en/agreement' },
+          { text: 'Privacy', link: '/en/privacy' }
         ],
         sidebar: {
           '/en/guide/': [
