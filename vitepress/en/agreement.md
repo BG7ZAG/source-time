@@ -6,7 +6,6 @@ title: Terms of Service
 
 **Effective date: November 3, 2026**
 **Product: SourceTime for HarmonyOS**
-**Operator: Huang Guodong**
 
 Welcome to SourceTime ("the App"). This agreement is made between you and the operator of the App regarding the download, installation and use of the App. Please read and fully understand these terms before use. By starting to use the App, you confirm that you have read and agree to these terms.
 
@@ -74,7 +73,6 @@ These terms are governed by the laws of the People's Republic of China. Disputes
 
 If you have questions, comments or suggestions about these terms, contact us via:
 
-- Developer: Huang Guodong
 - Repository: [BG7ZAG/source-time](https://github.com/BG7ZAG/source-time)
 - Feedback: open an issue in the repository
 
