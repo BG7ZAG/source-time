@@ -48,3 +48,7 @@ skills/.workspace
 /signing/
 /signature/
 /signatures/
+# 本地测试产物与 Agent 工具配置，不入库
+/test_artifacts/
+/.opencode/
+
