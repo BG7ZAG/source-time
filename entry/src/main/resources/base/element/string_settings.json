@@ -42,7 +42,11 @@
     },
     {
       "name": "settings_footer",
-      "value": "源时 · 本地离线优先，除 WebDAV 外不进行任何网络通信"
+      "value": "源时 · 数据默认仅保存在本机，除 WebDAV 同步外不进行网络通信"
+    },
+    {
+      "name": "settings_footer_offline",
+      "value": "源时 · 所有数据仅保存在本机，不进行任何网络通信"
     }
   ]
 }

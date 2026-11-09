@@ -1,6 +1,6 @@
 import { common } from '@kit.AbilityKit';
 import { privacyManager } from '@kit.AppGalleryKit';
-import { AppRoutes } from '../constants/AppConstants';
+import { AppRoutes, WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { AuroraBackground } from '../components/AuroraBackground';
 import {
@@ -194,8 +194,11 @@ struct SettingsPage {
               Column() {
                 this.settingItem($r('app.string.settings_item_security'),
                   $r('app.string.settings_item_security_note'), AppRoutes.SECURITY, $r('app.media.ic_security'), false)
-                this.settingItem($r('app.string.settings_item_webdav'),
-                  $r('app.string.settings_item_webdav_note'), AppRoutes.WEBDAV, $r('app.media.ic_sync'), false)
+                // 备案完成前不展示联网同步入口（WEBDAV_FEATURE_ENABLED == false）
+                if (WEBDAV_FEATURE_ENABLED) {
+                  this.settingItem($r('app.string.settings_item_webdav'),
+                    $r('app.string.settings_item_webdav_note'), AppRoutes.WEBDAV, $r('app.media.ic_sync'), false)
+                }
                 this.settingItem($r('app.string.settings_item_logs'),
                   $r('app.string.settings_item_logs_note'), AppRoutes.LOGS, $r('app.media.ic_log'), false)
                 this.settingItem($r('app.string.settings_item_privacy'),
@@ -227,7 +230,9 @@ struct SettingsPage {
 
           // 底部标语固定在页面底部（不再随列表漂浮），与居上的菜单形成上下呼应
           if (!DeviceAdapter.isWatch()) {
-            Text($r('app.string.settings_footer'))
+            Text(WEBDAV_FEATURE_ENABLED
+              ? $r('app.string.settings_footer')
+              : $r('app.string.settings_footer_offline'))
               .fontSize(11)
               .textAlign(TextAlign.Center)
               .fontColor($r('app.color.text_tertiary'))

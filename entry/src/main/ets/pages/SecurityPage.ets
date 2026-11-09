@@ -12,6 +12,7 @@ import { Result } from '../types/Result';
 import { Logger } from '../utils/Logger';
 import { UiText } from '../utils/UiText';
 import { USER_SECRET_MAX_LENGTH, USER_SECRET_MIN_LENGTH } from '../constants/CryptoConstants';
+import { WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { DeviceAdapter } from '../utils/DeviceAdapter';
 import { AuroraBackground } from '../components/AuroraBackground';
@@ -307,6 +308,11 @@ struct SecurityPage {
    * 未启用同步 / 未开启自动推送时，SyncService 内部会静默跳过。
    */
   private triggerSyncAfterKeyChange(newSecret: string): void {
+    // 备案完成前联网同步整体关闭：密钥变更只更新本地密文，不向云端推送
+    if (!WEBDAV_FEATURE_ENABLED) {
+      Logger.info('Sync after key change skipped: network sync is disabled');
+      return;
+    }
     SyncService.getInstance().onEncryptionKeyChanged(newSecret).then((result: Result<void>) => {
       if (result.success) {
         Logger.info('Sync after key change requested');

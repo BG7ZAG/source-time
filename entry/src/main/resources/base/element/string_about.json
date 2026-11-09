@@ -54,7 +54,11 @@
     },
     {
       "name": "about_footer",
-      "value": "本地离线优先 · WebDAV 端到端加密同步"
+      "value": "数据默认仅保存在本机 · WebDAV 端到端加密同步"
+    },
+    {
+      "name": "about_footer_local",
+      "value": "所有数据仅保存在本机 · 不进行任何网络通信"
     }
   ]
 }

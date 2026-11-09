@@ -54,7 +54,11 @@
     },
     {
       "name": "about_footer",
-      "value": "Local-first · end-to-end encrypted WebDAV sync"
+      "value": "Data stays on your device by default · end-to-end encrypted WebDAV sync"
+    },
+    {
+      "name": "about_footer_local",
+      "value": "All data stays on this device · no network communication"
     }
   ]
 }

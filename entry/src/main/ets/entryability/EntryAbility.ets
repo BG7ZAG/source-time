@@ -11,7 +11,7 @@ import { WebDavConfig } from '../model/WebDavConfig';
 import { Result } from '../types/Result';
 import { Logger } from '../utils/Logger';
 import { UiText } from '../utils/UiText';
-import { APP_LOCK_STORAGE_KEY } from '../constants/AppConstants';
+import { APP_LOCK_STORAGE_KEY, WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
 import { initGlassTheme, initImmersiveMaterialSupport, isDarkMode, supportsImmersive } from '../theme/GlassStyle';
 import { DeviceAdapter, DeviceCategory } from '../utils/DeviceAdapter';
 
@@ -124,6 +124,11 @@ export default class EntryAbility extends UIAbility {
    * 导致「新增/删除后自动推送」在未进过该页的会话里静默失效。
    */
   private configureSyncOnStart(secret: string): void {
+    // 联网同步在备案完成前不启用：不读取 WebDAV 配置、不发起自动拉取
+    if (!WEBDAV_FEATURE_ENABLED) {
+      Logger.info('Network sync is disabled by feature flag');
+      return;
+    }
     new SettingsService().loadWebDavConfig(secret).then((config: WebDavConfig) => {
       const syncService: SyncService = SyncService.getInstance();
       syncService.configure(config, secret);

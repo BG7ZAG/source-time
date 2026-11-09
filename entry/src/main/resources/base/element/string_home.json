@@ -479,6 +479,22 @@
     {
       "name": "watch_sync_manual_key",
       "value": "手动输入密钥"
+    },
+    {
+      "name": "watch_key_entry",
+      "value": "输入密钥"
+    },
+    {
+      "name": "watch_key_choice_title",
+      "value": "密钥与保护"
+    },
+    {
+      "name": "watch_key_choice_desc",
+      "value": "手动输入手机上的密钥，或管理查看保护"
+    },
+    {
+      "name": "watch_key_settings_entry",
+      "value": "密钥与保护"
     }
   ]
 }

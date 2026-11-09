@@ -14,7 +14,7 @@
     },
     {
       "name": "dialog_privacy_version",
-      "value": "版本 %s · 本地优先"
+      "value": "版本 %s · 仅存本机"
     },
     {
       "name": "dialog_section_collection_title",

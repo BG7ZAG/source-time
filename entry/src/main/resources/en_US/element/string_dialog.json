@@ -14,7 +14,7 @@
     },
     {
       "name": "dialog_privacy_version",
-      "value": "Version %s · Local-first"
+      "value": "Version %s · On-device only"
     },
     {
       "name": "dialog_section_collection_title",

@@ -8,7 +8,7 @@ import { WebDavConfig } from '../model/WebDavConfig';
 import { RemoteBackup } from '../model/RemoteBackup';
 import { SyncStatus } from '../model/SyncModel';
 import { Result } from '../types/Result';
-import { DEFAULT_WEBDAV_DIRECTORY } from '../constants/AppConstants';
+import { DEFAULT_WEBDAV_DIRECTORY, WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { Logger } from '../utils/Logger';
 import { UiText } from '../utils/UiText';
@@ -93,7 +93,8 @@ struct WebDavPage {
   private backupDialog: CustomDialogController | null = null;
 
   aboutToAppear(): void {
-    if (DeviceAdapter.isWatch()) {
+    // 联网同步功能在备案完成前整体关闭：即使通过路由/深链进入本页也直接返回，避免发起网络请求
+    if (!WEBDAV_FEATURE_ENABLED || DeviceAdapter.isWatch()) {
       this.getUIContext().getRouter().back();
       return;
     }

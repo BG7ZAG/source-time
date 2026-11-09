@@ -9,6 +9,8 @@
 @CustomDialog
 export struct WatchSyncChoiceDialog {
   controller?: CustomDialogController;
+  /** 联网同步开关；关闭时只保留「手动输入密钥」与「查看保护」两个本地操作。 */
+  webDavEnabled: boolean = true;
   lockEnabled: boolean = false;
   onPhoneSync: () => void = () => {};
   onManual: () => void = () => {};
@@ -18,40 +20,47 @@ export struct WatchSyncChoiceDialog {
 
   build() {
     Column({ space: 6 }) {
-      Text($r('app.string.watch_sync_choice_title'))
+      Text(this.webDavEnabled
+        ? $r('app.string.watch_sync_choice_title')
+        : $r('app.string.watch_key_choice_title'))
         .fontSize(15)
         .fontWeight(FontWeight.Bold)
         .fontColor(Color.White)
         .textAlign(TextAlign.Center)
 
-      Text($r('app.string.watch_sync_choice_desc'))
+      Text(this.webDavEnabled
+        ? $r('app.string.watch_sync_choice_desc')
+        : $r('app.string.watch_key_choice_desc'))
         .fontSize(10)
         .lineHeight(14)
         .fontColor('#B3FFFFFF')
         .textAlign(TextAlign.Center)
-        .maxLines(1)
+        .maxLines(2)
 
-      Button($r('app.string.watch_sync_from_phone'))
-        .width('100%')
-        .height(36)
-        .borderRadius(18)
-        .fontSize(12)
-        .fontWeight(FontWeight.Medium)
-        .linearGradient({
-          angle: 90,
-          colors: [[$r('app.color.brand'), 0.0], [$r('app.color.brand_secondary'), 1.0]]
-        })
-        .fontColor($r('app.color.fab_foreground'))
-        .onClick(() => this.onPhoneSync())
+      // 备案完成前（webDavEnabled == false）不展示任何联网同步入口
+      if (this.webDavEnabled) {
+        Button($r('app.string.watch_sync_from_phone'))
+          .width('100%')
+          .height(36)
+          .borderRadius(18)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .linearGradient({
+            angle: 90,
+            colors: [[$r('app.color.brand'), 0.0], [$r('app.color.brand_secondary'), 1.0]]
+          })
+          .fontColor($r('app.color.fab_foreground'))
+          .onClick(() => this.onPhoneSync())
 
-      Button($r('app.string.watch_sync_manual'))
-        .width('100%')
-        .height(32)
-        .borderRadius(16)
-        .fontSize(11)
-        .backgroundColor($r('app.color.pill_background'))
-        .fontColor($r('app.color.text_secondary'))
-        .onClick(() => this.onManual())
+        Button($r('app.string.watch_sync_manual'))
+          .width('100%')
+          .height(32)
+          .borderRadius(16)
+          .fontSize(11)
+          .backgroundColor($r('app.color.pill_background'))
+          .fontColor($r('app.color.text_secondary'))
+          .onClick(() => this.onManual())
+      }
 
       Row({ space: 6 }) {
         Button($r('app.string.watch_sync_manual_key'))

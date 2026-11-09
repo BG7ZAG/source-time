@@ -479,6 +479,22 @@
     {
       "name": "watch_sync_manual_key",
       "value": "Enter key manually"
+    },
+    {
+      "name": "watch_key_entry",
+      "value": "Enter key"
+    },
+    {
+      "name": "watch_key_choice_title",
+      "value": "Key & protection"
+    },
+    {
+      "name": "watch_key_choice_desc",
+      "value": "Enter the key from your phone, or manage view protection"
+    },
+    {
+      "name": "watch_key_settings_entry",
+      "value": "Key & protection"
     }
   ]
 }

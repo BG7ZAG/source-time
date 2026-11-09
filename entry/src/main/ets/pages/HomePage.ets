@@ -18,7 +18,7 @@ import { APP_LOCK_STORAGE_KEY } from '../constants/AppConstants';
 import { HomeViewModel, TotpDisplayItem } from '../viewmodel/HomeViewModel';
 import { TotpItem } from '../model/TotpItem';
 import { Result } from '../types/Result';
-import { AppRoutes, CURRENT_PRIVACY_POLICY_VERSION } from '../constants/AppConstants';
+import { AppRoutes, CURRENT_PRIVACY_POLICY_VERSION, WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
 import {
   CONTENT_MAX_WIDTH,
   WATCH_CONTENT_MAX_WIDTH,
@@ -129,6 +129,7 @@ struct HomePage {
   /** 手表端同步入口操作面板：从手机同步 / 手动配置 / 查看保护开关。 */
   private watchSyncChoiceDialog: CustomDialogController = new CustomDialogController({
     builder: WatchSyncChoiceDialog({
+      webDavEnabled: WEBDAV_FEATURE_ENABLED,
       lockEnabled: this.viewLockEnabled,
       onPhoneSync: () => {
         this.watchSyncChoiceDialog.close();
@@ -391,6 +392,10 @@ struct HomePage {
 
   /** 手表端「从手机同步」：申请分布式权限 → 读取配置包 → 直接应用（同账号可信通道，不再要传输 PIN）。 */
   private startPhoneSync(): void {
+    // 备案完成前联网同步整体关闭：即使弹窗入口被绕过也不发起跨设备读取
+    if (!WEBDAV_FEATURE_ENABLED) {
+      return;
+    }
     const distributed: DistributedConfigService = DistributedConfigService.getInstance();
     distributed.ensurePermission().then((granted: boolean) => {
       if (!granted) {
@@ -922,9 +927,11 @@ struct HomePage {
                   onTap: () => this.openAdd()
                 })
 
-                // 手表端唯一的数据入口：从 WebDAV 拉取手机推送的加密备份
+                // 手表端数据入口：联网同步关闭时只提供「输入密钥」（本地操作）
                 if (DeviceAdapter.isWatch() && this.keyInitialized) {
-                  Button($r('app.string.watch_sync_entry'))
+                  Button(WEBDAV_FEATURE_ENABLED
+                    ? $r('app.string.watch_sync_entry')
+                    : $r('app.string.watch_key_entry'))
                     .height(30)
                     .fontSize(10.5)
                     .fontColor($r('app.color.brand'))
@@ -934,7 +941,11 @@ struct HomePage {
                     .margin({ top: 10 })
                     .onClick(() => {
                       this.refreshViewLockState();
-                      this.watchSyncChoiceDialog.open();
+                      if (WEBDAV_FEATURE_ENABLED) {
+                        this.watchSyncChoiceDialog.open();
+                      } else {
+                        this.watchKeyDialog.open();
+                      }
                     })
                 }
               }
@@ -1087,7 +1098,9 @@ struct HomePage {
                   if (DeviceAdapter.isWatch()) {
                     ListItem() {
                       Row() {
-                        Button($r('app.string.watch_settings_entry'))
+                        Button(WEBDAV_FEATURE_ENABLED
+                          ? $r('app.string.watch_settings_entry')
+                          : $r('app.string.watch_key_settings_entry'))
                           .width(120)
                           .height(32)
                           .borderRadius(16)

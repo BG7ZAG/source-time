@@ -42,7 +42,11 @@
     },
     {
       "name": "settings_footer",
-      "value": "SourceTime · Local and offline first; no network communication except WebDAV"
+      "value": "SourceTime · Data stays on your device by default; no network communication except WebDAV sync"
+    },
+    {
+      "name": "settings_footer_offline",
+      "value": "SourceTime · All data stays on this device; no network communication"
     }
   ]
 }

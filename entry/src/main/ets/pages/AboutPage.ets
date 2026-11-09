@@ -2,6 +2,7 @@ import { common } from '@kit.AbilityKit';
 import { AuroraBackground } from '../components/AuroraBackground';
 import { frostedPillColor, glassGroupShadow, glassPillShadow } from '../theme/GlassStyle';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
+import { WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
 import { DeviceAdapter } from '../utils/DeviceAdapter';
 
 /**
@@ -217,7 +218,9 @@ struct AboutPage {
               .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
               .shadow(glassGroupShadow())
 
-              Text($r('app.string.about_footer'))
+              Text(WEBDAV_FEATURE_ENABLED
+                ? $r('app.string.about_footer')
+                : $r('app.string.about_footer_local'))
                 .fontSize(11)
                 .textAlign(TextAlign.Center)
                 .fontColor($r('app.color.text_tertiary'))

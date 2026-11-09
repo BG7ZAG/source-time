@@ -23,9 +23,10 @@
     ],
     "requestPermissions": [
       {
-        "name": "ohos.permission.INTERNET"
-      },
-      {
+        // 当前版本联网同步已关闭（WEBDAV_FEATURE_ENABLED = false），先移除网络权限。
+        // 备案完成、恢复 WebDAV / 跨设备同步时，需在此重新加回：
+        // { "name": "ohos.permission.INTERNET" }
+        // 多设备协同权限（DISTRIBUTED_DATASYNC）同样只在恢复联网同步后才需要。
         "name": "ohos.permission.CAMERA",
         "reason": "$string:camera_reason",
         "usedScene": {
@@ -36,7 +37,8 @@
         }
       },
       {
-        // 手机 → 手表同步 WebDAV 配置：仅在同一账号的可信设备间传输，配置本身再用一次性 PIN 加密
+        // 手机 → 手表同步 WebDAV 配置：仅在同一账号的可信设备间传输，配置本身再用一次性 PIN 加密。
+        // 当前版本联网同步关闭，不会发起跨设备传输；备案完成后随功能开关一起启用。
         "name": "ohos.permission.DISTRIBUTED_DATASYNC",
         "reason": "$string:distributed_reason",
         "usedScene": {
