@@ -40,6 +40,19 @@ export interface ConfigBundlePayload {
   appLock: AppLockBundle;
 }
 
+/**
+ * 配置包应用结果。
+ *
+ * 密钥同步与云端备份拉取是两件事：没有配置 WebDAV 或服务器暂时不可用时，
+ * 密钥仍应成功落到手表，不能因为拉取失败就整包报错（否则用户会误以为「无法同步密钥」）。
+ */
+export interface ConfigApplyResult {
+  keySynced: boolean;
+  backupPulled: boolean;
+  /** 备份拉取失败原因；仅 backupPulled 为 false 且有实际失败时存在。 */
+  backupError?: ResourceStr;
+}
+
 export class ConfigSyncService {
   private static instance: ConfigSyncService | null = null;
 
@@ -90,9 +103,9 @@ export class ConfigSyncService {
    * 应用配置包：落密钥 → 存 WebDAV 配置 → 同步查看保护 → 拉取云端最新备份。
    * 查看保护在拉取完成后才置位，避免 PIN 遮罩挡住同步过程。
    */
-  async applyBundle(payload: ConfigBundlePayload): Promise<Result<void>> {
-    if (payload.secret.length === 0 || payload.config.baseUrl.trim().length === 0) {
-      return err<void>(AppErrorCode.INVALID_INPUT, $r('app.string.watch_sync_bundle_invalid'));
+  async applyBundle(payload: ConfigBundlePayload): Promise<Result<ConfigApplyResult>> {
+    if (payload.secret.length === 0) {
+      return err<ConfigApplyResult>(AppErrorCode.INVALID_INPUT, $r('app.string.watch_sync_bundle_invalid'));
     }
     AppStorage.setOrCreate<string>(SECRET_STORAGE_KEY, payload.secret);
     const settings = this.settingsService.getSettings();
@@ -107,30 +120,62 @@ export class ConfigSyncService {
     }
     const saveSettingsResult: Result<void> = await this.settingsService.saveSettings(settings);
     if (!saveSettingsResult.success) {
-      return saveSettingsResult;
+      return err<ConfigApplyResult>(AppErrorCode.STORAGE_WRITE_FAILED,
+        saveSettingsResult.error !== undefined
+          ? saveSettingsResult.error.message
+          : $r('app.string.security_save_failed'));
     }
     await this.keyStoreService.save(payload.secret);
+
+    // 没有 WebDAV 配置时，配置包里最重要的「密钥」已经落盘：到这里就算同步成功。
+    // 审核环境常常只配置密钥、不配置 WebDAV，不能因此让整次同步失败。
+    if (payload.config.baseUrl.trim().length === 0) {
+      return ok<ConfigApplyResult>({ keySynced: true, backupPulled: false });
+    }
 
     const saveConfigResult: Result<void> =
       await this.settingsService.saveWebDavConfig(payload.config, payload.secret);
     if (!saveConfigResult.success) {
-      return saveConfigResult;
+      return ok<ConfigApplyResult>({
+        keySynced: true,
+        backupPulled: false,
+        backupError: saveConfigResult.error !== undefined
+          ? saveConfigResult.error.message
+          : $r('app.string.watch_sync_failed')
+      });
     }
 
     SyncService.getInstance().configure(payload.config, payload.secret);
     const listResult: Result<RemoteBackup[]> = await SyncService.getInstance().listBackups();
     if (!listResult.success || listResult.data === undefined) {
-      return err<void>(AppErrorCode.WEBDAV_DOWNLOAD_FAILED,
-        listResult.error !== undefined ? listResult.error.message : $r('app.string.watch_sync_failed'));
+      // 密钥已同步成功；云端不可用只影响「顺带拉取备份」，单独提示原因
+      return ok<ConfigApplyResult>({
+        keySynced: true,
+        backupPulled: false,
+        backupError: listResult.error !== undefined
+          ? listResult.error.message
+          : $r('app.string.watch_sync_failed')
+      });
     }
     if (listResult.data.length === 0) {
-      return err<void>(AppErrorCode.WEBDAV_INVALID_REMOTE_FILE, $r('app.string.watch_sync_no_backup'));
+      return ok<ConfigApplyResult>({
+        keySynced: true,
+        backupPulled: false,
+        backupError: $r('app.string.watch_sync_no_backup')
+      });
     }
     const pullResult: Result<void> = await SyncService.getInstance().pullBackup(listResult.data[0].name);
-    if (pullResult.success) {
-      // 拉取完成后按手机端的开关立即上锁：符合“每次查看都要 PIN”的语义
-      AppStorage.setOrCreate<boolean>(APP_LOCK_STORAGE_KEY, new PinService().isLockUsable());
+    if (!pullResult.success) {
+      return ok<ConfigApplyResult>({
+        keySynced: true,
+        backupPulled: false,
+        backupError: pullResult.error !== undefined
+          ? pullResult.error.message
+          : $r('app.string.watch_sync_failed')
+      });
     }
-    return pullResult;
+    // 拉取完成后按手机端的开关立即上锁：符合“每次查看都要 PIN”的语义
+    AppStorage.setOrCreate<boolean>(APP_LOCK_STORAGE_KEY, new PinService().isLockUsable());
+    return ok<ConfigApplyResult>({ keySynced: true, backupPulled: true });
   }
 }

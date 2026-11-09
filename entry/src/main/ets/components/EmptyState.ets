@@ -15,10 +15,12 @@ import { DeviceAdapter } from '../utils/DeviceAdapter';
 export struct EmptyState {
   @Prop message: ResourceStr = $r('app.string.empty_message');
   @Prop hint: ResourceStr = $r('app.string.empty_hint');
-  /** 是否响应点击；手表端密钥初始化完成后没有新增能力，置 false 避免无效点击。 */
+  /** 是否响应点击；手表端始终响应：未初始化时设置密钥，已初始化时打开同步入口。 */
   @Prop clickable: boolean = true;
+  /** 中央图标文案：手机端为加号，手表端改用同步箭头，避免误导为「可以新增」。 */
+  @Prop symbol: string = '＋';
   @State breathing: boolean = false;
-  /** 点击中央加号触发新增，与右下角悬浮球同一动作。 */
+  /** 点击中央图标触发新增（手表端为同步入口）。 */
   onTap: () => void = () => {};
 
   aboutToAppear(): void {
@@ -107,8 +109,8 @@ export struct EmptyState {
           })
           .shadow(this.immersive() ? noShadow() : glowButtonShadow())
 
-        // 渐变加号
-        Text('＋')
+        // 渐变加号（手表端为同步箭头）
+        Text(this.symbol)
           .fontSize(this.plusFontSize())
           .fontWeight(FontWeight.Medium)
           .fontColor($r('app.color.brand'))

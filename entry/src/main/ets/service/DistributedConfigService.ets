@@ -102,9 +102,11 @@ export class DistributedConfigService {
   async read(): Promise<Result<string>> {
     try {
       const store = await this.ensureStore();
-      for (let attempt = 0; attempt < 3; attempt++) {
+      // 跨设备同步不是即时的：拉取后通常要数秒才落到本机，重试窗口放宽到 ~4.5s，
+      // 避免手机端刚提示「已发送」、手表端却因读得太早而报「未发现手机配置」。
+      for (let attempt = 0; attempt < 6; attempt++) {
         this.syncWithPeers(store);
-        await this.delay(attempt === 0 ? 500 : 900);
+        await this.delay(attempt === 0 ? 500 : 800);
         try {
           const value: boolean | string | number | Uint8Array = await store.get(KEY_BUNDLE);
           if (typeof value === 'string' && value.length > 0) {
@@ -119,7 +121,9 @@ export class DistributedConfigService {
           // 本轮还没有同步到，继续重试
         }
       }
-      return err<string>(AppErrorCode.UNKNOWN, $r('app.string.watch_sync_no_bundle'));
+      // 区分「通道里暂时没有包」与「根本没有同账号设备」：后者重试也没用，提示用户先组网
+      return err<string>(AppErrorCode.UNKNOWN,
+        this.hasOnlinePeer() ? $r('app.string.watch_sync_no_bundle') : $r('app.string.watch_sync_no_peer'));
     } catch (error) {
       const failure = error as BusinessError;
       Logger.error('Read config bundle failed: code=' + failure.code + ' message=' + failure.message);

@@ -31,8 +31,12 @@ export struct WatchKeySetupDialog {
   private clipboardService: ClipboardService = new ClipboardService();
 
   aboutToAppear(): void {
-    // 默认给出一枚 256-bit 随机密钥，用户可直接使用，也可以改成手机上已有的密钥
-    this.secret = this.cryptoService.generateRandomEncryptionSecret();
+    // 已有密钥时直接显示当前值（便于查看/复制/覆盖为手机上的密钥），
+    // 仅在首次初始化时给出一枚 256-bit 随机密钥。
+    const current: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
+    this.secret = (current !== undefined && current.length > 0)
+      ? current
+      : this.cryptoService.generateRandomEncryptionSecret();
   }
 
   private regenerate(): void {

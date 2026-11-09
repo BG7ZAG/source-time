@@ -12,6 +12,8 @@ export struct WatchSyncChoiceDialog {
   lockEnabled: boolean = false;
   onPhoneSync: () => void = () => {};
   onManual: () => void = () => {};
+  /** 手动输入/粘贴手机上的密钥：分布式通道不可用时的兜底路径。 */
+  onManualKey: () => void = () => {};
   onToggleLock: () => void = () => {};
 
   build() {
@@ -51,14 +53,26 @@ export struct WatchSyncChoiceDialog {
         .fontColor($r('app.color.text_secondary'))
         .onClick(() => this.onManual())
 
-      Button(this.lockEnabled ? $r('app.string.watch_view_lock_on') : $r('app.string.watch_view_lock_off'))
-        .width('100%')
-        .height(30)
-        .borderRadius(15)
-        .fontSize(11)
-        .backgroundColor($r('app.color.pill_background'))
-        .fontColor(this.lockEnabled ? $r('app.color.brand') : $r('app.color.text_secondary'))
-        .onClick(() => this.onToggleLock())
+      Row({ space: 6 }) {
+        Button($r('app.string.watch_sync_manual_key'))
+          .layoutWeight(1)
+          .height(30)
+          .borderRadius(15)
+          .fontSize(10)
+          .backgroundColor($r('app.color.pill_background'))
+          .fontColor($r('app.color.text_secondary'))
+          .onClick(() => this.onManualKey())
+
+        Button(this.lockEnabled ? $r('app.string.watch_view_lock_on') : $r('app.string.watch_view_lock_off'))
+          .layoutWeight(1)
+          .height(30)
+          .borderRadius(15)
+          .fontSize(10)
+          .backgroundColor($r('app.color.pill_background'))
+          .fontColor(this.lockEnabled ? $r('app.color.brand') : $r('app.color.text_secondary'))
+          .onClick(() => this.onToggleLock())
+      }
+      .width('100%')
     }
     .width('100%')
     .constraintSize({ maxWidth: 180, minHeight: 180, maxHeight: 205 })

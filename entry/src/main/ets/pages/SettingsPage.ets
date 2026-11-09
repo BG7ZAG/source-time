@@ -1,3 +1,5 @@
+import { common } from '@kit.AbilityKit';
+import { privacyManager } from '@kit.AppGalleryKit';
 import { AppRoutes } from '../constants/AppConstants';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { AuroraBackground } from '../components/AuroraBackground';
@@ -17,6 +19,47 @@ import { DeviceAdapter } from '../utils/DeviceAdapter';
 struct SettingsPage {
   private navigateTo(route: string): void {
     this.getUIContext().getRouter().pushUrl({ url: route });
+  }
+
+  /**
+   * 打开隐私声明。
+   *
+   * 应用已接入平台标准化隐私声明托管服务：应用内的隐私声明入口必须展示托管声明，
+   * 与系统隐私弹窗保持同一份内容（否则属于「应用内非标隐私声明链接」）。
+   * 查询失败（如调试包未预置托管信息）时回退到应用内页面，保证入口始终可用。
+   */
+  private openPrivacyPolicy(): void {
+    // 隐私管理服务不支持手表等设备：直接回退到应用内页面，避免调用未声明的系统能力
+    if (!canIUse('SystemCapability.AppGalleryService.PrivacyManager')) {
+      this.navigateTo(AppRoutes.PRIVACY_POLICY);
+      return;
+    }
+    try {
+      const info: privacyManager.AppPrivacyMgmtInfo = privacyManager.getAppPrivacyMgmtInfo();
+      const links: privacyManager.AppPrivacyLink[] = info.privacyInfo;
+      for (let i = 0; i < links.length; i++) {
+        if (links[i].type === privacyManager.AppPrivacyLinkType.PRIVACY_STATEMENT_LINK
+          && links[i].url.length > 0) {
+          this.openLink(links[i].url);
+          return;
+        }
+      }
+    } catch (error) {
+      // 未接入隐私托管 / 非真机环境：走下面的应用内页面
+    }
+    this.navigateTo(AppRoutes.PRIVACY_POLICY);
+  }
+
+  private openLink(url: string): void {
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      context.openLink(url).catch(() => {
+        // 无法拉起浏览器时回退到应用内页面
+        this.navigateTo(AppRoutes.PRIVACY_POLICY);
+      });
+    } catch (error) {
+      this.navigateTo(AppRoutes.PRIVACY_POLICY);
+    }
   }
 
   @Builder
@@ -118,7 +161,13 @@ struct SettingsPage {
     .onHover((isHover: boolean) => {
       DeviceAdapter.applyHoverCursor(this.getUIContext().getCursorController(), isHover);
     })
-    .onClick(() => this.navigateTo(route))
+    .onClick(() => {
+      if (route === AppRoutes.PRIVACY_POLICY) {
+        this.openPrivacyPolicy();
+        return;
+      }
+      this.navigateTo(route);
+    })
   }
 
   pageTransition() {

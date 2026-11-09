@@ -467,6 +467,18 @@
     {
       "name": "rename_empty_hint",
       "value": "名称和账号至少填一个"
+    },
+    {
+      "name": "watch_sync_key_only",
+      "value": "密钥已同步（未配置 WebDAV，未拉取备份）"
+    },
+    {
+      "name": "watch_sync_no_peer",
+      "value": "未发现同账号的手机，请确认两台设备已登录同一账号并已连接"
+    },
+    {
+      "name": "watch_sync_manual_key",
+      "value": "手动输入密钥"
     }
   ]
 }

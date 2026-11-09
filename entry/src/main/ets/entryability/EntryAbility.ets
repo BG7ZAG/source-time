@@ -80,9 +80,14 @@ export default class EntryAbility extends UIAbility {
     const settings = settingsService.getSettings();
 
     let initialPage: string = 'pages/HomePage';
-    if (settings.privacyPolicyAccepted && !settings.encryptionInitialized) {
+    if (DeviceAdapter.isWatch()) {
+      // 手表不在隐私托管支持的设备范围内：隐私确认与密钥初始化都在首页内完成，
+      // 进入 SecurityPage 会被其 aboutToAppear 直接 back()，所以始终从首页启动。
+      initialPage = 'pages/HomePage';
+    } else if (!settings.encryptionInitialized) {
+      // 手机/平板/PC 的隐私同意由系统标准化隐私弹窗完成，这里只需判断密钥是否已初始化
       initialPage = 'pages/SecurityPage';
-    } else if (settings.privacyPolicyAccepted && settings.encryptionInitialized && secret.length === 0) {
+    } else if (secret.length === 0) {
       hilog.error(DOMAIN, 'SourceTime', 'Encryption secret lost: initialized but KeyStore returned empty');
       initialPage = 'pages/SecurityPage';
     }

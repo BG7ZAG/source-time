@@ -467,6 +467,18 @@
     {
       "name": "rename_empty_hint",
       "value": "Enter a name or an account"
+    },
+    {
+      "name": "watch_sync_key_only",
+      "value": "Key synced (WebDAV not configured, backup not pulled)"
+    },
+    {
+      "name": "watch_sync_no_peer",
+      "value": "No phone found on the same account. Make sure both devices are signed in to the same account and connected."
+    },
+    {
+      "name": "watch_sync_manual_key",
+      "value": "Enter key manually"
     }
   ]
 }

@@ -21,6 +21,14 @@
       "value": "开源协议"
     },
     {
+      "name": "about_requirement",
+      "value": "系统要求"
+    },
+    {
+      "name": "about_requirement_value",
+      "value": "HarmonyOS 7.0 及以上"
+    },
+    {
       "name": "about_license_value",
       "value": "MIT License"
     },

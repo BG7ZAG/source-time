@@ -185,6 +185,8 @@ struct AboutPage {
               .alignItems(HorizontalAlign.Center)
 
               Column() {
+                // 审核要求：仅适配较高版本 HarmonyOS 时，必须在应用内给出明显标注
+                this.infoRow($r('app.media.ic_security'), $r('app.string.about_requirement'), $r('app.string.about_requirement_value'), false, false)
                 this.infoRow($r('app.media.ic_doc'), $r('app.string.about_license'), $r('app.string.about_license_value'), false, false)
                 this.infoRow($r('app.media.ic_github'), $r('app.string.about_repo'), 'BG7ZAG/source-time', true, false)
                 this.infoRow($r('app.media.ic_heart'), $r('app.string.about_thanks'), $r('app.string.about_thanks_value'), false, true)

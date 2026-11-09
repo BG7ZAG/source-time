@@ -11,7 +11,7 @@ import { WatchSyncDialog } from '../components/WatchSyncDialog';
 import { WatchSyncChoiceDialog } from '../components/WatchSyncChoiceDialog';
 import { WatchVerifyPinDialog } from '../components/WatchVerifyPinDialog';
 import { WatchSetPinDialog } from '../components/WatchSetPinDialog';
-import { ConfigSyncService, ConfigBundlePayload } from '../service/ConfigSyncService';
+import { ConfigSyncService, ConfigBundlePayload, ConfigApplyResult } from '../service/ConfigSyncService';
 import { DistributedConfigService } from '../service/DistributedConfigService';
 import { PinService } from '../service/PinService';
 import { APP_LOCK_STORAGE_KEY } from '../constants/AppConstants';
@@ -143,6 +143,13 @@ struct HomePage {
           this.watchSyncDialog.open();
         }, 120);
       },
+      onManualKey: () => {
+        // 分布式通道不可用（不同账号/未组网/云调试）时，允许直接输入或粘贴手机上的密钥
+        this.watchSyncChoiceDialog.close();
+        setTimeout(() => {
+          this.watchKeyDialog.open();
+        }, 120);
+      },
       onToggleLock: () => {
         this.watchSyncChoiceDialog.close();
         setTimeout(() => {
@@ -212,13 +219,17 @@ struct HomePage {
     const settings = this.settingsService.getSettings();
     this.keyInitialized = settings.encryptionInitialized;
     this.refreshViewLockState();
-    // 除「从未同意过」外，还要比对已同意的版本号：政策改版后必须重新弹窗确认，
-    // 否则老用户会在没看到新条款的情况下继续使用（getSettings 对旧数据返回空串，天然会重弹）。
-    if (!settings.privacyPolicyAccepted || settings.privacyPolicyVersion !== CURRENT_PRIVACY_POLICY_VERSION) {
+    // 手机/平板/PC 已接入平台标准化隐私声明托管服务：首次启动由系统统一弹出隐私弹窗，
+    // 应用内不得再自建隐私弹窗，否则审核时会看到两个弹窗。
+    // 手表不在隐私托管支持的设备范围内，仍需保留应用内的隐私确认页。
+    // 除「从未同意过」外，还要比对已同意的版本号：政策改版后必须重新确认。
+    if (DeviceAdapter.isWatch()
+      && (!settings.privacyPolicyAccepted || settings.privacyPolicyVersion !== CURRENT_PRIVACY_POLICY_VERSION)) {
       this.privacyDialog.open();
       return;
     }
-    // 手表端没有可用的安全页（进入即 back），改为首页内的紧凑密钥初始化弹窗
+    // 手机端首次启动由 EntryAbility 路由到「设置加密密钥」；
+    // 手表端没有可用的安全页（进入即 back），改为首页内的紧凑密钥初始化弹窗。
     if (DeviceAdapter.isWatch() && !settings.encryptionInitialized) {
       this.watchKeyDialog.open();
       return;
@@ -235,9 +246,10 @@ struct HomePage {
     const settings = this.settingsService.getSettings();
     this.keyInitialized = settings.encryptionInitialized;
     this.refreshViewLockState();
-    // 与 aboutToAppear 同一判据：政策待重新确认时不把口令加载出来，避免遮在弹窗下层可见
-    const consented: boolean = settings.privacyPolicyAccepted
-      && settings.privacyPolicyVersion === CURRENT_PRIVACY_POLICY_VERSION;
+    // 手表端在用户处理隐私弹窗前不加载口令，避免数据遮在弹窗下层可见；
+    // 手机/平板/PC 的隐私确认由系统托管弹窗完成，这里只判断密钥是否就绪。
+    const consented: boolean = !DeviceAdapter.isWatch()
+      || (settings.privacyPolicyAccepted && settings.privacyPolicyVersion === CURRENT_PRIVACY_POLICY_VERSION);
     if (consented && settings.encryptionInitialized) {
       this.viewModel.load().then((result: Result<void>) => {
         if (result.success) {
@@ -361,11 +373,14 @@ struct HomePage {
 
   private openAdd(): void {
     if (DeviceAdapter.isWatch()) {
-      // 手表端不提供新增，但空状态仍需要一个有意义的动作：
-      // 尚未初始化密钥时，点击加号打开密钥设置弹窗，避免「点了没反应」。
+      // 手表端不支持新增口令。未初始化密钥时先设置密钥；
+      // 已初始化时打开同步入口，避免「点了加号没有任何反应」。
       if (!this.keyInitialized) {
         this.watchKeyDialog.open();
+        return;
       }
+      this.refreshViewLockState();
+      this.watchSyncChoiceDialog.open();
       return;
     }
     if (!DeviceAdapter.showFullFeatures()) {
@@ -397,17 +412,27 @@ struct HomePage {
                 : $r('app.string.watch_sync_bundle_invalid'));
               return;
             }
-            ConfigSyncService.getInstance().applyBundle(openResult.data).then((applyResult: Result<void>) => {
+            ConfigSyncService.getInstance().applyBundle(openResult.data).then((applyResult: Result<ConfigApplyResult>) => {
               if (!applyResult.success) {
                 this.showWatchToast(applyResult.error !== undefined
                   ? applyResult.error.message
                   : $r('app.string.watch_sync_failed'));
                 return;
               }
+              // 密钥已经落盘，即使云端备份拉取失败也要立即进入可用状态
               this.keyInitialized = true;
               this.refreshViewLockState();
               this.loadData();
-              this.showWatchToast($r('app.string.watch_sync_received'));
+              const outcome: ConfigApplyResult | undefined = applyResult.data;
+              if (outcome !== undefined && !outcome.backupPulled) {
+                this.showWatchToast(outcome.backupError !== undefined
+                  ? outcome.backupError
+                  : $r('app.string.watch_sync_key_only'));
+              } else {
+                this.showWatchToast($r('app.string.watch_sync_received'));
+              }
+              // 配置包是一次性的：消费成功后清掉本机副本，避免旧配置被重复应用
+              distributed.clear();
             });
           });
       });
@@ -890,8 +915,10 @@ struct HomePage {
                       ? $r('app.string.home_empty_hint_watch')
                       : $r('app.string.home_empty_hint_watch_key'))
                     : $r('app.string.home_empty_hint'),
-                  // 手表端密钥初始化完成后没有新增能力，加号不再可点，避免无效点击
-                  clickable: !DeviceAdapter.isWatch() || !this.keyInitialized,
+                  // 手表端点击中央图标打开「同步口令」入口；不再展示
+                  // 会让人误以为能新增口令的加号，改为同步图标。
+                  symbol: DeviceAdapter.isWatch() ? '↓' : '＋',
+                  clickable: true,
                   onTap: () => this.openAdd()
                 })
 

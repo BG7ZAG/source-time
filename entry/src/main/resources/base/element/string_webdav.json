@@ -275,6 +275,22 @@
     {
       "name": "webdav_send_pending_message",
       "value": "当前未发现在线手表，配置已加密发布；在手表端打开「从手机同步」即可接收。"
+    },
+    {
+      "name": "webdav_send_key_done_title",
+      "value": "密钥已发送到手表"
+    },
+    {
+      "name": "webdav_send_key_done_message",
+      "value": "请在手表端选择「从手机同步」完成密钥同步（未配置 WebDAV 时仅同步密钥）。"
+    },
+    {
+      "name": "webdav_send_key_pending_title",
+      "value": "密钥已就绪"
+    },
+    {
+      "name": "webdav_send_key_pending_message",
+      "value": "当前未发现在线手表，密钥已加密发布；在手表端打开「从手机同步」即可接收。"
     }
   ]
 }

@@ -111,30 +111,52 @@ export struct PrivacyDialog {
       .layoutWeight(this.isWatch() ? 1 : 0)
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
+      // Scroll 默认支持旋转表冠，但前提是组件获焦；模态弹窗内需要显式指定焦点，
+      // 否则审核会在手表上出现「隐私政策界面未适配旋转表冠」。
+      .focusable(this.isWatch())
+      .focusOnTouch(this.isWatch())
+      .defaultFocus(this.isWatch())
 
       Row({ space: this.isWatch() ? 8 : 12 }) {
-        Button($r('app.string.dialog_decline'))
-          .layoutWeight(1)
-          .height(this.isWatch() ? 36 : 46)
-          .borderRadius(this.isWatch() ? 18 : 23)
-          .fontSize(this.isWatch() ? 12 : 15)
-          .backgroundColor($r('app.color.pill_background'))
-          .fontColor($r('app.color.text_secondary'))
-          .onClick(() => this.onDecline())
+        Button() {
+          Text($r('app.string.dialog_decline'))
+            .width('100%')
+            .fontSize(this.isWatch() ? 10.5 : 15)
+            .fontColor($r('app.color.text_secondary'))
+            .textAlign(TextAlign.Center)
+            .maxLines(1)
+            // 手表端英文 "Decline" 在窄按钮里会被省略号截断，用跑马灯兜底显示完整
+            .textOverflow({ overflow: TextOverflow.MARQUEE })
+            .marqueeOptions({ start: true, fromStart: true, step: 6, loop: -1, delay: 800 })
+        }
+        .layoutWeight(1)
+        .height(this.isWatch() ? 36 : 46)
+        .borderRadius(this.isWatch() ? 18 : 23)
+        .padding({ left: this.isWatch() ? 2 : 16, right: this.isWatch() ? 2 : 16 })
+        .backgroundColor($r('app.color.pill_background'))
+        .onClick(() => this.onDecline())
 
-        Button(this.isWatch() ? $r('app.string.dialog_agree_short') : $r('app.string.dialog_agree'))
-          .layoutWeight(1)
-          .height(this.isWatch() ? 36 : 46)
-          .borderRadius(this.isWatch() ? 18 : 23)
-          .fontSize(this.isWatch() ? 12 : 15)
-          .fontWeight(FontWeight.Medium)
-          .linearGradient({
-            angle: 90,
-            colors: [[$r('app.color.brand'), 0.0], [$r('app.color.brand_secondary'), 1.0]]
-          })
-          .fontColor($r('app.color.fab_foreground'))
-          .shadow({ radius: 12, color: '#590A59F7', offsetX: 0, offsetY: 4 })
-          .onClick(() => this.onAgree())
+        Button() {
+          Text(this.isWatch() ? $r('app.string.dialog_agree_short') : $r('app.string.dialog_agree'))
+            .width('100%')
+            .fontSize(this.isWatch() ? 10.5 : 15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.fab_foreground'))
+            .textAlign(TextAlign.Center)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.MARQUEE })
+            .marqueeOptions({ start: true, fromStart: true, step: 6, loop: -1, delay: 800 })
+        }
+        .layoutWeight(1)
+        .height(this.isWatch() ? 36 : 46)
+        .borderRadius(this.isWatch() ? 18 : 23)
+        .padding({ left: this.isWatch() ? 2 : 16, right: this.isWatch() ? 2 : 16 })
+        .linearGradient({
+          angle: 90,
+          colors: [[$r('app.color.brand'), 0.0], [$r('app.color.brand_secondary'), 1.0]]
+        })
+        .shadow({ radius: 12, color: '#590A59F7', offsetX: 0, offsetY: 4 })
+        .onClick(() => this.onAgree())
       }
       .width('100%')
     }
@@ -146,5 +168,11 @@ export struct PrivacyDialog {
     .backgroundBlurStyle(this.isWatch() ? BlurStyle.NONE : BlurStyle.COMPONENT_THICK)
     .border({ width: this.isWatch() ? 0 : 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
     .shadow(glassCardShadow())
+    // 手表端系统默认的右滑返回对模态弹窗不生效：显式监听右滑，
+    // 与「不同意」一致地关闭隐私页并退出应用。
+    .gesture(
+      PanGesture({ direction: PanDirection.Right, distance: 30 })
+        .onActionEnd(() => this.onDecline())
+    )
   }
 }

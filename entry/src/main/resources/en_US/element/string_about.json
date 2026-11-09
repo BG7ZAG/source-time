@@ -21,6 +21,14 @@
       "value": "License"
     },
     {
+      "name": "about_requirement",
+      "value": "System requirement"
+    },
+    {
+      "name": "about_requirement_value",
+      "value": "HarmonyOS 7.0 or later"
+    },
+    {
       "name": "about_license_value",
       "value": "MIT License"
     },

@@ -275,6 +275,22 @@
     {
       "name": "webdav_send_pending_message",
       "value": "No watch is online right now. The encrypted config is published; choose Sync from phone on your watch to receive it."
+    },
+    {
+      "name": "webdav_send_key_done_title",
+      "value": "Key sent to watch"
+    },
+    {
+      "name": "webdav_send_key_done_message",
+      "value": "On your watch, choose Sync from phone to sync the key. Only the key is synced when WebDAV is not configured."
+    },
+    {
+      "name": "webdav_send_key_pending_title",
+      "value": "Key ready"
+    },
+    {
+      "name": "webdav_send_key_pending_message",
+      "value": "No watch is online right now. The encrypted key is published; choose Sync from phone on your watch to receive it."
     }
   ]
 }

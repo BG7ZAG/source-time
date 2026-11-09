@@ -276,15 +276,14 @@ struct WebDavPage {
    * 手表端读取密文后输入同一个 PIN 即可零输入完成配置。
    */
   private onSendToWatch(): void {
-    if (!this.hasConfig() || !this.webDavEnabled) {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_send_no_config') });
-      return;
-    }
+    // 密钥同步不依赖 WebDAV：未配置 WebDAV 时只同步密钥（手表同样需要密钥才能解密本地数据），
+    // 配置完整时再顺带同步 WebDAV 配置并拉取云端备份。
     if (this.encryptionSecret.length === 0) {
       this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_send_failed') });
       return;
     }
     const config: WebDavConfig = this.buildConfig();
+    const hasWebDav: boolean = this.webDavEnabled && this.hasConfig();
     this.sendingToWatch = true;
     const distributed: DistributedConfigService = DistributedConfigService.getInstance();
     distributed.ensurePermission().then((granted: boolean) => {
@@ -317,13 +316,15 @@ struct WebDavPage {
             }
             // 写库成功 ≠ 已送达：没有在线设备时同步会被跳过，文案不能报「已发送」
             const reachable: boolean = distributed.hasOnlinePeer();
+            const title: ResourceStr = hasWebDav
+              ? (reachable ? $r('app.string.webdav_send_done_title') : $r('app.string.webdav_send_pending_title'))
+              : (reachable ? $r('app.string.webdav_send_key_done_title') : $r('app.string.webdav_send_key_pending_title'));
+            const message: ResourceStr = hasWebDav
+              ? (reachable ? $r('app.string.webdav_send_done_message') : $r('app.string.webdav_send_pending_message'))
+              : (reachable ? $r('app.string.webdav_send_key_done_message') : $r('app.string.webdav_send_key_pending_message'));
             this.getUIContext().getPromptAction().showDialog({
-              title: reachable
-                ? $r('app.string.webdav_send_done_title')
-                : $r('app.string.webdav_send_pending_title'),
-              message: reachable
-                ? $r('app.string.webdav_send_done_message')
-                : $r('app.string.webdav_send_pending_message'),
+              title: title,
+              message: message,
               buttons: [{ text: $r('app.string.common_ok'), color: '#0A59F7' }]
             });
             // 过期后清掉本机密文，避免一次性配置包长期留在分布式库里
@@ -766,7 +767,7 @@ struct WebDavPage {
                   .fontWeight(FontWeight.Medium)
                   .backgroundColor($r('app.color.subtle_brand_background'))
                   .fontColor($r('app.color.brand'))
-                  .enabled(!this.sendingToWatch && this.webDavEnabled && this.hasConfig())
+                  .enabled(!this.sendingToWatch)
                   .margin({ top: 10 })
                   .onClick(() => this.onSendToWatch())
               }
