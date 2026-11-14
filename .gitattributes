@@ -1,0 +1,3 @@
+# Git 钩子必须是 LF：core.autocrlf=true 的机器上被转成 CRLF 后，
+# sh 会以 "bad interpreter: /bin/sh^M" 拒绝执行，钩子等于失效。
+.githooks/* text eol=lf
