@@ -2,6 +2,7 @@ import { KeyboardAvoidMode, ShowDialogSuccessResponse } from '@kit.ArkUI';
 import { WebDavService } from '../service/WebDavService';
 import { SyncService } from '../service/SyncService';
 import { SettingsService } from '../service/SettingsService';
+import { StorageService } from '../service/StorageService';
 import { ConfigSyncService, AppLockBundle, CONFIG_BUNDLE_TTL_MS } from '../service/ConfigSyncService';
 import { DistributedConfigService } from '../service/DistributedConfigService';
 import { WebDavConfig } from '../model/WebDavConfig';
@@ -299,7 +300,9 @@ struct WebDavPage {
         pinHash: settings.appLockPinHash,
         pinSalt: settings.appLockPinSalt
       };
-      ConfigSyncService.getInstance().createBundle(config, this.encryptionSecret, appLock)
+      const currentDb = StorageService.getInstance().getDatabase();
+      ConfigSyncService.getInstance().createBundle(config, this.encryptionSecret, appLock,
+        currentDb !== null ? currentDb.items : [])
         .then((bundleResult: Result<string>) => {
           if (!bundleResult.success || bundleResult.data === undefined) {
             this.sendingToWatch = false;

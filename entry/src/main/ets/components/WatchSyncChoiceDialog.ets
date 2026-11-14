@@ -20,9 +20,7 @@ export struct WatchSyncChoiceDialog {
 
   build() {
     Column({ space: 6 }) {
-      Text(this.webDavEnabled
-        ? $r('app.string.watch_sync_choice_title')
-        : $r('app.string.watch_key_choice_title'))
+      Text($r('app.string.watch_sync_choice_title'))
         .fontSize(15)
         .fontWeight(FontWeight.Bold)
         .fontColor(Color.White)
@@ -30,28 +28,30 @@ export struct WatchSyncChoiceDialog {
 
       Text(this.webDavEnabled
         ? $r('app.string.watch_sync_choice_desc')
-        : $r('app.string.watch_key_choice_desc'))
+        : $r('app.string.watch_sync_choice_desc_local'))
         .fontSize(10)
         .lineHeight(14)
         .fontColor('#B3FFFFFF')
         .textAlign(TextAlign.Center)
         .maxLines(2)
 
-      // 备案完成前（webDavEnabled == false）不展示任何联网同步入口
-      if (this.webDavEnabled) {
-        Button($r('app.string.watch_sync_from_phone'))
-          .width('100%')
-          .height(36)
-          .borderRadius(18)
-          .fontSize(12)
-          .fontWeight(FontWeight.Medium)
-          .linearGradient({
-            angle: 90,
-            colors: [[$r('app.color.brand'), 0.0], [$r('app.color.brand_secondary'), 1.0]]
-          })
-          .fontColor($r('app.color.fab_foreground'))
-          .onClick(() => this.onPhoneSync())
+      // 手机→手表的分布式同步与 WebDAV 云同步相互独立：本版本即使 WebDAV 未备案关闭，
+      // 「从手机同步」也必须可用（审核要求手机添加口令后手表能拿到）。
+      Button($r('app.string.watch_sync_from_phone'))
+        .width('100%')
+        .height(36)
+        .borderRadius(18)
+        .fontSize(12)
+        .fontWeight(FontWeight.Medium)
+        .linearGradient({
+          angle: 90,
+          colors: [[$r('app.color.brand'), 0.0], [$r('app.color.brand_secondary'), 1.0]]
+        })
+        .fontColor($r('app.color.fab_foreground'))
+        .onClick(() => this.onPhoneSync())
 
+      // 只在 WebDAV 功能开启时展示服务器配置入口
+      if (this.webDavEnabled) {
         Button($r('app.string.watch_sync_manual'))
           .width('100%')
           .height(32)

@@ -57,6 +57,9 @@ export class AppRoutes {
 
   static readonly PRIVACY_POLICY: string = 'pages/PrivacyPolicyPage';
 
+  /** 手表端隐私确认页：独立页面，支持表冠滚动与右滑返回。 */
+  static readonly WATCH_PRIVACY: string = 'pages/WatchPrivacyPage';
+
   static readonly ABOUT: string = 'pages/AboutPage';
 
   static readonly LOGS: string = 'pages/LogPage';

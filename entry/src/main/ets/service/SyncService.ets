@@ -10,6 +10,7 @@ import { AppErrorCode } from '../types/Errors';
 import { Logger } from '../utils/Logger';
 import { UiText } from '../utils/UiText';
 import { nowMilliseconds } from '../utils/TimeUtils';
+import { WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
 import { REMOTE_BACKUP_KEEP_COUNT, buildBackupFileName, isBackupFileName }
   from '../constants/SyncConstants';
 
@@ -54,6 +55,10 @@ export class SyncService {
    * 未配置 WebDAV / 未开启自动推送时静默跳过。
    */
   async onEncryptionKeyChanged(newSecret: string): Promise<Result<void>> {
+    if (!WEBDAV_FEATURE_ENABLED) {
+      // 备案完成前不向云端推送；密钥变更只影响本地密文
+      return ok(undefined);
+    }
     this.encryptionSecret = newSecret;
     if (this.config === null || this.config.password.length === 0) {
       // 会话内还没配置过同步（或密码已被清空）：从持久化配置里取一次，取到的密码已用新密钥加密
@@ -83,6 +88,10 @@ export class SyncService {
    * 云端文件数量由「自动清理旧备份」控制在最近 REMOTE_BACKUP_KEEP_COUNT 份。
    */
   async enqueuePush(reason: SyncReason): Promise<Result<void>> {
+    if (!WEBDAV_FEATURE_ENABLED) {
+      // 统一开关：WebDAV 未备案关闭时，所有自动推送都静默跳过
+      return ok(undefined);
+    }
     if (!this.isConfigured()) {
       return ok(undefined);
     }
@@ -127,6 +136,9 @@ export class SyncService {
 
   /** 启动时自动拉取云端最新备份（受 revision 冲突保护，避免用旧版本覆盖本机新数据）。 */
   async autoPullOnStart(): Promise<Result<void>> {
+    if (!WEBDAV_FEATURE_ENABLED) {
+      return ok(undefined);
+    }
     if (this.config === null || !this.config.enabled || !this.config.autoPullOnStart) {
       return ok(undefined);
     }

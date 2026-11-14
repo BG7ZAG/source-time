@@ -11,12 +11,13 @@ import { WatchSyncDialog } from '../components/WatchSyncDialog';
 import { WatchSyncChoiceDialog } from '../components/WatchSyncChoiceDialog';
 import { WatchVerifyPinDialog } from '../components/WatchVerifyPinDialog';
 import { WatchSetPinDialog } from '../components/WatchSetPinDialog';
-import { ConfigSyncService, ConfigBundlePayload, ConfigApplyResult } from '../service/ConfigSyncService';
+import { ConfigSyncService, ConfigBundlePayload, ConfigApplyResult, AppLockBundle } from '../service/ConfigSyncService';
 import { DistributedConfigService } from '../service/DistributedConfigService';
 import { PinService } from '../service/PinService';
 import { APP_LOCK_STORAGE_KEY } from '../constants/AppConstants';
 import { HomeViewModel, TotpDisplayItem } from '../viewmodel/HomeViewModel';
 import { TotpItem } from '../model/TotpItem';
+import { WebDavConfig } from '../model/WebDavConfig';
 import { Result } from '../types/Result';
 import { AppRoutes, CURRENT_PRIVACY_POLICY_VERSION, WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
 import {
@@ -58,6 +59,8 @@ struct HomePage {
   @State viewLockUsable: boolean = false;
   /** 隐私弹窗是否已由用户明确处理（同意/不同意），用于拦截返回键等交互式关闭。 */
   private privacySettled: boolean = false;
+  /** 是否已经历过一次 onPageShow：从扫码页等返回时数据可能已变化，需要重新发布给手表。 */
+  private hasShown: boolean = false;
   /** 软键盘高度（vp）：新增口令是居中气泡卡片，需要自己把卡片抬到键盘上方。 */
   @State keyboardHeightVp: number = 0;
   /** 全模态覆盖层高度（vp）：与键盘高度一起算出卡片可用高度。 */
@@ -100,6 +103,11 @@ struct HomePage {
         this.watchKeyDialog.close();
         this.keyInitialized = true;
         this.loadData();
+        // 输入/确认密钥后自动尝试从手机同步密钥与口令：审核步骤就是「手机添加口令 →
+        // 手表输入密钥」，不能要求用户再手动找到同步入口。
+        setTimeout(() => {
+          this.startPhoneSync();
+        }, 200);
       },
       onCancel: () => {
         this.watchKeyDialog.close();
@@ -222,11 +230,12 @@ struct HomePage {
     this.refreshViewLockState();
     // 手机/平板/PC 已接入平台标准化隐私声明托管服务：首次启动由系统统一弹出隐私弹窗，
     // 应用内不得再自建隐私弹窗，否则审核时会看到两个弹窗。
-    // 手表不在隐私托管支持的设备范围内，仍需保留应用内的隐私确认页。
+    // 手表不在隐私托管支持的设备范围内，仍需应用内确认；改用独立页面：
+    // CustomDialog 模态窗口拿不到表冠焦点，也无法右滑退出。
     // 除「从未同意过」外，还要比对已同意的版本号：政策改版后必须重新确认。
     if (DeviceAdapter.isWatch()
       && (!settings.privacyPolicyAccepted || settings.privacyPolicyVersion !== CURRENT_PRIVACY_POLICY_VERSION)) {
-      this.privacyDialog.open();
+      this.getUIContext().getRouter().pushUrl({ url: AppRoutes.WATCH_PRIVACY });
       return;
     }
     // 手机端首次启动由 EntryAbility 路由到「设置加密密钥」；
@@ -247,14 +256,26 @@ struct HomePage {
     const settings = this.settingsService.getSettings();
     this.keyInitialized = settings.encryptionInitialized;
     this.refreshViewLockState();
+    // 从扫码页等返回时数据可能已变化：重新加载后把最新口令发布给同账号手表。
+    // 首次显示不发布，避免启动即申请多设备协同权限。
+    const shouldPublish: boolean = this.hasShown && !DeviceAdapter.isWatch();
+    this.hasShown = true;
     // 手表端在用户处理隐私弹窗前不加载口令，避免数据遮在弹窗下层可见；
     // 手机/平板/PC 的隐私确认由系统托管弹窗完成，这里只判断密钥是否就绪。
     const consented: boolean = !DeviceAdapter.isWatch()
       || (settings.privacyPolicyAccepted && settings.privacyPolicyVersion === CURRENT_PRIVACY_POLICY_VERSION);
+    // 手表从隐私确认页返回后：尚未初始化密钥则直接进入密钥设置，否则加载口令
+    if (consented && DeviceAdapter.isWatch() && !settings.encryptionInitialized) {
+      this.watchKeyDialog.open();
+      return;
+    }
     if (consented && settings.encryptionInitialized) {
       this.viewModel.load().then((result: Result<void>) => {
         if (result.success) {
           this.refreshItems();
+          if (shouldPublish) {
+            this.publishToWatch();
+          }
         } else {
           this.onLoadFailed(result);
         }
@@ -341,6 +362,51 @@ struct HomePage {
     });
   }
 
+  /**
+   * 手机端：把当前口令与密钥发布到同账号可信设备，供手表「从手机同步」直接读取。
+   *
+   * 不依赖 WebDAV：即使云同步未备案/未启用，手机与手表之间的加密分布式通道仍可工作。
+   * 失败保持静默，不能因为同步问题打断本地新增/删除操作。
+   */
+  private publishToWatch(): void {
+    const secret: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
+    if (secret === undefined || secret.length === 0) {
+      return;
+    }
+    const settings = this.settingsService.getSettings();
+    const appLock: AppLockBundle = {
+      enabled: settings.appLockEnabled,
+      pinHash: settings.appLockPinHash,
+      pinSalt: settings.appLockPinSalt
+    };
+    // 配置包只带本地数据，不携带任何 WebDAV 服务器信息
+    const config: WebDavConfig = {
+      enabled: false,
+      baseUrl: '',
+      username: '',
+      password: '',
+      remotePath: '',
+      autoPush: false,
+      autoPullOnStart: false,
+      cleanOldBackups: true,
+      allowInsecure: false
+    };
+    const items: TotpItem[] = this.viewModel.items;
+    const distributed: DistributedConfigService = DistributedConfigService.getInstance();
+    distributed.ensurePermission().then((granted: boolean) => {
+      if (!granted) {
+        return;
+      }
+      ConfigSyncService.getInstance().createBundle(config, secret, appLock, items)
+        .then((bundleResult: Result<string>) => {
+          if (!bundleResult.success || bundleResult.data === undefined) {
+            return;
+          }
+          distributed.publish(bundleResult.data);
+        });
+    });
+  }
+
   private refreshItems(): void {
     this.displayItems = this.viewModel.getDisplayItems();
   }
@@ -392,10 +458,8 @@ struct HomePage {
 
   /** 手表端「从手机同步」：申请分布式权限 → 读取配置包 → 直接应用（同账号可信通道，不再要传输 PIN）。 */
   private startPhoneSync(): void {
-    // 备案完成前联网同步整体关闭：即使弹窗入口被绕过也不发起跨设备读取
-    if (!WEBDAV_FEATURE_ENABLED) {
-      return;
-    }
+    // 手机/手表之间的分布式同步与 WebDAV 云同步相互独立：WebDAV 未备案关闭时，
+    // 「从手机同步」仍需可用（审核步骤：手机添加口令 → 手表输入密钥后应能拿到口令）。
     const distributed: DistributedConfigService = DistributedConfigService.getInstance();
     distributed.ensurePermission().then((granted: boolean) => {
       if (!granted) {
@@ -521,6 +585,8 @@ struct HomePage {
             this.showAddSheet = false;
             this.viewModel.load().then(() => {
               this.refreshItems();
+              // 新增成功后把最新口令推给同账号手表
+              this.publishToWatch();
             });
           },
           onScan: () => {
@@ -856,6 +922,8 @@ struct HomePage {
       this.getUIContext().getPromptAction().showToast({ message: message });
       if (result.success) {
         this.refreshItems();
+        // 重命名成功后同步给手表，保持一致
+        this.publishToWatch();
       }
     });
   }
@@ -891,6 +959,8 @@ struct HomePage {
       this.viewModel.remove(item).then((removeResult: Result<void>) => {
         if (removeResult.success) {
           this.refreshItems();
+          // 删除成功后同步给手表，避免手表仍显示已删除的口令
+          this.publishToWatch();
         } else {
           const message: ResourceStr = removeResult.error !== undefined ? removeResult.error.message : $r('app.string.home_delete_failed');
           this.getUIContext().getPromptAction().showToast({ message: message });

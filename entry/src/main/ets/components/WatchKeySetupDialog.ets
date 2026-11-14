@@ -111,23 +111,40 @@ export struct WatchKeySetupDialog {
         })
 
       Row({ space: 8 }) {
-        Button($r('app.string.common_generate'))
-          .layoutWeight(1)
-          .height(30)
-          .borderRadius(15)
-          .fontSize(11)
-          .backgroundColor($r('app.color.pill_background'))
-          .fontColor($r('app.color.text_secondary'))
-          .onClick(() => this.regenerate())
+        Button() {
+          Text($r('app.string.common_generate'))
+            .width('100%')
+            .fontSize(10.5)
+            .fontColor($r('app.color.text_secondary'))
+            .textAlign(TextAlign.Center)
+            .maxLines(1)
+            // 英文 "Generate" 在等宽按钮里会被省略号截断，用跑马灯兜底
+            .textOverflow({ overflow: TextOverflow.MARQUEE })
+            .marqueeOptions({ start: true, fromStart: true, step: 6, loop: -1, delay: 800 })
+        }
+        .layoutWeight(1)
+        .height(30)
+        .borderRadius(15)
+        .padding({ left: 2, right: 2 })
+        .backgroundColor($r('app.color.pill_background'))
+        .onClick(() => this.regenerate())
 
-        Button($r('app.string.common_copy'))
-          .layoutWeight(1)
-          .height(30)
-          .borderRadius(15)
-          .fontSize(11)
-          .backgroundColor($r('app.color.pill_background'))
-          .fontColor($r('app.color.text_secondary'))
-          .onClick(() => this.copyKey())
+        Button() {
+          Text($r('app.string.common_copy'))
+            .width('100%')
+            .fontSize(10.5)
+            .fontColor($r('app.color.text_secondary'))
+            .textAlign(TextAlign.Center)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.MARQUEE })
+            .marqueeOptions({ start: true, fromStart: true, step: 6, loop: -1, delay: 800 })
+        }
+        .layoutWeight(1)
+        .height(30)
+        .borderRadius(15)
+        .padding({ left: 2, right: 2 })
+        .backgroundColor($r('app.color.pill_background'))
+        .onClick(() => this.copyKey())
       }
       .width('100%')
 

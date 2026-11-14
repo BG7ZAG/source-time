@@ -495,6 +495,10 @@
     {
       "name": "watch_key_settings_entry",
       "value": "密钥与保护"
+    },
+    {
+      "name": "watch_sync_choice_desc_local",
+      "value": "从手机同步密钥与口令，无需填写服务器"
     }
   ]
 }

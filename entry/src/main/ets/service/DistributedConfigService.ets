@@ -33,15 +33,32 @@ export class DistributedConfigService {
     return DistributedConfigService.instance;
   }
 
+  private permissionGranted: boolean = false;
+  private permissionDenied: boolean = false;
+
   /** 申请跨设备数据同步权限；已授权时系统会直接返回 0。 */
   async ensurePermission(): Promise<boolean> {
+    if (this.permissionGranted) {
+      return true;
+    }
+    if (this.permissionDenied) {
+      // 用户已明确拒绝：本次启动不再反复弹系统权限框，避免每次新增口令都被打断
+      return false;
+    }
     try {
       const atManager = abilityAccessCtrl.createAtManager();
       const result = await atManager.requestPermissionsFromUser(
         AppContextHolder.getContext(), [DISTRIBUTED_PERMISSION]);
-      return result.authResults.length > 0 && result.authResults[0] === 0;
+      const granted: boolean = result.authResults.length > 0 && result.authResults[0] === 0;
+      if (granted) {
+        this.permissionGranted = true;
+      } else {
+        this.permissionDenied = true;
+      }
+      return granted;
     } catch (error) {
       Logger.error('Request DISTRIBUTED_DATASYNC permission failed');
+      this.permissionDenied = true;
       return false;
     }
   }
@@ -102,9 +119,9 @@ export class DistributedConfigService {
   async read(): Promise<Result<string>> {
     try {
       const store = await this.ensureStore();
-      // 跨设备同步不是即时的：拉取后通常要数秒才落到本机，重试窗口放宽到 ~4.5s，
+      // 跨设备同步不是即时的：拉取后通常要数秒才落到本机，重试窗口放宽到 ~8s，
       // 避免手机端刚提示「已发送」、手表端却因读得太早而报「未发现手机配置」。
-      for (let attempt = 0; attempt < 6; attempt++) {
+      for (let attempt = 0; attempt < 10; attempt++) {
         this.syncWithPeers(store);
         await this.delay(attempt === 0 ? 500 : 800);
         try {
