@@ -4,6 +4,8 @@ import { KeyStoreService } from '../service/KeyStoreService';
 import { SettingsService } from '../service/SettingsService';
 import { StorageService } from '../service/StorageService';
 import { SyncService } from '../service/SyncService';
+import { ConfigSyncService, AppLockBundle } from '../service/ConfigSyncService';
+import { DistributedConfigService, PeerDevice } from '../service/DistributedConfigService';
 import { PinService } from '../service/PinService';
 import { ClipboardService } from '../service/ClipboardService';
 import { DatabaseModel } from '../model/DatabaseModel';
@@ -16,6 +18,7 @@ import { WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { DeviceAdapter } from '../utils/DeviceAdapter';
 import { AuroraBackground } from '../components/AuroraBackground';
+import { DevicePickerDialog } from '../components/DevicePickerDialog';
 import {
   focusGlowShadow,
   frostedPillColor,
@@ -67,6 +70,12 @@ struct SecurityPage {
   /** 应用锁区的错误提示：Resource 走多语言资源。 */
   @State lockError: ResourceStr = '';
   @State lockSaving: boolean = false;
+  /** 同步到手表：发布过程中禁用按钮，避免重复发布会覆盖同一份密文。 */
+  @State syncingToWatch: boolean = false;
+  /** 多台在线设备时的选择弹窗：每次按当前列表重建。 */
+  private devicePicker: CustomDialogController | undefined = undefined;
+  /** 本次会话上次推送的目标，多设备时默认选中，避免每次重新找。 */
+  private lastDeviceId: string = '';
 
   private cryptoService: CryptoService = new CryptoService();
   private settingsService: SettingsService = new SettingsService();
@@ -543,6 +552,109 @@ struct SecurityPage {
     this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_app_lock_off') });
   }
 
+  /**
+   * 手机端「同步到手表」入口。
+   *
+   * 申请权限 → 拉在线可信设备 → 只有一台直接推，多台弹设备选择。
+   * 推送前不判断对方密钥：手机看不到目标设备的密钥，是否覆盖只能由接收端确认。
+   */
+  private async onSendToWatch(): Promise<void> {
+    if (this.syncingToWatch) {
+      return;
+    }
+    const secret: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
+    if (secret === undefined || secret.length === 0) {
+      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_watch_sync_no_key') });
+      return;
+    }
+    this.syncingToWatch = true;
+    const distributed: DistributedConfigService = DistributedConfigService.getInstance();
+    try {
+      const granted: boolean = await distributed.ensurePermission();
+      if (!granted) {
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_send_permission_denied') });
+        return;
+      }
+      const peers: PeerDevice[] = distributed.listPeers();
+      if (peers.length === 0) {
+        // 没有设备时不能报「已发送」：多半是同账号/蓝牙/组网没建立
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.security_watch_sync_no_device') });
+        return;
+      }
+      if (peers.length === 1) {
+        await this.publishToDevice(peers[0].deviceId, peers[0].deviceName, secret);
+        return;
+      }
+      this.openDevicePicker(peers, secret);
+    } finally {
+      this.syncingToWatch = false;
+    }
+  }
+
+  /** 生成配置包并定向推送到选中的设备（只该设备会收到，不会广播给组内其它设备）。 */
+  private async publishToDevice(deviceId: string, deviceName: string, secret: string): Promise<void> {
+    this.syncingToWatch = true;
+    this.lastDeviceId = deviceId;
+    const distributed: DistributedConfigService = DistributedConfigService.getInstance();
+    try {
+      const settings = this.settingsService.getSettings();
+      const appLock: AppLockBundle = {
+        enabled: settings.appLockEnabled,
+        pinHash: settings.appLockPinHash,
+        pinSalt: settings.appLockPinSalt
+      };
+      // 内存态可能还没加载（例如没经过首页直接进本页）：先解密本地库，
+      // 否则会把空 items 发出去——手机提示「已发送」，手表却一条口令都拿不到。
+      let db: DatabaseModel | null = this.storageService.getDatabase();
+      if (db === null) {
+        const loadResult: Result<DatabaseModel> = await this.storageService.loadDatabase(secret);
+        db = loadResult.success && loadResult.data !== undefined ? loadResult.data : null;
+      }
+      const bundleResult: Result<string> = await ConfigSyncService.getInstance()
+        .createBundle(secret, appLock, db !== null ? db.items : []);
+      if (!bundleResult.success || bundleResult.data === undefined) {
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_send_failed') });
+        return;
+      }
+      const publishResult: Result<void> = await distributed.publish(bundleResult.data, [deviceId]);
+      if (!publishResult.success) {
+        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_send_failed') });
+        return;
+      }
+      // 目标可能是手表、手机或平板，文案不再写死「手表端」
+      this.getUIContext().getPromptAction().showDialog({
+        title: UiText.of($r('app.string.security_watch_sync_sent_to'), deviceName),
+        message: $r('app.string.security_watch_sync_done_hint'),
+        buttons: [{ text: $r('app.string.common_ok'), color: '#0A59F7' }]
+      });
+    } finally {
+      this.syncingToWatch = false;
+    }
+  }
+
+  /** 多台在线设备时让用户选目标；默认选中本次会话上次推过的那台。 */
+  private openDevicePicker(peers: PeerDevice[], secret: string): void {
+    this.devicePicker = new CustomDialogController({
+      builder: DevicePickerDialog({
+        devices: peers,
+        selected: this.lastDeviceId,
+        onConfirm: (deviceId: string) => {
+          this.devicePicker?.close();
+          const target: PeerDevice | undefined =
+            peers.find((peer: PeerDevice) => peer.deviceId === deviceId);
+          this.publishToDevice(deviceId, target !== undefined ? target.deviceName : '', secret);
+        },
+        onCancel: () => {
+          this.devicePicker?.close();
+        }
+      }),
+      autoCancel: true,
+      customStyle: true,
+      alignment: DialogAlignment.Center
+    });
+    this.devicePicker.open();
+  }
+
   @Builder
   header() {
     Row() {
@@ -1002,6 +1114,31 @@ struct SecurityPage {
     .shadow(glassGroupShadow())
   }
 
+  /** 同步到手表：WebDAV 配置页隐藏后，手机端的同步入口收拢到本页。 */
+  @Builder
+  watchSyncView() {
+    Column({ space: 12 }) {
+      this.hintCard($r('app.media.ic_sync'), $r('app.string.security_watch_sync_title'),
+        $r('app.string.security_watch_sync_body'), false)
+
+      this.primaryButton({
+        label: this.syncingToWatch
+          ? $r('app.string.security_watch_sync_pushing')
+          : $r('app.string.security_watch_sync_push'),
+        enabled: !this.syncingToWatch,
+        onTap: () => {
+          this.onSendToWatch();
+        }
+      })
+    }
+    .width('100%')
+    .padding(18)
+    .borderRadius(24)
+    .backgroundColor($r('app.color.card_background_solid'))
+    .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+    .shadow(glassGroupShadow())
+  }
+
   @Builder
   fieldLabel(label: ResourceStr) {
     Text(label)
@@ -1041,6 +1178,7 @@ struct SecurityPage {
                 }
                 // 应用锁只在密钥已初始化后出现：首屏要把注意力留给「设置加密密钥」
                 this.appLockView()
+                this.watchSyncView()
               }
             }
             .width('100%')
@@ -1130,7 +1268,9 @@ struct PinField {
       .backgroundColor($r('app.color.field_background'))
       .placeholderColor($r('app.color.text_tertiary'))
       .caretColor($r('app.color.brand'))
-      .type(InputType.Number)
+      // 数字密码模式：默认圆点遮蔽，点末尾小眼睛可临时明文；键盘仍是数字键盘
+      .type(InputType.NUMBER_PASSWORD)
+      .showPasswordIcon(true)
       .maxLength(6)
       .border({
         width: 1.5,

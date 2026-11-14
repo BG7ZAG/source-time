@@ -124,7 +124,8 @@ export struct PinLockOverlay {
 
         Column() {
           TextInput({ text: $$this.pin, placeholder: $r('app.string.pin_placeholder') })
-            .type(InputType.Number)
+            .type(InputType.NUMBER_PASSWORD)
+            .showPasswordIcon(true)
             .maxLength(6)
             .fontSize(DeviceAdapter.isWatch() ? 16 : 22)
             .fontColor(DeviceAdapter.isWatch() ? Color.White : $r('app.color.text_primary'))

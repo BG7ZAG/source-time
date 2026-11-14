@@ -284,8 +284,6 @@ struct WebDavPage {
       this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_send_failed') });
       return;
     }
-    const config: WebDavConfig = this.buildConfig();
-    const hasWebDav: boolean = this.webDavEnabled && this.hasConfig();
     this.sendingToWatch = true;
     const distributed: DistributedConfigService = DistributedConfigService.getInstance();
     distributed.ensurePermission().then((granted: boolean) => {
@@ -301,7 +299,7 @@ struct WebDavPage {
         pinSalt: settings.appLockPinSalt
       };
       const currentDb = StorageService.getInstance().getDatabase();
-      ConfigSyncService.getInstance().createBundle(config, this.encryptionSecret, appLock,
+      ConfigSyncService.getInstance().createBundle(this.encryptionSecret, appLock,
         currentDb !== null ? currentDb.items : [])
         .then((bundleResult: Result<string>) => {
           if (!bundleResult.success || bundleResult.data === undefined) {
@@ -318,14 +316,15 @@ struct WebDavPage {
               this.getUIContext().getPromptAction().showToast({ message: message });
               return;
             }
-            // 写库成功 ≠ 已送达：没有在线设备时同步会被跳过，文案不能报「已发送」
+            // 写库成功 ≠ 已送达：没有在线设备时同步会被跳过，文案不能报「已发送」。
+            // 配置包自 v2 起不再包含 WebDAV 服务器信息，统一用「密钥与口令」这类文案。
             const reachable: boolean = distributed.hasOnlinePeer();
-            const title: ResourceStr = hasWebDav
-              ? (reachable ? $r('app.string.webdav_send_done_title') : $r('app.string.webdav_send_pending_title'))
-              : (reachable ? $r('app.string.webdav_send_key_done_title') : $r('app.string.webdav_send_key_pending_title'));
-            const message: ResourceStr = hasWebDav
-              ? (reachable ? $r('app.string.webdav_send_done_message') : $r('app.string.webdav_send_pending_message'))
-              : (reachable ? $r('app.string.webdav_send_key_done_message') : $r('app.string.webdav_send_key_pending_message'));
+            const title: ResourceStr = reachable
+              ? $r('app.string.webdav_send_key_done_title')
+              : $r('app.string.webdav_send_key_pending_title');
+            const message: ResourceStr = reachable
+              ? $r('app.string.webdav_send_key_done_message')
+              : $r('app.string.webdav_send_key_pending_message');
             this.getUIContext().getPromptAction().showDialog({
               title: title,
               message: message,

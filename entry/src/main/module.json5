@@ -37,15 +37,18 @@
         }
       },
       {
-        // 手机 → 手表同步 WebDAV 配置：仅在同一账号的可信设备间传输，配置本身再用一次性 PIN 加密。
-        // 当前版本联网同步关闭，不会发起跨设备传输；备案完成后随功能开关一起启用。
+        // 手机 → 手表同步配置：仅在同一账号的可信设备间传输，KV 库自身开启加密。
+        // 与 WEBDAV_FEATURE_ENABLED（联网云同步）相互独立：联网关闭时，本地口令同步仍会用到该权限。
+        // 注意：分布式库安全等级必须为 S1 —— 手表是 SL1 设备，S2 及以上同步不过来。
         "name": "ohos.permission.DISTRIBUTED_DATASYNC",
         "reason": "$string:distributed_reason",
         "usedScene": {
           "abilities": [
             "EntryAbility"
           ],
-          "when": "inuse"
+          // 分布式同步在应用退到后台后仍可能被系统调用；声明为 inuse 会在后台收回授权，
+          // 表现为「前台发送成功、切走后同步丢失」。对齐官方样例用 always。
+          "when": "always"
         }
       },
       {

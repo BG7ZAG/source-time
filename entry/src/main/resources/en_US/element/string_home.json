@@ -326,7 +326,7 @@
     },
     {
       "name": "watch_sync_no_bundle",
-      "value": "No phone settings found. Tap Sync to watch on your phone first."
+      "value": "No settings found. Tap \"Push to other devices\" on your phone first."
     },
     {
       "name": "watch_sync_distributed_failed",
@@ -346,7 +346,7 @@
     },
     {
       "name": "watch_sync_bundle_expired",
-      "value": "Settings expired. Sync again from your phone."
+      "value": "Settings expired. Push them again from your phone."
     },
     {
       "name": "watch_sync_pin_invalid",
@@ -469,12 +469,8 @@
       "value": "Enter a name or an account"
     },
     {
-      "name": "watch_sync_key_only",
-      "value": "Key synced (WebDAV not configured, backup not pulled)"
-    },
-    {
       "name": "watch_sync_no_peer",
-      "value": "No phone found on the same account. Make sure both devices are signed in to the same account and connected."
+      "value": "No other device found on the same account. Make sure both devices are signed in to the same account and connected."
     },
     {
       "name": "watch_sync_manual_key",
@@ -499,6 +495,22 @@
     {
       "name": "watch_sync_choice_desc_local",
       "value": "Sync key and codes from your phone; no server needed"
+    },
+    {
+      "name": "watch_sync_key_mismatch_title",
+      "value": "Key mismatch"
+    },
+    {
+      "name": "watch_sync_key_mismatch_message",
+      "value": "The phone uses a different encryption key. Continuing overwrites this device's key, and existing codes must be synced from the phone again."
+    },
+    {
+      "name": "watch_sync_overwrite",
+      "value": "Overwrite"
+    },
+    {
+      "name": "watch_sync_key_kept",
+      "value": "Kept the local key"
     }
   ]
 }

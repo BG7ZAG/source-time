@@ -383,6 +383,70 @@
     {
       "name": "pin_forgot_hint",
       "value": "If you forget the PIN, you must clear the app data; codes and the encryption key will be unrecoverable"
+    },
+    {
+      "name": "security_watch_sync_title",
+      "value": "Push to other devices"
+    },
+    {
+      "name": "security_watch_sync_body",
+      "value": "Send the current key and all codes to the selected device over the encrypted same-account channel, then tap \"Sync from phone\" on that device to receive them."
+    },
+    {
+      "name": "security_watch_sync_no_key",
+      "value": "Set an encryption key first"
+    },
+    {
+      "name": "security_watch_sync_no_device",
+      "value": "No other device found. Make sure both devices use the same HUAWEI ID with Bluetooth and Wi-Fi on"
+    },
+    {
+      "name": "security_watch_sync_sent_to",
+      "value": "Sent to %s"
+    },
+    {
+      "name": "security_watch_sync_push",
+      "value": "Push to other devices"
+    },
+    {
+      "name": "security_watch_sync_pushing",
+      "value": "Pushing…"
+    },
+    {
+      "name": "security_watch_sync_done_hint",
+      "value": "Open \"Sync from phone\" under the plus button on that device to receive it."
+    },
+    {
+      "name": "security_device_picker_title",
+      "value": "Choose a device"
+    },
+    {
+      "name": "security_device_picker_subtitle",
+      "value": "%d devices online — only the selected one receives the bundle"
+    },
+    {
+      "name": "security_device_picker_confirm",
+      "value": "Sync now"
+    },
+    {
+      "name": "device_type_wearable",
+      "value": "Watch"
+    },
+    {
+      "name": "device_type_phone",
+      "value": "Phone"
+    },
+    {
+      "name": "device_type_tablet",
+      "value": "Tablet"
+    },
+    {
+      "name": "device_type_pc",
+      "value": "PC"
+    },
+    {
+      "name": "device_type_other",
+      "value": "Device"
     }
   ]
 }

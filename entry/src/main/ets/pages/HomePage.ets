@@ -11,13 +11,12 @@ import { WatchSyncDialog } from '../components/WatchSyncDialog';
 import { WatchSyncChoiceDialog } from '../components/WatchSyncChoiceDialog';
 import { WatchVerifyPinDialog } from '../components/WatchVerifyPinDialog';
 import { WatchSetPinDialog } from '../components/WatchSetPinDialog';
-import { ConfigSyncService, ConfigBundlePayload, ConfigApplyResult, AppLockBundle } from '../service/ConfigSyncService';
+import { ConfigSyncService, ConfigBundlePayload } from '../service/ConfigSyncService';
 import { DistributedConfigService } from '../service/DistributedConfigService';
 import { PinService } from '../service/PinService';
 import { APP_LOCK_STORAGE_KEY } from '../constants/AppConstants';
 import { HomeViewModel, TotpDisplayItem } from '../viewmodel/HomeViewModel';
 import { TotpItem } from '../model/TotpItem';
-import { WebDavConfig } from '../model/WebDavConfig';
 import { Result } from '../types/Result';
 import { AppRoutes, CURRENT_PRIVACY_POLICY_VERSION, WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
 import {
@@ -59,8 +58,8 @@ struct HomePage {
   @State viewLockUsable: boolean = false;
   /** 隐私弹窗是否已由用户明确处理（同意/不同意），用于拦截返回键等交互式关闭。 */
   private privacySettled: boolean = false;
-  /** 是否已经历过一次 onPageShow：从扫码页等返回时数据可能已变化，需要重新发布给手表。 */
-  private hasShown: boolean = false;
+  /** 手表端「从手机同步」进行中：分布式同步要等十几秒，期间忽略重复点击。 */
+  private syncingFromPhone: boolean = false;
   /** 软键盘高度（vp）：新增口令是居中气泡卡片，需要自己把卡片抬到键盘上方。 */
   @State keyboardHeightVp: number = 0;
   /** 全模态覆盖层高度（vp）：与键盘高度一起算出卡片可用高度。 */
@@ -256,12 +255,7 @@ struct HomePage {
     const settings = this.settingsService.getSettings();
     this.keyInitialized = settings.encryptionInitialized;
     this.refreshViewLockState();
-    // 从扫码页等返回时数据可能已变化：重新加载后把最新口令发布给同账号手表。
-    // 首次显示不发布，避免启动即申请多设备协同权限。
-    const shouldPublish: boolean = this.hasShown && !DeviceAdapter.isWatch();
-    this.hasShown = true;
-    // 手表端在用户处理隐私弹窗前不加载口令，避免数据遮在弹窗下层可见；
-    // 手机/平板/PC 的隐私确认由系统托管弹窗完成，这里只判断密钥是否就绪。
+    // 手机/平板/PC 的隐私确认由系统托管弹窗完成，这里只判断密钥是否就绪；
     const consented: boolean = !DeviceAdapter.isWatch()
       || (settings.privacyPolicyAccepted && settings.privacyPolicyVersion === CURRENT_PRIVACY_POLICY_VERSION);
     // 手表从隐私确认页返回后：尚未初始化密钥则直接进入密钥设置，否则加载口令
@@ -273,9 +267,6 @@ struct HomePage {
       this.viewModel.load().then((result: Result<void>) => {
         if (result.success) {
           this.refreshItems();
-          if (shouldPublish) {
-            this.publishToWatch();
-          }
         } else {
           this.onLoadFailed(result);
         }
@@ -363,50 +354,11 @@ struct HomePage {
   }
 
   /**
-   * 手机端：把当前口令与密钥发布到同账号可信设备，供手表「从手机同步」直接读取。
+   * 手机端不再做「改动即推送」：多设备同步统一走安全页的手动推送按钮。
    *
-   * 不依赖 WebDAV：即使云同步未备案/未启用，手机与手表之间的加密分布式通道仍可工作。
-   * 失败保持静默，不能因为同步问题打断本地新增/删除操作。
+   * 自动推送只保留给 WebDAV 云同步（由 SyncService 负责，开关关闭时不工作）。
+   * 设备通道是显式动作，避免用户改一条口令就把主密钥广播给组内所有设备。
    */
-  private publishToWatch(): void {
-    const secret: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
-    if (secret === undefined || secret.length === 0) {
-      return;
-    }
-    const settings = this.settingsService.getSettings();
-    const appLock: AppLockBundle = {
-      enabled: settings.appLockEnabled,
-      pinHash: settings.appLockPinHash,
-      pinSalt: settings.appLockPinSalt
-    };
-    // 配置包只带本地数据，不携带任何 WebDAV 服务器信息
-    const config: WebDavConfig = {
-      enabled: false,
-      baseUrl: '',
-      username: '',
-      password: '',
-      remotePath: '',
-      autoPush: false,
-      autoPullOnStart: false,
-      cleanOldBackups: true,
-      allowInsecure: false
-    };
-    const items: TotpItem[] = this.viewModel.items;
-    const distributed: DistributedConfigService = DistributedConfigService.getInstance();
-    distributed.ensurePermission().then((granted: boolean) => {
-      if (!granted) {
-        return;
-      }
-      ConfigSyncService.getInstance().createBundle(config, secret, appLock, items)
-        .then((bundleResult: Result<string>) => {
-          if (!bundleResult.success || bundleResult.data === undefined) {
-            return;
-          }
-          distributed.publish(bundleResult.data);
-        });
-    });
-  }
-
   private refreshItems(): void {
     this.displayItems = this.viewModel.getDisplayItems();
   }
@@ -457,55 +409,86 @@ struct HomePage {
   }
 
   /** 手表端「从手机同步」：申请分布式权限 → 读取配置包 → 直接应用（同账号可信通道，不再要传输 PIN）。 */
-  private startPhoneSync(): void {
+  private async startPhoneSync(): Promise<void> {
     // 手机/手表之间的分布式同步与 WebDAV 云同步相互独立：WebDAV 未备案关闭时，
     // 「从手机同步」仍需可用（审核步骤：手机添加口令 → 手表输入密钥后应能拿到口令）。
+    if (this.syncingFromPhone) {
+      return;
+    }
+    this.syncingFromPhone = true;
     const distributed: DistributedConfigService = DistributedConfigService.getInstance();
-    distributed.ensurePermission().then((granted: boolean) => {
+    // read() 内部有十几秒的重试窗口，先给一句反馈，避免点完像没反应、被用户反复点
+    this.showWatchToast($r('app.string.watch_sync_connecting'));
+    try {
+      const granted: boolean = await distributed.ensurePermission();
       if (!granted) {
         this.showWatchToast($r('app.string.watch_sync_permission_denied'));
         return;
       }
-      distributed.read().then((readResult: Result<string>) => {
-        if (!readResult.success || readResult.data === undefined) {
-          this.showWatchToast(readResult.error !== undefined
-            ? readResult.error.message
-            : $r('app.string.watch_sync_no_bundle'));
+      const readResult: Result<string> = await distributed.read();
+      if (!readResult.success || readResult.data === undefined) {
+        this.showWatchToast(readResult.error !== undefined
+          ? readResult.error.message
+          : $r('app.string.watch_sync_no_bundle'));
+        return;
+      }
+      const openResult: Result<ConfigBundlePayload> =
+        await ConfigSyncService.getInstance().openBundle(readResult.data);
+      if (!openResult.success || openResult.data === undefined) {
+        this.showWatchToast(openResult.error !== undefined
+          ? openResult.error.message
+          : $r('app.string.watch_sync_bundle_invalid'));
+        return;
+      }
+      // 密钥不一致必须由接收端确认：手机看不到目标设备用的是什么密钥，
+      // 而覆盖之后旧密文就再也解不开了，不能静默替换。
+      const localSecret: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
+      const keyChanged: boolean = localSecret !== undefined && localSecret.length > 0
+        && localSecret !== openResult.data.secret;
+      if (keyChanged) {
+        const overwrite: boolean = await this.confirmKeyOverwrite();
+        if (!overwrite) {
+          // 不清包：用户改主意后可以直接再点一次同步
+          this.showWatchToast($r('app.string.watch_sync_key_kept'));
           return;
         }
-        ConfigSyncService.getInstance().openBundle(readResult.data)
-          .then((openResult: Result<ConfigBundlePayload>) => {
-            if (!openResult.success || openResult.data === undefined) {
-              this.showWatchToast(openResult.error !== undefined
-                ? openResult.error.message
-                : $r('app.string.watch_sync_bundle_invalid'));
-              return;
-            }
-            ConfigSyncService.getInstance().applyBundle(openResult.data).then((applyResult: Result<ConfigApplyResult>) => {
-              if (!applyResult.success) {
-                this.showWatchToast(applyResult.error !== undefined
-                  ? applyResult.error.message
-                  : $r('app.string.watch_sync_failed'));
-                return;
-              }
-              // 密钥已经落盘，即使云端备份拉取失败也要立即进入可用状态
-              this.keyInitialized = true;
-              this.refreshViewLockState();
-              this.loadData();
-              const outcome: ConfigApplyResult | undefined = applyResult.data;
-              if (outcome !== undefined && !outcome.backupPulled) {
-                this.showWatchToast(outcome.backupError !== undefined
-                  ? outcome.backupError
-                  : $r('app.string.watch_sync_key_only'));
-              } else {
-                this.showWatchToast($r('app.string.watch_sync_received'));
-              }
-              // 配置包是一次性的：消费成功后清掉本机副本，避免旧配置被重复应用
-              distributed.clear();
-            });
-          });
-      });
-    });
+        // 旧密文用新密钥解不开：先隔离，否则应用完会再弹一次「解密失败」，像是同步失败
+        const resetResult: Result<void> = await this.viewModel.resetLocalData();
+        if (!resetResult.success) {
+          this.showWatchToast($r('app.string.watch_sync_failed'));
+          return;
+        }
+      }
+      const applyResult: Result<void> =
+        await ConfigSyncService.getInstance().applyBundle(openResult.data);
+      if (!applyResult.success) {
+        this.showWatchToast(applyResult.error !== undefined
+          ? applyResult.error.message
+          : $r('app.string.watch_sync_failed'));
+        return;
+      }
+      // 密钥已经落盘，立即进入可用状态
+      this.keyInitialized = true;
+      this.refreshViewLockState();
+      this.loadData();
+      this.showWatchToast($r('app.string.watch_sync_received'));
+      // 配置包是一次性的：消费成功后清掉本机副本，避免旧配置被重复应用
+      await distributed.clear();
+    } finally {
+      this.syncingFromPhone = false;
+    }
+  }
+
+  /** 密钥不一致时的覆盖确认：true 表示同意用手机的密钥覆盖本机。 */
+  private confirmKeyOverwrite(): Promise<boolean> {
+    return this.getUIContext().getPromptAction().showDialog({
+      title: $r('app.string.watch_sync_key_mismatch_title'),
+      message: $r('app.string.watch_sync_key_mismatch_message'),
+      buttons: [
+        { text: $r('app.string.common_cancel'), color: '#666666' },
+        { text: $r('app.string.watch_sync_overwrite'), color: '#E84026' }
+      ]
+    }).then((result: ShowDialogSuccessResponse) => result.index === 1);
   }
 
   /** 刷新查看保护状态：有 PIN 校验数据即可开启，与当前开关分开判断。 */
@@ -585,8 +568,6 @@ struct HomePage {
             this.showAddSheet = false;
             this.viewModel.load().then(() => {
               this.refreshItems();
-              // 新增成功后把最新口令推给同账号手表
-              this.publishToWatch();
             });
           },
           onScan: () => {
@@ -922,8 +903,6 @@ struct HomePage {
       this.getUIContext().getPromptAction().showToast({ message: message });
       if (result.success) {
         this.refreshItems();
-        // 重命名成功后同步给手表，保持一致
-        this.publishToWatch();
       }
     });
   }
@@ -959,8 +938,6 @@ struct HomePage {
       this.viewModel.remove(item).then((removeResult: Result<void>) => {
         if (removeResult.success) {
           this.refreshItems();
-          // 删除成功后同步给手表，避免手表仍显示已删除的口令
-          this.publishToWatch();
         } else {
           const message: ResourceStr = removeResult.error !== undefined ? removeResult.error.message : $r('app.string.home_delete_failed');
           this.getUIContext().getPromptAction().showToast({ message: message });

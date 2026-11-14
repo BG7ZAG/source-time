@@ -383,6 +383,70 @@
     {
       "name": "pin_forgot_hint",
       "value": "忘记 PIN 需清除应用数据，届时口令与密钥将无法恢复"
+    },
+    {
+      "name": "security_watch_sync_title",
+      "value": "推送到其他设备"
+    },
+    {
+      "name": "security_watch_sync_body",
+      "value": "把当前密钥与全部口令通过同账号加密通道发送到选中的设备；设备端打开加号里的「从手机同步」接收。"
+    },
+    {
+      "name": "security_watch_sync_no_key",
+      "value": "请先设置加密密钥"
+    },
+    {
+      "name": "security_watch_sync_no_device",
+      "value": "未发现其他设备，请确认两台设备登录同一华为账号，并打开蓝牙与 Wi-Fi"
+    },
+    {
+      "name": "security_watch_sync_sent_to",
+      "value": "已发送到 %s"
+    },
+    {
+      "name": "security_watch_sync_push",
+      "value": "推送到其他设备"
+    },
+    {
+      "name": "security_watch_sync_pushing",
+      "value": "正在推送…"
+    },
+    {
+      "name": "security_watch_sync_done_hint",
+      "value": "请在设备端打开加号里的「从手机同步」完成接收。"
+    },
+    {
+      "name": "security_device_picker_title",
+      "value": "选择接收设备"
+    },
+    {
+      "name": "security_device_picker_subtitle",
+      "value": "当前在线 %d 台，只推送给选中的设备"
+    },
+    {
+      "name": "security_device_picker_confirm",
+      "value": "开始同步"
+    },
+    {
+      "name": "device_type_wearable",
+      "value": "手表"
+    },
+    {
+      "name": "device_type_phone",
+      "value": "手机"
+    },
+    {
+      "name": "device_type_tablet",
+      "value": "平板"
+    },
+    {
+      "name": "device_type_pc",
+      "value": "电脑"
+    },
+    {
+      "name": "device_type_other",
+      "value": "其他设备"
     }
   ]
 }
