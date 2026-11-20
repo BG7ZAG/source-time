@@ -30,13 +30,12 @@ export const DEFAULT_TOTP_ALGORITHM: TotpAlgorithm = 'SHA1';
 export const DEFAULT_WEBDAV_DIRECTORY: string = '/SourceTime/';
 
 /**
- * 联网同步功能总开关（WebDAV / 跨设备同步）。
+ * 联网同步功能总开关（WebDAV）。
  *
  * 当前版本尚未完成相关备案：先屏蔽全部联网入口，避免用户在本版本使用未备案的联网能力。
  * 开关关闭时同时屏蔽：
  * - 设置页「WebDAV 同步」入口与 WebDavPage；
- * - 冷启动自动拉取、密钥变更后的自动推送；
- * - 手表端「从手机同步 / 手动配置 WebDAV」。
+ * - 冷启动自动拉取、密钥变更后的自动推送。
  * 备案完成后把这里改为 true 即可恢复，无需再改各页面逻辑。
  */
 export const WEBDAV_FEATURE_ENABLED: boolean = false;
@@ -56,9 +55,6 @@ export class AppRoutes {
   static readonly WEBDAV: string = 'pages/WebDavPage';
 
   static readonly PRIVACY_POLICY: string = 'pages/PrivacyPolicyPage';
-
-  /** 手表端隐私确认页：独立页面，支持表冠滚动与右滑返回。 */
-  static readonly WATCH_PRIVACY: string = 'pages/WatchPrivacyPage';
 
   static readonly ABOUT: string = 'pages/AboutPage';
 

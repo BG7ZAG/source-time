@@ -15,12 +15,12 @@ import { DeviceAdapter } from '../utils/DeviceAdapter';
 export struct EmptyState {
   @Prop message: ResourceStr = $r('app.string.empty_message');
   @Prop hint: ResourceStr = $r('app.string.empty_hint');
-  /** 是否响应点击；手表端始终响应：未初始化时设置密钥，已初始化时打开同步入口。 */
+  /** 是否响应点击。 */
   @Prop clickable: boolean = true;
-  /** 中央图标文案：手机端为加号，手表端改用同步箭头，避免误导为「可以新增」。 */
+  /** 中央图标文案。 */
   @Prop symbol: string = '＋';
   @State breathing: boolean = false;
-  /** 点击中央图标触发新增（手表端为同步入口）。 */
+  /** 点击中央图标触发新增。 */
   onTap: () => void = () => {};
 
   aboutToAppear(): void {
@@ -32,49 +32,31 @@ export struct EmptyState {
   }
 
   /**
-   * 空状态尺寸：手表紧凑、平板/2in1 放大、手机居中。
+   * 空状态尺寸：平板/2in1 放大、手机居中。
    * 132vp 的圆环在手机（360vp 宽）上占 37%，到 13 寸平板（1440vp 宽）只剩 9%，
    * 不放大就会显得又小又空。
    */
   private glowSize(): number {
-    if (DeviceAdapter.isWatch()) {
-      return 80;
-    }
     return DeviceAdapter.isWideScreen() ? 176 : 132;
   }
 
   private ringSize(): number {
-    if (DeviceAdapter.isWatch()) {
-      return 64;
-    }
     return DeviceAdapter.isWideScreen() ? 140 : 104;
   }
 
   private plusFontSize(): number {
-    if (DeviceAdapter.isWatch()) {
-      return 24;
-    }
     return DeviceAdapter.isWideScreen() ? 48 : 38;
   }
 
   private titleFontSize(): number {
-    if (DeviceAdapter.isWatch()) {
-      return 12;
-    }
     return DeviceAdapter.isWideScreen() ? 17 : 15;
   }
 
   private hintFontSize(): number {
-    if (DeviceAdapter.isWatch()) {
-      return 10;
-    }
     return DeviceAdapter.isWideScreen() ? 13.5 : 12;
   }
 
   private contentSpace(): number {
-    if (DeviceAdapter.isWatch()) {
-      return 10;
-    }
     return DeviceAdapter.isWideScreen() ? 22 : 18;
   }
 
@@ -109,7 +91,7 @@ export struct EmptyState {
           })
           .shadow(this.immersive() ? noShadow() : glowButtonShadow())
 
-        // 渐变加号（手表端为同步箭头）
+        // 渐变加号
         Text(this.symbol)
           .fontSize(this.plusFontSize())
           .fontWeight(FontWeight.Medium)
@@ -197,7 +179,7 @@ export struct GlowFab {
         .type(ButtonType.Circle)
         .width(this.diameter)
         .height(this.diameter)
-        .fontSize(DeviceAdapter.isWatch() ? 18 : 26)
+        .fontSize(26)
         .fontWeight(FontWeight.Medium)
         .fontColor($r('app.color.fab_foreground'))
         .linearGradient({ angle: 135, colors: trackGradientColors(0) })

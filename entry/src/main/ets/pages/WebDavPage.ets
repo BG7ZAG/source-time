@@ -2,9 +2,6 @@ import { KeyboardAvoidMode, ShowDialogSuccessResponse } from '@kit.ArkUI';
 import { WebDavService } from '../service/WebDavService';
 import { SyncService } from '../service/SyncService';
 import { SettingsService } from '../service/SettingsService';
-import { StorageService } from '../service/StorageService';
-import { ConfigSyncService, AppLockBundle, CONFIG_BUNDLE_TTL_MS } from '../service/ConfigSyncService';
-import { DistributedConfigService } from '../service/DistributedConfigService';
 import { WebDavConfig } from '../model/WebDavConfig';
 import { RemoteBackup } from '../model/RemoteBackup';
 import { SyncStatus } from '../model/SyncModel';
@@ -13,7 +10,6 @@ import { DEFAULT_WEBDAV_DIRECTORY, WEBDAV_FEATURE_ENABLED } from '../constants/A
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { Logger } from '../utils/Logger';
 import { UiText } from '../utils/UiText';
-import { DeviceAdapter } from '../utils/DeviceAdapter';
 import { AuroraBackground } from '../components/AuroraBackground';
 import { BackupPickerDialog } from '../components/BackupPickerDialog';
 import {
@@ -68,8 +64,6 @@ struct WebDavPage {
   @State saving: boolean = false;
   @State pushing: boolean = false;
   @State pulling: boolean = false;
-  /** 正在把加密配置推送到手表。 */
-  @State sendingToWatch: boolean = false;
   @State syncStatus: SyncStatus = SyncStatus.IDLE;
   @State lastSyncAt: number = 0;
   @State syncMessage: ResourceStr = '';
@@ -95,7 +89,7 @@ struct WebDavPage {
 
   aboutToAppear(): void {
     // 联网同步功能在备案完成前整体关闭：即使通过路由/深链进入本页也直接返回，避免发起网络请求
-    if (!WEBDAV_FEATURE_ENABLED || DeviceAdapter.isWatch()) {
+    if (!WEBDAV_FEATURE_ENABLED) {
       this.getUIContext().getRouter().back();
       return;
     }
@@ -270,72 +264,6 @@ struct WebDavPage {
       this.backups = backups;
       this.selectedBackup = backups[0].name;   // 默认勾选最新一条
       this.openBackupPicker();
-    });
-  }
-
-  /**
-   * 手机端：把当前 WebDAV 配置（含主密钥）用一次性 PIN 加密后推送到可信设备。
-   * 手表端读取密文后输入同一个 PIN 即可零输入完成配置。
-   */
-  private onSendToWatch(): void {
-    // 密钥同步不依赖 WebDAV：未配置 WebDAV 时只同步密钥（手表同样需要密钥才能解密本地数据），
-    // 配置完整时再顺带同步 WebDAV 配置并拉取云端备份。
-    if (this.encryptionSecret.length === 0) {
-      this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_send_failed') });
-      return;
-    }
-    this.sendingToWatch = true;
-    const distributed: DistributedConfigService = DistributedConfigService.getInstance();
-    distributed.ensurePermission().then((granted: boolean) => {
-      if (!granted) {
-        this.sendingToWatch = false;
-        this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_send_permission_denied') });
-        return;
-      }
-      const settings = this.settingsService.getSettings();
-      const appLock: AppLockBundle = {
-        enabled: settings.appLockEnabled,
-        pinHash: settings.appLockPinHash,
-        pinSalt: settings.appLockPinSalt
-      };
-      const currentDb = StorageService.getInstance().getDatabase();
-      ConfigSyncService.getInstance().createBundle(this.encryptionSecret, appLock,
-        currentDb !== null ? currentDb.items : [])
-        .then((bundleResult: Result<string>) => {
-          if (!bundleResult.success || bundleResult.data === undefined) {
-            this.sendingToWatch = false;
-            this.getUIContext().getPromptAction().showToast({ message: $r('app.string.webdav_send_failed') });
-            return;
-          }
-          distributed.publish(bundleResult.data).then((publishResult: Result<void>) => {
-            this.sendingToWatch = false;
-            if (!publishResult.success) {
-              const message: ResourceStr = publishResult.error !== undefined
-                ? publishResult.error.message
-                : $r('app.string.webdav_send_failed');
-              this.getUIContext().getPromptAction().showToast({ message: message });
-              return;
-            }
-            // 写库成功 ≠ 已送达：没有在线设备时同步会被跳过，文案不能报「已发送」。
-            // 配置包自 v2 起不再包含 WebDAV 服务器信息，统一用「密钥与口令」这类文案。
-            const reachable: boolean = distributed.hasOnlinePeer();
-            const title: ResourceStr = reachable
-              ? $r('app.string.webdav_send_key_done_title')
-              : $r('app.string.webdav_send_key_pending_title');
-            const message: ResourceStr = reachable
-              ? $r('app.string.webdav_send_key_done_message')
-              : $r('app.string.webdav_send_key_pending_message');
-            this.getUIContext().getPromptAction().showDialog({
-              title: title,
-              message: message,
-              buttons: [{ text: $r('app.string.common_ok'), color: '#0A59F7' }]
-            });
-            // 过期后清掉本机密文，避免一次性配置包长期留在分布式库里
-            setTimeout(() => {
-              distributed.clear();
-            }, CONFIG_BUNDLE_TTL_MS + 1000);
-          });
-        });
     });
   }
 
@@ -759,20 +687,6 @@ struct WebDavPage {
                   })
                 }
                 .width('100%')
-
-                Button(this.sendingToWatch
-                  ? $r('app.string.webdav_sending_to_watch')
-                  : $r('app.string.webdav_send_to_watch'))
-                  .width('100%')
-                  .height(44)
-                  .borderRadius(22)
-                  .fontSize(14)
-                  .fontWeight(FontWeight.Medium)
-                  .backgroundColor($r('app.color.subtle_brand_background'))
-                  .fontColor($r('app.color.brand'))
-                  .enabled(!this.sendingToWatch)
-                  .margin({ top: 10 })
-                  .onClick(() => this.onSendToWatch())
               }
               .width('100%')
               .padding(16)

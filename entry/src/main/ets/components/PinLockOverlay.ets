@@ -3,8 +3,7 @@ import { Result } from '../types/Result';
 import { Logger } from '../utils/Logger';
 import { UiText } from '../utils/UiText';
 import { APP_LOCK_STORAGE_KEY } from '../constants/AppConstants';
-import { LOCK_CONTENT_MAX_WIDTH, WATCH_LOCK_CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
-import { DeviceAdapter } from '../utils/DeviceAdapter';
+import { LOCK_CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 
 /**
  * 应用锁遮罩：覆盖整页，遮住口令与密钥，直到 PIN 校验通过。
@@ -105,37 +104,35 @@ export struct PinLockOverlay {
       // 宽屏（平板 / 2in1）下 PIN 面板收窄居中：全宽输入框在超宽窗口下不可用
       Column() {
         Image($r('app.media.ic_security'))
-          .width(DeviceAdapter.isWatch() ? 26 : 34)
-          .height(DeviceAdapter.isWatch() ? 26 : 34)
-          .fillColor(DeviceAdapter.isWatch() ? '#B3FFFFFF' : $r('app.color.text_secondary'))
+          .width(34)
+          .height(34)
+          .fillColor($r('app.color.text_secondary'))
 
         Text($r('app.string.pin_locked_title'))
-          .fontSize(DeviceAdapter.isWatch() ? 15 : 19)
+          .fontSize(19)
           .fontWeight(FontWeight.Medium)
-          .fontColor(DeviceAdapter.isWatch() ? Color.White : $r('app.color.text_primary'))
-          .margin({ top: DeviceAdapter.isWatch() ? 8 : 12 })
+          .fontColor($r('app.color.text_primary'))
+          .margin({ top: 12 })
 
-        if (!DeviceAdapter.isWatch()) {
-          Text($r('app.string.pin_locked_hint'))
-            .fontSize(12.5)
-            .fontColor($r('app.color.text_tertiary'))
-            .margin({ top: 6 })
-        }
+        Text($r('app.string.pin_locked_hint'))
+          .fontSize(12.5)
+          .fontColor($r('app.color.text_tertiary'))
+          .margin({ top: 6 })
 
         Column() {
           TextInput({ text: $$this.pin, placeholder: $r('app.string.pin_placeholder') })
             .type(InputType.NUMBER_PASSWORD)
             .showPasswordIcon(true)
             .maxLength(6)
-            .fontSize(DeviceAdapter.isWatch() ? 16 : 22)
-            .fontColor(DeviceAdapter.isWatch() ? Color.White : $r('app.color.text_primary'))
-            .placeholderColor(DeviceAdapter.isWatch() ? '#80FFFFFF' : $r('app.color.text_tertiary'))
+            .fontSize(22)
+            .fontColor($r('app.color.text_primary'))
+            .placeholderColor($r('app.color.text_tertiary'))
             .textAlign(TextAlign.Center)
-            .letterSpacing(DeviceAdapter.isWatch() ? 4 : 8)
-            .height(DeviceAdapter.isWatch() ? 38 : 46)
-            .backgroundColor(DeviceAdapter.isWatch() ? '#1AFFFFFF' : $r('app.color.field_background'))
-            .border({ width: 1.5, color: DeviceAdapter.isWatch() ? '#33FFFFFF' : $r('app.color.field_border') })
-            .borderRadius(DeviceAdapter.isWatch() ? 10 : 14)
+            .letterSpacing(8)
+            .height(46)
+            .backgroundColor($r('app.color.field_background'))
+            .border({ width: 1.5, color: $r('app.color.field_border') })
+            .borderRadius(14)
             .enabled(this.lockRemaining === 0)
             .onChange((value: string) => {
               this.onPinChange(value);
@@ -145,46 +142,44 @@ export struct PinLockOverlay {
             })
         }
         .width('100%')
-        .margin({ top: DeviceAdapter.isWatch() ? 16 : 22 })
+        .margin({ top: 22 })
 
         if (this.lockRemaining > 0) {
           Text($r('app.string.pin_locked_retry', this.lockRemaining))
-            .fontSize(DeviceAdapter.isWatch() ? 10 : 12)
+            .fontSize(12)
             .fontColor($r('app.color.danger'))
             .margin({ top: 8 })
         } else if (this.error !== '') {
           Text(this.error)
-            .fontSize(DeviceAdapter.isWatch() ? 10 : 12)
+            .fontSize(12)
             .fontColor($r('app.color.danger'))
             .margin({ top: 8 })
         }
 
         Button(this.verifying ? $r('app.string.pin_verifying') : $r('app.string.pin_unlock'))
           .width('100%')
-          .height(DeviceAdapter.isWatch() ? 38 : 46)
-          .borderRadius(DeviceAdapter.isWatch() ? 10 : 14)
-          .fontSize(DeviceAdapter.isWatch() ? 14 : 16)
+          .height(46)
+          .borderRadius(14)
+          .fontSize(16)
           .enabled(!this.verifying && this.lockRemaining === 0)
-          .margin({ top: DeviceAdapter.isWatch() ? 12 : 16 })
+          .margin({ top: 16 })
           .onClick(() => {
             this.onUnlock();
           })
 
-        if (!DeviceAdapter.isWatch()) {
-          Text($r('app.string.pin_forgot_hint'))
-            .fontSize(11.5)
-            .fontColor($r('app.color.text_tertiary'))
-            .textAlign(TextAlign.Center)
-            .margin({ top: 18 })
-        }
+        Text($r('app.string.pin_forgot_hint'))
+          .fontSize(11.5)
+          .fontColor($r('app.color.text_tertiary'))
+          .textAlign(TextAlign.Center)
+          .margin({ top: 18 })
       }
       .width('100%')
-      .constraintSize({ maxWidth: DeviceAdapter.isWatch() ? WATCH_LOCK_CONTENT_MAX_WIDTH : LOCK_CONTENT_MAX_WIDTH })
+      .constraintSize({ maxWidth: LOCK_CONTENT_MAX_WIDTH })
     }
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .padding({ left: DeviceAdapter.isWatch() ? 16 : 34, right: DeviceAdapter.isWatch() ? 16 : 34 })
-    .backgroundColor(DeviceAdapter.isWatch() ? '#0B0F1A' : $r('app.color.page_background'))
+    .padding({ left: 34, right: 34 })
+    .backgroundColor($r('app.color.page_background'))
   }
 }

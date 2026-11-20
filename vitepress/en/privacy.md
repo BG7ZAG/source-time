@@ -39,7 +39,6 @@ We do not perform profiling, targeted marketing or behavioral analytics.
 |------------|---------|----------------|
 | Camera | Scan otpauth QR codes | When you tap "Scan QR code" |
 | Network | Access your WebDAV server | When you enable and run sync |
-| Distributed data sync | Sync WebDAV settings to your watch on the same account | When you tap "Sync to watch" |
 | Privacy window | Prevent screenshots and screen recording | While the App is running |
 | Clipboard | Write a code when you tap "Copy" | When you tap copy |
 

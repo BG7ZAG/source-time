@@ -5,29 +5,17 @@ import { HomeSearchField } from '../components/HomeSearchField';
 import { AuroraBackground } from '../components/AuroraBackground';
 import { AddTotpSheet } from '../components/AddTotpSheet';
 import { RenameDialog } from '../components/RenameDialog';
-import { PrivacyDialog } from '../components/PrivacyDialog';
-import { WatchKeySetupDialog } from '../components/WatchKeySetupDialog';
-import { WatchSyncDialog } from '../components/WatchSyncDialog';
-import { WatchSyncChoiceDialog } from '../components/WatchSyncChoiceDialog';
-import { WatchVerifyPinDialog } from '../components/WatchVerifyPinDialog';
-import { WatchSetPinDialog } from '../components/WatchSetPinDialog';
-import { ConfigSyncService, ConfigBundlePayload } from '../service/ConfigSyncService';
-import { DistributedConfigService } from '../service/DistributedConfigService';
-import { PinService } from '../service/PinService';
-import { APP_LOCK_STORAGE_KEY } from '../constants/AppConstants';
 import { HomeViewModel, TotpDisplayItem } from '../viewmodel/HomeViewModel';
 import { TotpItem } from '../model/TotpItem';
 import { Result } from '../types/Result';
-import { AppRoutes, CURRENT_PRIVACY_POLICY_VERSION, WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
+import { AppRoutes } from '../constants/AppConstants';
 import {
   CONTENT_MAX_WIDTH,
-  WATCH_CONTENT_MAX_WIDTH,
   GRID_MIN_WIDTH,
   OVERLAY_MAX_WIDTH,
   MENU_WIDTH
 } from '../constants/LayoutConstants';
 import { SettingsService } from '../service/SettingsService';
-import { AppContextHolder } from '../utils/AppContextHolder';
 import { UiText } from '../utils/UiText';
 import { DeviceAdapter } from '../utils/DeviceAdapter';
 import {
@@ -51,22 +39,13 @@ struct HomePage {
   @State deletingId: string = '';
   /** 本地数据无法解密时，本会话只提示一次，避免反复弹窗。 */
   @State loadErrorShown: boolean = false;
-  /** 是否已完成加密密钥初始化（手表端用于决定空状态文案与点击行为）。 */
-  @State keyInitialized: boolean = false;
-  /** 手表查看保护：是否开启、是否已有可用的 PIN 校验数据。 */
-  @State viewLockEnabled: boolean = false;
-  @State viewLockUsable: boolean = false;
-  /** 隐私弹窗是否已由用户明确处理（同意/不同意），用于拦截返回键等交互式关闭。 */
-  private privacySettled: boolean = false;
-  /** 手表端「从手机同步」进行中：分布式同步要等十几秒，期间忽略重复点击。 */
-  private syncingFromPhone: boolean = false;
   /** 软键盘高度（vp）：新增口令是居中气泡卡片，需要自己把卡片抬到键盘上方。 */
   @State keyboardHeightVp: number = 0;
   /** 全模态覆盖层高度（vp）：与键盘高度一起算出卡片可用高度。 */
   @State overlayHeightVp: number = 0;
   /** 当前窗口宽度（vp）：分屏/悬浮窗下用它判断还适不适合双列网格。 */
   @State windowWidthVp: number = 0;
-  /** 首页搜索关键词：按发行方/账号过滤（手表端不显示搜索框，恒为空）。 */
+  /** 搜索关键词：按发行方/账号过滤。 */
   @State searchQuery: string = '';
   /** 当前打开长按菜单的条目 id（空串表示没有菜单）。 */
   @State menuCardId: string = '';
@@ -75,137 +54,6 @@ struct HomePage {
   private renameDialog: CustomDialogController | undefined = undefined;
   private viewModel: HomeViewModel = new HomeViewModel();
   private settingsService: SettingsService = new SettingsService();
-  private privacyDialog: CustomDialogController = new CustomDialogController({
-    builder: PrivacyDialog({
-      onAgree: () => {
-        this.acceptPrivacyPolicy();
-      },
-      onDecline: () => {
-        this.declinePrivacyPolicy();
-      }
-    }),
-    autoCancel: false,
-    customStyle: true,
-    maskColor: DeviceAdapter.isWatch() ? '#FF000000' : '#66000000',
-    alignment: DialogAlignment.Center,
-    // 未明确同意/拒绝前，返回键、遮罩、侧滑都不允许关闭弹窗，避免绕过隐私确认
-    onWillDismiss: (action: DismissDialogAction) => {
-      if (this.privacySettled) {
-        action.dismiss();
-      }
-    }
-  });
-  /** 手表端密钥初始化弹窗：替代会被 SecurityPage 立即 back() 掉的首次设置流程。 */
-  private watchKeyDialog: CustomDialogController = new CustomDialogController({
-    builder: WatchKeySetupDialog({
-      onDone: () => {
-        this.watchKeyDialog.close();
-        this.keyInitialized = true;
-        this.loadData();
-        // 输入/确认密钥后自动尝试从手机同步密钥与口令：审核步骤就是「手机添加口令 →
-        // 手表输入密钥」，不能要求用户再手动找到同步入口。
-        setTimeout(() => {
-          this.startPhoneSync();
-        }, 200);
-      },
-      onCancel: () => {
-        this.watchKeyDialog.close();
-      }
-    }),
-    autoCancel: false,
-    customStyle: true,
-    maskColor: '#FF000000',
-    alignment: DialogAlignment.Center
-  });
-  /** 手表端 WebDAV 拉取：没有设置入口，空状态直接给一个最小拉取入口。 */
-  private watchSyncDialog: CustomDialogController = new CustomDialogController({
-    builder: WatchSyncDialog({
-      onDone: () => {
-        this.watchSyncDialog.close();
-        this.loadData();
-      },
-      onCancel: () => {
-        this.watchSyncDialog.close();
-      }
-    }),
-    autoCancel: false,
-    customStyle: true,
-    maskColor: '#FF000000',
-    alignment: DialogAlignment.Center
-  });
-  /** 手表端同步入口操作面板：从手机同步 / 手动配置 / 查看保护开关。 */
-  private watchSyncChoiceDialog: CustomDialogController = new CustomDialogController({
-    builder: WatchSyncChoiceDialog({
-      webDavEnabled: WEBDAV_FEATURE_ENABLED,
-      lockEnabled: this.viewLockEnabled,
-      onPhoneSync: () => {
-        this.watchSyncChoiceDialog.close();
-        // 等选择弹窗的窗口真正关闭后再继续，避免连续开关窗口被系统忽略
-        setTimeout(() => {
-          this.startPhoneSync();
-        }, 120);
-      },
-      onManual: () => {
-        this.watchSyncChoiceDialog.close();
-        setTimeout(() => {
-          this.watchSyncDialog.open();
-        }, 120);
-      },
-      onManualKey: () => {
-        // 分布式通道不可用（不同账号/未组网/云调试）时，允许直接输入或粘贴手机上的密钥
-        this.watchSyncChoiceDialog.close();
-        setTimeout(() => {
-          this.watchKeyDialog.open();
-        }, 120);
-      },
-      onToggleLock: () => {
-        this.watchSyncChoiceDialog.close();
-        setTimeout(() => {
-          this.toggleViewLock();
-        }, 120);
-      }
-    }),
-    autoCancel: true,
-    customStyle: true,
-    maskColor: '#FF000000',
-    alignment: DialogAlignment.Center
-  });
-  /** 手表端自行设置查看 PIN（手机端未同步校验值时使用）。 */
-  private watchSetPinDialog: CustomDialogController = new CustomDialogController({
-    builder: WatchSetPinDialog({
-      onDone: () => {
-        this.watchSetPinDialog.close();
-        this.viewLockEnabled = true;
-        this.viewLockUsable = true;
-        AppStorage.setOrCreate<boolean>(APP_LOCK_STORAGE_KEY, true);
-        this.showWatchToast($r('app.string.watch_view_lock_enabled'));
-      },
-      onCancel: () => {
-        this.watchSetPinDialog.close();
-      }
-    }),
-    autoCancel: false,
-    customStyle: true,
-    maskColor: '#FF000000',
-    alignment: DialogAlignment.Center
-  });
-  /** 关闭查看保护前的 PIN 校验。 */
-  private watchVerifyPinDialog: CustomDialogController = new CustomDialogController({
-    builder: WatchVerifyPinDialog({
-      onConfirmed: () => {
-        this.watchVerifyPinDialog.close();
-        this.disableViewLock();
-      },
-      onCancel: () => {
-        this.watchVerifyPinDialog.close();
-      }
-    }),
-    autoCancel: false,
-    customStyle: true,
-    maskColor: '#FF000000',
-    alignment: DialogAlignment.Center
-  });
-
   /** 监听软键盘高度：仅用于把新增口令的居中卡片抬到键盘上方。 */
   private bindKeyboardHeight(): void {
     const context = this.getUIContext().getHostContext();
@@ -224,25 +72,6 @@ struct HomePage {
 
   aboutToAppear(): void {
     this.bindKeyboardHeight();
-    const settings = this.settingsService.getSettings();
-    this.keyInitialized = settings.encryptionInitialized;
-    this.refreshViewLockState();
-    // 手机/平板/PC 已接入平台标准化隐私声明托管服务：首次启动由系统统一弹出隐私弹窗，
-    // 应用内不得再自建隐私弹窗，否则审核时会看到两个弹窗。
-    // 手表不在隐私托管支持的设备范围内，仍需应用内确认；改用独立页面：
-    // CustomDialog 模态窗口拿不到表冠焦点，也无法右滑退出。
-    // 除「从未同意过」外，还要比对已同意的版本号：政策改版后必须重新确认。
-    if (DeviceAdapter.isWatch()
-      && (!settings.privacyPolicyAccepted || settings.privacyPolicyVersion !== CURRENT_PRIVACY_POLICY_VERSION)) {
-      this.getUIContext().getRouter().pushUrl({ url: AppRoutes.WATCH_PRIVACY });
-      return;
-    }
-    // 手机端首次启动由 EntryAbility 路由到「设置加密密钥」；
-    // 手表端没有可用的安全页（进入即 back），改为首页内的紧凑密钥初始化弹窗。
-    if (DeviceAdapter.isWatch() && !settings.encryptionInitialized) {
-      this.watchKeyDialog.open();
-      return;
-    }
     this.loadData();
   }
 
@@ -252,54 +81,10 @@ struct HomePage {
   }
 
   onPageShow(): void {
-    const settings = this.settingsService.getSettings();
-    this.keyInitialized = settings.encryptionInitialized;
-    this.refreshViewLockState();
-    // 手机/平板/PC 的隐私确认由系统托管弹窗完成，这里只判断密钥是否就绪；
-    const consented: boolean = !DeviceAdapter.isWatch()
-      || (settings.privacyPolicyAccepted && settings.privacyPolicyVersion === CURRENT_PRIVACY_POLICY_VERSION);
-    // 手表从隐私确认页返回后：尚未初始化密钥则直接进入密钥设置，否则加载口令
-    if (consented && DeviceAdapter.isWatch() && !settings.encryptionInitialized) {
-      this.watchKeyDialog.open();
-      return;
+    // 密钥尚未初始化时由 EntryAbility 引导到安全页，这里只加载已完成初始化的数据
+    if (this.settingsService.getSettings().encryptionInitialized) {
+      this.loadData();
     }
-    if (consented && settings.encryptionInitialized) {
-      this.viewModel.load().then((result: Result<void>) => {
-        if (result.success) {
-          this.refreshItems();
-        } else {
-          this.onLoadFailed(result);
-        }
-      });
-    }
-  }
-
-  private acceptPrivacyPolicy(): void {
-    this.privacySettled = true;
-    const currentSettings = this.settingsService.getSettings();
-    currentSettings.privacyPolicyAccepted = true;
-    currentSettings.privacyPolicyVersion = CURRENT_PRIVACY_POLICY_VERSION;
-    this.settingsService.saveSettings(currentSettings).then(() => {
-      this.privacyDialog.close();
-      if (!currentSettings.encryptionInitialized) {
-        if (DeviceAdapter.isWatch()) {
-          // 等隐私弹窗的窗口真正关闭后再开下一个，避免同一帧内连续开关被系统忽略
-          setTimeout(() => {
-            this.watchKeyDialog.open();
-          }, 120);
-        } else {
-          this.getUIContext().getRouter().replaceUrl({ url: AppRoutes.SECURITY });
-        }
-      } else {
-        this.loadData();
-      }
-    });
-  }
-
-  private declinePrivacyPolicy(): void {
-    this.privacySettled = true;
-    this.privacyDialog.close();
-    AppContextHolder.getContext().terminateSelf();
   }
 
   private loadData(): void {
@@ -354,10 +139,7 @@ struct HomePage {
   }
 
   /**
-   * 手机端不再做「改动即推送」：多设备同步统一走安全页的手动推送按钮。
-   *
-   * 自动推送只保留给 WebDAV 云同步（由 SyncService 负责，开关关闭时不工作）。
-   * 设备通道是显式动作，避免用户改一条口令就把主密钥广播给组内所有设备。
+   * 刷新首页展示列表：数据层更新后重新取一次展示项。
    */
   private refreshItems(): void {
     this.displayItems = this.viewModel.getDisplayItems();
@@ -391,158 +173,7 @@ struct HomePage {
   }
 
   private openAdd(): void {
-    if (DeviceAdapter.isWatch()) {
-      // 手表端不支持新增口令。未初始化密钥时先设置密钥；
-      // 已初始化时打开同步入口，避免「点了加号没有任何反应」。
-      if (!this.keyInitialized) {
-        this.watchKeyDialog.open();
-        return;
-      }
-      this.refreshViewLockState();
-      this.watchSyncChoiceDialog.open();
-      return;
-    }
-    if (!DeviceAdapter.showFullFeatures()) {
-      return;
-    }
     this.showAddSheet = true;
-  }
-
-  /** 手表端「从手机同步」：申请分布式权限 → 读取配置包 → 直接应用（同账号可信通道，不再要传输 PIN）。 */
-  private async startPhoneSync(): Promise<void> {
-    // 手机/手表之间的分布式同步与 WebDAV 云同步相互独立：WebDAV 未备案关闭时，
-    // 「从手机同步」仍需可用（审核步骤：手机添加口令 → 手表输入密钥后应能拿到口令）。
-    if (this.syncingFromPhone) {
-      return;
-    }
-    this.syncingFromPhone = true;
-    const distributed: DistributedConfigService = DistributedConfigService.getInstance();
-    // read() 内部有十几秒的重试窗口，先给一句反馈，避免点完像没反应、被用户反复点
-    this.showWatchToast($r('app.string.watch_sync_connecting'));
-    try {
-      const granted: boolean = await distributed.ensurePermission();
-      if (!granted) {
-        this.showWatchToast($r('app.string.watch_sync_permission_denied'));
-        return;
-      }
-      const readResult: Result<string> = await distributed.read();
-      if (!readResult.success || readResult.data === undefined) {
-        this.showWatchToast(readResult.error !== undefined
-          ? readResult.error.message
-          : $r('app.string.watch_sync_no_bundle'));
-        return;
-      }
-      const openResult: Result<ConfigBundlePayload> =
-        await ConfigSyncService.getInstance().openBundle(readResult.data);
-      if (!openResult.success || openResult.data === undefined) {
-        this.showWatchToast(openResult.error !== undefined
-          ? openResult.error.message
-          : $r('app.string.watch_sync_bundle_invalid'));
-        return;
-      }
-      // 密钥不一致必须由接收端确认：手机看不到目标设备用的是什么密钥，
-      // 而覆盖之后旧密文就再也解不开了，不能静默替换。
-      const localSecret: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
-      const keyChanged: boolean = localSecret !== undefined && localSecret.length > 0
-        && localSecret !== openResult.data.secret;
-      if (keyChanged) {
-        const overwrite: boolean = await this.confirmKeyOverwrite();
-        if (!overwrite) {
-          // 不清包：用户改主意后可以直接再点一次同步
-          this.showWatchToast($r('app.string.watch_sync_key_kept'));
-          return;
-        }
-        // 旧密文用新密钥解不开：先隔离，否则应用完会再弹一次「解密失败」，像是同步失败
-        const resetResult: Result<void> = await this.viewModel.resetLocalData();
-        if (!resetResult.success) {
-          this.showWatchToast($r('app.string.watch_sync_failed'));
-          return;
-        }
-      }
-      const applyResult: Result<void> =
-        await ConfigSyncService.getInstance().applyBundle(openResult.data);
-      if (!applyResult.success) {
-        this.showWatchToast(applyResult.error !== undefined
-          ? applyResult.error.message
-          : $r('app.string.watch_sync_failed'));
-        return;
-      }
-      // 密钥已经落盘，立即进入可用状态
-      this.keyInitialized = true;
-      this.refreshViewLockState();
-      this.loadData();
-      this.showWatchToast($r('app.string.watch_sync_received'));
-      // 配置包是一次性的：消费成功后清掉本机副本，避免旧配置被重复应用
-      await distributed.clear();
-    } finally {
-      this.syncingFromPhone = false;
-    }
-  }
-
-  /** 密钥不一致时的覆盖确认：true 表示同意用手机的密钥覆盖本机。 */
-  private confirmKeyOverwrite(): Promise<boolean> {
-    return this.getUIContext().getPromptAction().showDialog({
-      title: $r('app.string.watch_sync_key_mismatch_title'),
-      message: $r('app.string.watch_sync_key_mismatch_message'),
-      buttons: [
-        { text: $r('app.string.common_cancel'), color: '#666666' },
-        { text: $r('app.string.watch_sync_overwrite'), color: '#E84026' }
-      ]
-    }).then((result: ShowDialogSuccessResponse) => result.index === 1);
-  }
-
-  /** 刷新查看保护状态：有 PIN 校验数据即可开启，与当前开关分开判断。 */
-  private refreshViewLockState(): void {
-    const settings = this.settingsService.getSettings();
-    this.viewLockEnabled = settings.appLockEnabled;
-    this.viewLockUsable = settings.appLockPinHash.length > 0 && settings.appLockPinSalt.length > 0;
-  }
-
-  /**
-   * 切换查看保护：
-   * - 关闭必须先验证当前 PIN；
-   * - 开启要求已经同步过 PIN 校验数据（来自手机应用锁），否则提示先去手机端开启并同步。
-   */
-  private toggleViewLock(): void {
-    if (this.viewLockEnabled) {
-      this.watchVerifyPinDialog.open();
-      return;
-    }
-    if (!this.viewLockUsable) {
-      // 没有手机同步过来的校验值时，允许手表自己设一个 6 位 PIN
-      this.watchSetPinDialog.open();
-      return;
-    }
-    const settings = this.settingsService.getSettings();
-    settings.appLockEnabled = true;
-    this.settingsService.saveSettings(settings).then((result: Result<void>) => {
-      if (!result.success) {
-        this.showWatchToast($r('app.string.security_save_failed'));
-        return;
-      }
-      this.viewLockEnabled = true;
-      // 立即上锁：符合“每次查看都要 PIN”的语义
-      AppStorage.setOrCreate<boolean>(APP_LOCK_STORAGE_KEY, true);
-      this.showWatchToast($r('app.string.watch_view_lock_enabled'));
-    });
-  }
-
-  private disableViewLock(): void {
-    const settings = this.settingsService.getSettings();
-    settings.appLockEnabled = false;
-    this.settingsService.saveSettings(settings).then((result: Result<void>) => {
-      if (!result.success) {
-        this.showWatchToast($r('app.string.security_save_failed'));
-        return;
-      }
-      this.viewLockEnabled = false;
-      AppStorage.setOrCreate<boolean>(APP_LOCK_STORAGE_KEY, false);
-      this.showWatchToast($r('app.string.watch_view_lock_disabled'));
-    });
-  }
-
-  private showWatchToast(message: ResourceStr): void {
-    this.getUIContext().getPromptAction().showToast({ message: message });
   }
 
   @Builder
@@ -752,44 +383,39 @@ struct HomePage {
             angle: 20,
             colors: titleGradientColors()
           }))
-        if (!DeviceAdapter.isWatch()) {
-          Text($r('app.string.home_subtitle'))
-            .fontSize(DeviceAdapter.subtitleFontSize())
-            .letterSpacing(0.6)
-            .fontColor($r('app.color.text_secondary'))
-        }
+        Text($r('app.string.home_subtitle'))
+          .fontSize(DeviceAdapter.subtitleFontSize())
+          .letterSpacing(0.6)
+          .fontColor($r('app.color.text_secondary'))
       }
-      .alignItems(DeviceAdapter.isWatch() ? HorizontalAlign.Center : HorizontalAlign.Start)
+      .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
 
-      if (!DeviceAdapter.isWatch()) {
-        // 磨砂玻璃胶囊按键
-        Stack({ alignContent: Alignment.Center }) {
-          Image($r('app.media.ic_settings'))
-            .width(21)
-            .height(21)
-            .fillColor($r('app.color.text_primary'))
-        }
-        .width(42)
-        .height(42)
-        .borderRadius(21)
-        .backgroundColor(frostedPillColor())
-        .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
-        .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
-        .shadow(glassPillShadow())
-        .onHover((isHover: boolean) => {
-          DeviceAdapter.applyHoverCursor(this.getUIContext().getCursorController(), isHover);
-        })
-        .onClick(() => this.openSettings())
+      // 磨砂玻璃胶囊按键
+      Stack({ alignContent: Alignment.Center }) {
+        Image($r('app.media.ic_settings'))
+          .width(21)
+          .height(21)
+          .fillColor($r('app.color.text_primary'))
       }
+      .width(42)
+      .height(42)
+      .borderRadius(21)
+      .backgroundColor(frostedPillColor())
+      .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
+      .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+      .shadow(glassPillShadow())
+      .onHover((isHover: boolean) => {
+        DeviceAdapter.applyHoverCursor(this.getUIContext().getCursorController(), isHover);
+      })
+      .onClick(() => this.openSettings())
     }
     .width('100%')
     .padding({
-      left: DeviceAdapter.isWatch() ? 24 : DeviceAdapter.pagePaddingH(),
-      right: DeviceAdapter.isWatch() ? 24 : DeviceAdapter.pagePaddingH(),
-      // 圆形表盘顶部收窄：标题下沉到 26vp，避开左上角不可见区域
-      top: DeviceAdapter.isWatch() ? 26 : 14,
-      bottom: DeviceAdapter.isWatch() ? 8 : 14
+      left: DeviceAdapter.pagePaddingH(),
+      right: DeviceAdapter.pagePaddingH(),
+      top: 14,
+      bottom: 14
     })
     .alignItems(VerticalAlign.Center)
   }
@@ -962,50 +588,18 @@ struct HomePage {
               Column() {
                 EmptyState({
                   message: $r('app.string.home_empty_message'),
-                  hint: DeviceAdapter.isWatch()
-                    ? (this.keyInitialized
-                      ? $r('app.string.home_empty_hint_watch')
-                      : $r('app.string.home_empty_hint_watch_key'))
-                    : $r('app.string.home_empty_hint'),
-                  // 手表端点击中央图标打开「同步口令」入口；不再展示
-                  // 会让人误以为能新增口令的加号，改为同步图标。
-                  symbol: DeviceAdapter.isWatch() ? '↓' : '＋',
+                  hint: $r('app.string.home_empty_hint'),
+                  symbol: '＋',
                   clickable: true,
                   onTap: () => this.openAdd()
                 })
-
-                // 手表端数据入口：联网同步关闭时只提供「输入密钥」（本地操作）
-                if (DeviceAdapter.isWatch() && this.keyInitialized) {
-                  Button(WEBDAV_FEATURE_ENABLED
-                    ? $r('app.string.watch_sync_entry')
-                    : $r('app.string.watch_key_entry'))
-                    .height(30)
-                    .fontSize(10.5)
-                    .fontColor($r('app.color.brand'))
-                    .backgroundColor($r('app.color.pill_background'))
-                    .borderRadius(15)
-                    .padding({ left: 12, right: 12 })
-                    .margin({ top: 10 })
-                    .onClick(() => {
-                      this.refreshViewLockState();
-                      if (WEBDAV_FEATURE_ENABLED) {
-                        this.watchSyncChoiceDialog.open();
-                      } else {
-                        this.watchKeyDialog.open();
-                      }
-                    })
-                }
               }
               .layoutWeight(1)
               .width('100%')
               .justifyContent(FlexAlign.Center)
-              // 手表端空状态多了「从 WebDAV 拉取」按钮，整体上移避开表盘底部圆弧
-              .padding({ bottom: DeviceAdapter.isWatch() ? 32 : 0 })
             } else {
-              if (!DeviceAdapter.isWatch()) {
-                this.summaryBar()
-                this.searchBar()
-              }
+              this.summaryBar()
+              this.searchBar()
 
               // 有数据但搜索无结果：给出明确提示，而不是渲染空列表
               if (this.filteredItems().length === 0) {
@@ -1017,7 +611,7 @@ struct HomePage {
                 .layoutWeight(1)
                 .width('100%')
                 .justifyContent(FlexAlign.Center)
-                .padding({ bottom: DeviceAdapter.showFab() ? 90 : 20 })
+                .padding({ bottom: 90 })
               } else if (this.useGridLayout()) {
                 Scroll() {
                   GridRow({ columns: 2, gutter: { x: DeviceAdapter.listSpacing(), y: DeviceAdapter.listSpacing() } }) {
@@ -1061,7 +655,7 @@ struct HomePage {
                     left: DeviceAdapter.pagePaddingH(),
                     right: DeviceAdapter.pagePaddingH(),
                     top: 2,
-                    bottom: DeviceAdapter.showFab() ? 90 : (DeviceAdapter.isWatch() ? 44 : 20)
+                    bottom: 90
                   })
                 }
                 .layoutWeight(1)
@@ -1069,7 +663,7 @@ struct HomePage {
                 .scrollBar(BarState.Off)
                 .edgeEffect(EdgeEffect.Spring)
               } else {
-                // 手机/手表：单列列表
+                // 手机：单列列表
                 List({ space: DeviceAdapter.listSpacing() }) {
                   ForEach(this.filteredItems(), (display: TotpDisplayItem, index: number) => {
                     ListItem() {
@@ -1100,7 +694,7 @@ struct HomePage {
 
                         // 删除粒子层：作为卡片兄弟节点，卡片淡出时粒子仍可见，形成「瓦解消散」观感。
                         // 画布宽取卡片宽度、发射矩形铺满卡片主体，保证粒子覆盖整卡。
-                        if (this.deletingId === display.item.id && DeviceAdapter.supportsParticle()) {
+                        if (this.deletingId === display.item.id) {
                           Particle({
                             particles: [
                               {
@@ -1138,31 +732,8 @@ struct HomePage {
                         this.openCardMenu(display.item);
                       }))
                     }
-                    .swipeAction(DeviceAdapter.supportsSwipeDelete() ? { end: this.deleteAction(display.item) } : undefined)
+                    .swipeAction({ end: this.deleteAction(display.item) })
                   }, (display: TotpDisplayItem) => this.cardKey(display))
-
-                  // 手表有数据后首页不再显示「同步口令」入口，在列表末尾补一个设置入口
-                  if (DeviceAdapter.isWatch()) {
-                    ListItem() {
-                      Row() {
-                        Button(WEBDAV_FEATURE_ENABLED
-                          ? $r('app.string.watch_settings_entry')
-                          : $r('app.string.watch_key_settings_entry'))
-                          .width(120)
-                          .height(32)
-                          .borderRadius(16)
-                          .fontSize(11)
-                          .backgroundColor($r('app.color.pill_background'))
-                          .fontColor($r('app.color.text_secondary'))
-                          .onClick(() => {
-                            this.refreshViewLockState();
-                            this.watchSyncChoiceDialog.open();
-                          })
-                      }
-                      .width('100%')
-                      .justifyContent(FlexAlign.Center)
-                    }
-                  }
                 }
                 .layoutWeight(1)
                 .width('100%')
@@ -1170,7 +741,7 @@ struct HomePage {
                   left: DeviceAdapter.pagePaddingH(),
                   right: DeviceAdapter.pagePaddingH(),
                   top: 2,
-                  bottom: DeviceAdapter.showFab() ? 90 : 20
+                  bottom: 90
                 })
                 .scrollBar(BarState.Off)
                 .edgeEffect(EdgeEffect.Spring)
@@ -1180,33 +751,29 @@ struct HomePage {
             // 悬浮光效球：右下角，带环绕呼吸光晕与点击粒子。
             // 外层布局盒为 148x148（含光晕与粒子活动区），偏移 +45 使 58 光球视觉中心落在距右下各 37vp 处。
             // 偏移挂在普通 Row 上，避免把通用属性直接挂在自定义组件上。
-            // 手表不显示 FAB（空间有限，点击卡片即可复制）
-            if (DeviceAdapter.showFab()) {
+            Row() {
               Row() {
-                Row() {
-                  GlowFab({
-                    label: '＋',
-                    diameter: DeviceAdapter.fabDiameter(),
-                    onTap: () => this.openAdd()
-                  })
-                }
-                .offset({ x: 45, y: 45 })
+                GlowFab({
+                  label: '＋',
+                  diameter: DeviceAdapter.fabDiameter(),
+                  onTap: () => this.openAdd()
+                })
               }
-              .width('100%')
-              .padding({ right: 8, bottom: 8 })
-              .justifyContent(FlexAlign.End)
+              .offset({ x: 45, y: 45 })
             }
+            .width('100%')
+            .padding({ right: 8, bottom: 8 })
+            .justifyContent(FlexAlign.End)
           }
           .width('100%')
           .height('100%')
-          .constraintSize({ maxWidth: DeviceAdapter.isWatch() ? WATCH_CONTENT_MAX_WIDTH : CONTENT_MAX_WIDTH })
+          .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
         }
         .width('100%')
         .height('100%')
         // 水平居中对齐：内容列在宽屏下按最大宽度收窄后由此居中（同 AuroraBackground 内容槽）
         .alignContent(Alignment.Top)
         // 弹窗采用居中沉浸式气泡卡片，尺寸自适应内容，告别占满屏幕的常规抽屉
-        // 手表不显示新增弹窗（无录入功能）
         .bindContentCover($$this.showAddSheet, this.addSheetBuilder(), {
           modalTransition: ModalTransition.DEFAULT,
           backgroundColor: Color.Transparent

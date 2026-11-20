@@ -29,7 +29,7 @@ struct SettingsPage {
    * 查询失败（如调试包未预置托管信息）时回退到应用内页面，保证入口始终可用。
    */
   private openPrivacyPolicy(): void {
-    // 隐私管理服务不支持手表等设备：直接回退到应用内页面，避免调用未声明的系统能力
+    // 隐私管理服务不可用时直接回退到应用内页面，避免调用未声明的系统能力
     if (!canIUse('SystemCapability.AppGalleryService.PrivacyManager')) {
       this.navigateTo(AppRoutes.PRIVACY_POLICY);
       return;
@@ -86,7 +86,7 @@ struct SettingsPage {
       Blank()
 
       Text($r('app.string.settings_title'))
-        .fontSize(DeviceAdapter.isWatch() ? 16 : 20)
+        .fontSize(20)
         .fontWeight(FontWeight.Bold)
         .fontColor($r('app.color.text_primary'))
 
@@ -123,38 +123,34 @@ struct SettingsPage {
   @Builder
   settingItem(title: ResourceStr, subtitle: ResourceStr, route: string, icon: Resource, isLast: boolean) {
     Column() {
-      Row({ space: DeviceAdapter.isWatch() ? 10 : 14 }) {
+      Row({ space: 14 }) {
         this.glassIcon(icon)
 
         Column({ space: 3 }) {
           Text(title)
-            .fontSize(DeviceAdapter.isWatch() ? 13 : 15.5)
+            .fontSize(15.5)
             .fontWeight(FontWeight.Medium)
             .fontColor($r('app.color.text_primary'))
-          if (!DeviceAdapter.isWatch()) {
-            Text(subtitle)
-              .fontSize(11.5)
-              .fontColor($r('app.color.text_tertiary'))
-          }
+          Text(subtitle)
+            .fontSize(11.5)
+            .fontColor($r('app.color.text_tertiary'))
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
 
-        if (!DeviceAdapter.isWatch()) {
-          Image($r('app.media.ic_chevron_right'))
-            .width(15)
-            .height(15)
-            .fillColor($r('app.color.text_tertiary'))
-        }
+        Image($r('app.media.ic_chevron_right'))
+          .width(15)
+          .height(15)
+          .fillColor($r('app.color.text_tertiary'))
       }
       .width('100%')
-      .padding({ left: DeviceAdapter.isWatch() ? 12 : 16, right: DeviceAdapter.isWatch() ? 12 : 16, top: DeviceAdapter.isWatch() ? 12 : 15, bottom: DeviceAdapter.isWatch() ? 12 : 15 })
+      .padding({ left: 16, right: 16, top: 15, bottom: 15 })
       .alignItems(VerticalAlign.Center)
 
       if (!isLast) {
         Divider()
           .color($r('app.color.divider'))
-          .margin({ left: DeviceAdapter.isWatch() ? 50 : 68, right: 16 })
+          .margin({ left: 68, right: 16 })
       }
     }
     .width('100%')
@@ -229,16 +225,14 @@ struct SettingsPage {
           .align(Alignment.TopStart)  // 内容不足一屏时不被 Scroll 垂直居中
 
           // 底部标语固定在页面底部（不再随列表漂浮），与居上的菜单形成上下呼应
-          if (!DeviceAdapter.isWatch()) {
-            Text(WEBDAV_FEATURE_ENABLED
-              ? $r('app.string.settings_footer')
-              : $r('app.string.settings_footer_offline'))
-              .fontSize(11)
-              .textAlign(TextAlign.Center)
-              .fontColor($r('app.color.text_tertiary'))
-              .width('100%')
-              .padding({ top: 6, bottom: 12 })
-          }
+          Text(WEBDAV_FEATURE_ENABLED
+            ? $r('app.string.settings_footer')
+            : $r('app.string.settings_footer_offline'))
+            .fontSize(11)
+            .textAlign(TextAlign.Center)
+            .fontColor($r('app.color.text_tertiary'))
+            .width('100%')
+            .padding({ top: 6, bottom: 12 })
         }
         .width('100%')
         .height('100%')

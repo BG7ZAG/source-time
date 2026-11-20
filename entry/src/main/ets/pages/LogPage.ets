@@ -5,7 +5,6 @@ import { LogEntry, LogLevel } from '../model/LogEntry';
 import { Result } from '../types/Result';
 import { frostedPillColor, glassCardShadow, glassGroupShadow, glassPillShadow } from '../theme/GlassStyle';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
-import { DeviceAdapter } from '../utils/DeviceAdapter';
 import { ShowDialogSuccessResponse } from '@kit.ArkUI';
 
 const FILTER_ALL: string = 'ALL';
@@ -44,10 +43,6 @@ struct LogPage {
   private clipboardService: ClipboardService = new ClipboardService();
 
   aboutToAppear(): void {
-    if (DeviceAdapter.isWatch()) {
-      this.getUIContext().getRouter().back();
-      return;
-    }
     // 先把内存中的日志落盘，保证「本机已保存」与页面展示一致
     Logger.flush();
     this.reload();

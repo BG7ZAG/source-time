@@ -39,10 +39,6 @@ struct ScanPage {
   private viewModel: AddTotpViewModel = new AddTotpViewModel();
 
   aboutToAppear(): void {
-    if (DeviceAdapter.isWatch()) {
-      this.getUIContext().getRouter().back();
-      return;
-    }
     const stored: string | undefined = AppStorage.get<string>(SECRET_STORAGE_KEY);
     if (stored !== undefined && stored.length > 0) {
       this.viewModel.setEncryptionSecret(stored);

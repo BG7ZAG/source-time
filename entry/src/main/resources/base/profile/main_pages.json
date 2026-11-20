@@ -6,7 +6,6 @@
     "pages/SecurityPage",
     "pages/WebDavPage",
     "pages/PrivacyPolicyPage",
-    "pages/WatchPrivacyPage",
     "pages/AboutPage",
     "pages/LogPage"
   ]

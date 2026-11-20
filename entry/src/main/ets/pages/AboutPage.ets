@@ -3,7 +3,6 @@ import { AuroraBackground } from '../components/AuroraBackground';
 import { frostedPillColor, glassGroupShadow, glassPillShadow } from '../theme/GlassStyle';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 import { WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
-import { DeviceAdapter } from '../utils/DeviceAdapter';
 
 /**
  * 关于页（鸿蒙 7 版）：悬浮 logo + 版本胶囊 + 冰晶信息分组卡片。
@@ -12,13 +11,6 @@ import { DeviceAdapter } from '../utils/DeviceAdapter';
 @Component
 struct AboutPage {
   private repoUrl: string = 'https://github.com/BG7ZAG/source-time';
-
-  aboutToAppear(): void {
-    if (DeviceAdapter.isWatch()) {
-      this.getUIContext().getRouter().back();
-      return;
-    }
-  }
 
   @Builder
   header() {

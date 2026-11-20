@@ -1,7 +1,6 @@
 import { TotpService } from '../service/TotpService';
 import { calculateRemainingSeconds, nowMilliseconds } from '../utils/TimeUtils';
 import { TotpAlgorithm } from '../model/TotpItem';
-import { RingCountdown } from './CountDown';
 import { DeviceAdapter } from '../utils/DeviceAdapter';
 import {
   avatarGradientColors,
@@ -292,50 +291,39 @@ export struct TotpCard {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Column({ space: DeviceAdapter.isWatch() ? 4 : 8 }) {
+      Column({ space: 8 }) {
         // ---- 层级一：发行方 + 账号 + 环形倒计时（唯一时间指示，不再叠加光轨） ----
-        Row({ space: DeviceAdapter.isWatch() ? 6 : 10 }) {
+        Row({ space: 10 }) {
           Stack({ alignContent: Alignment.Center }) {
             Text(this.avatarLetter())
-              .fontSize(DeviceAdapter.isWatch() ? 12 : 16)
+              .fontSize(16)
               .fontWeight(FontWeight.Medium)
               .fontColor(Color.White)
           }
           .width(DeviceAdapter.avatarSize())
           .height(DeviceAdapter.avatarSize())
-          .borderRadius(DeviceAdapter.isWatch() ? 8 : 12)
+          .borderRadius(12)
           .linearGradient({ angle: 145, colors: avatarGradientColors(this.avatarKey()) })
           .border({ width: 1, color: $r('app.color.card_highlight'), style: BorderStyle.Solid })
           .shadow(avatarShadow())
 
           Column({ space: 2 }) {
             Text(this.issuer.length > 0 ? this.issuer : $r('app.string.card_issuer_unnamed'))
-              .fontSize(DeviceAdapter.isWatch() ? 12 : 15)
+              .fontSize(15)
               .fontWeight(FontWeight.Medium)
               .fontColor($r('app.color.text_primary'))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
-            if (!DeviceAdapter.isWatch()) {
-              Text(this.account.length > 0 ? this.account : $r('app.string.card_account_missing'))
-                .fontSize(12)
-                .fontColor($r('app.color.text_secondary'))
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-            }
+            Text(this.account.length > 0 ? this.account : $r('app.string.card_account_missing'))
+              .fontSize(12)
+              .fontColor($r('app.color.text_secondary'))
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
           }
           .alignItems(HorizontalAlign.Start)
           .layoutWeight(1)
 
-          if (DeviceAdapter.isWatch()) {
-            RingCountdown({
-              remaining: this.remaining,
-              period: this.period,
-              ringSize: DeviceAdapter.ringSize(),
-              showText: false
-            })
-          } else {
-            this.moreButton()
-          }
+          this.moreButton()
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
@@ -351,30 +339,29 @@ export struct TotpCard {
               angle: 90,
               colors: codeGradientColors(this.stage())
             }))
-            .letterSpacing(DeviceAdapter.isWatch() ? 1 : 2)
+            .letterSpacing(2)
             // 表格数字：每位数字等宽，口令刷新时不会因字宽差异产生跳动
             .fontFeature('"tnum" on')
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .layoutWeight(1)
 
-          if (!DeviceAdapter.isWatch()) {
-            Stack({ alignContent: Alignment.Center }) {
-              Button($r('app.string.common_copy'))
-                .fontSize(13)
-                .fontWeight(FontWeight.Medium)
-                .height(DeviceAdapter.copyButtonHeight())
-                .padding({ left: 16, right: 16 })
-                .borderRadius(17)
-                .linearGradient({ angle: 90, colors: trackGradientColors(0) })
-                .fontColor($r('app.color.fab_foreground'))
-                .shadow(glowButtonShadow())
-                .onClick(() => {
-                  this.triggerCopyParticle();
-                  this.onCopy();
-                })
+          Stack({ alignContent: Alignment.Center }) {
+            Button($r('app.string.common_copy'))
+              .fontSize(13)
+              .fontWeight(FontWeight.Medium)
+              .height(DeviceAdapter.copyButtonHeight())
+              .padding({ left: 16, right: 16 })
+              .borderRadius(17)
+              .linearGradient({ angle: 90, colors: trackGradientColors(0) })
+              .fontColor($r('app.color.fab_foreground'))
+              .shadow(glowButtonShadow())
+              .onClick(() => {
+                this.triggerCopyParticle();
+                this.onCopy();
+              })
 
-              if (this.copyParticleActive && DeviceAdapter.supportsParticle()) {
+            if (this.copyParticleActive) {
                 Particle({
                   particles: [
                     {
@@ -403,23 +390,20 @@ export struct TotpCard {
                 .width(100)
                 .height(100)
                 .hitTestBehavior(HitTestMode.Transparent)
-              }
             }
-            .width(80)
-            .height(36)
-            .clip(false)
           }
+          .width(80)
+          .height(36)
+          .clip(false)
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
 
         // ---- 层级三：底部倒计时进度条（横条 + 右侧剩余秒数） ----
-        if (!DeviceAdapter.isWatch()) {
-          this.countdownBar()
-        }
+        this.countdownBar()
       }
       // 刷新粒子：作为浮层叠在卡片上，不参与布局（早先作为 Column 子元素会让卡片在归零瞬间变高再缩回）
-      if (this.refreshParticleActive && DeviceAdapter.supportsParticle()) {
+      if (this.refreshParticleActive) {
         Particle({
           particles: [
             {
@@ -454,8 +438,8 @@ export struct TotpCard {
     .padding({
       left: DeviceAdapter.cardPadding(),
       right: DeviceAdapter.cardPadding(),
-      top: DeviceAdapter.isWatch() ? 6 : 10,
-      bottom: DeviceAdapter.isWatch() ? 6 : 10
+      top: 10,
+      bottom: 10
     })
     .width('100%')
     .borderRadius(DeviceAdapter.cardRadius())

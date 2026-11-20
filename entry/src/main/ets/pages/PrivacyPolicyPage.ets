@@ -7,7 +7,6 @@ import {
   glassPillShadow
 } from '../theme/GlassStyle';
 import { UiText } from '../utils/UiText';
-import { DeviceAdapter } from '../utils/DeviceAdapter';
 
 /**
  * 隐私政策页（鸿蒙 7 版）：冰晶章卡片 + 灰色矢量章节图标。
@@ -15,13 +14,6 @@ import { DeviceAdapter } from '../utils/DeviceAdapter';
 @Entry
 @Component
 struct PrivacyPolicyPage {
-  aboutToAppear(): void {
-    if (DeviceAdapter.isWatch()) {
-      this.getUIContext().getRouter().back();
-      return;
-    }
-  }
-
   @Builder
   header() {
     Row() {
