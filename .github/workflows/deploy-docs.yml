@@ -26,10 +26,10 @@ jobs:
         working-directory: vitepress
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -47,6 +47,10 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        with:
+          # 首次运行时仓库还没启用 Pages，这里自动开启（需要 pages: write 权限）。
+          # 若组织策略禁止自动启用，可在仓库 Settings → Pages 手动选择 GitHub Actions。
+          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
