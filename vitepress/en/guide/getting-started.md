@@ -8,11 +8,7 @@
 
 ## Get & Install
 
-<p align="center">
-  <a href="https://url.cloud.huawei.com/D0D1qLBUbK" target="_blank" rel="noreferrer">
-    <img src="/badges/appgallery-badge-en.png" alt="Get SourceTime on AppGallery" height="52">
-  </a>
-</p>
+[![Get SourceTime on AppGallery](/badges/appgallery-badge-en.png)](https://url.cloud.huawei.com/D0D1qLBUbK)
 
 - **AppGallery**: tap the badge above, or open the [SourceTime listing](https://url.cloud.huawei.com/D0D1qLBUbK)
 - **Native HarmonyOS sideload**: build `entry-default-signed.hap` yourself and install it

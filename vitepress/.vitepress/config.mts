@@ -3,8 +3,15 @@ import { defineConfig } from 'vitepress'
 // 源时 SourceTime 文档站配置（中英双语）
 const REPO_URL = 'https://github.com/BG7ZAG/source-time/'
 
+// GitHub Pages 项目站点部署在 https://<user>.github.io/<repo>/ 下。
+// 本地开发保持根路径；CI 通过 DOCS_BASE 注入，自定义域名时设为 '/'。
+const DOCS_BASE = process.env.DOCS_BASE ?? '/'
+// GitHub Pages 不会把无扩展名 URL 映射到同名 .html，CI 构建关闭 cleanUrls 避免 404
+const IS_CI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true'
+
 export default defineConfig({
-  cleanUrls: true,
+  base: DOCS_BASE,
+  cleanUrls: !IS_CI,
   lastUpdated: true,
 
   head: [

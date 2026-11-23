@@ -8,14 +8,7 @@
 
 ## 获取与安装
 
-<p align="center">
-  <a href="https://url.cloud.huawei.com/D0D1qLBUbK" target="_blank" rel="noreferrer">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="/badges/appgallery-badge-dark.png">
-      <img src="/badges/appgallery-badge-light.png" alt="在华为应用市场下载源时" height="52">
-    </picture>
-  </a>
-</p>
+[![在华为应用市场下载源时](/badges/appgallery-badge-light.png)](https://url.cloud.huawei.com/D0D1qLBUbK)
 
 - **华为应用市场**：点击上方徽章，或访问[源时应用市场详情页](https://url.cloud.huawei.com/D0D1qLBUbK)
 - **鸿蒙原生侧载**：自行构建 `entry-default-signed.hap` 后安装
