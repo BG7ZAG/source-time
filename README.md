@@ -178,7 +178,7 @@ vitepress/            在线文档站（VitePress，中英双语）
 
 ## 下载安装
 
-- **华为应用市场（推荐）**：点击页首徽章，或访问[源时应用市场详情页](https://url.cloud.huawei.com/D0D1qLBUbK)
+- **华为应用市场（推荐）**：&nbsp;<a href="https://url.cloud.huawei.com/D0D1qLBUbK"><picture><source media="(prefers-color-scheme: dark)" srcset="vitepress/public/badges/appgallery-badge-dark.png"><img src="vitepress/public/badges/appgallery-badge-light.png" alt="在华为应用市场下载源时" height="36" align="middle"></picture></a>
 - **鸿蒙原生侧载**：自行构建 `entry-default-signed.hap` 后安装
 
 华为应用市场是正式发布渠道，版本更新与更新日志以应用市场为准；本仓库不额外提供 Release 安装包。
@@ -224,5 +224,5 @@ npm run dev
 如果项目对你有帮助，欢迎 Star、Fork、支持作者持续维护！
 
 - 在线文档：<https://bg7zag.github.io/source-time/>
-- 华为应用市场：[下载源时](https://url.cloud.huawei.com/D0D1qLBUbK)
 - 源码仓库：<https://github.com/BG7ZAG/source-time>
+- 华为应用市场：&nbsp;<a href="https://url.cloud.huawei.com/D0D1qLBUbK"><picture><source media="(prefers-color-scheme: dark)" srcset="vitepress/public/badges/appgallery-badge-dark.png"><img src="vitepress/public/badges/appgallery-badge-light.png" alt="在华为应用市场下载源时" height="36" align="middle"></picture></a>
