@@ -2,6 +2,7 @@ import { common } from '@kit.AbilityKit';
 import { AuroraBackground } from '../components/AuroraBackground';
 import { frostedPillColor, glassGroupShadow, glassPillShadow } from '../theme/GlassStyle';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
+import { AppInfoUtils } from '../utils/AppInfoUtils';
 
 /**
  * 关于页（鸿蒙 7 版）：悬浮 logo + 版本胶囊 + 冰晶信息分组卡片。
@@ -10,6 +11,17 @@ import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
 @Component
 struct AboutPage {
   private repoUrl: string = 'https://github.com/BG7ZAG/source-time';
+  /** 应用版本：运行时读取 app.json5 的 versionName，不在此处硬编码。 */
+  @State appVersion: string = '';
+
+  aboutToAppear(): void {
+    this.appVersion = AppInfoUtils.getVersionName();
+  }
+
+  /** 版本胶囊中的版本号；读取失败时用占位符兜底。 */
+  private versionLabel(): string {
+    return this.appVersion.length > 0 ? this.appVersion : '—';
+  }
 
   @Builder
   header() {
@@ -163,7 +175,7 @@ struct AboutPage {
                   .fontSize(12.5)
                   .fontColor($r('app.color.text_secondary'))
 
-                Text($r('app.string.about_version'))
+                Text($r('app.string.about_version', this.versionLabel()))
                   .fontSize(11.5)
                   .fontWeight(FontWeight.Medium)
                   .fontColor($r('app.color.brand_on_container'))

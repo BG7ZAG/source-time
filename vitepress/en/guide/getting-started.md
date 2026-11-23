@@ -8,9 +8,16 @@
 
 ## Get & Install
 
-Native HarmonyOS installation is currently supported: build `entry-default-signed.hap` yourself and sideload it. An AppGallery release will follow.
+<p align="center">
+  <a href="https://url.cloud.huawei.com/D0D1qLBUbK" target="_blank" rel="noreferrer">
+    <img src="/badges/appgallery-badge-en.png" alt="Get SourceTime on AppGallery" height="52">
+  </a>
+</p>
 
-This repository does not ship a Release package yet; stable, beta and changelog releases will be published together once the app is on AppGallery.
+- **AppGallery**: tap the badge above, or open the [SourceTime listing](https://url.cloud.huawei.com/D0D1qLBUbK)
+- **Native HarmonyOS sideload**: build `entry-default-signed.hap` yourself and install it
+
+Releases are published on AppGallery; this repository does not ship a Release package.
 
 ## First launch flow
 

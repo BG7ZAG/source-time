@@ -26,6 +26,7 @@ export default defineConfig({
         nav: [
           { text: '首页', link: '/' },
           { text: '指南', link: '/guide/introduction', activeMatch: '/guide/' },
+          { text: '应用市场', link: 'https://url.cloud.huawei.com/D0D1qLBUbK' },
           { text: '用户协议', link: '/agreement' },
           { text: '隐私政策', link: '/privacy' }
         ],
@@ -82,6 +83,7 @@ export default defineConfig({
         nav: [
           { text: 'Home', link: '/en/' },
           { text: 'Guide', link: '/en/guide/introduction', activeMatch: '/en/guide/' },
+          { text: 'AppGallery', link: 'https://url.cloud.huawei.com/D0D1qLBUbK' },
           { text: 'Terms', link: '/en/agreement' },
           { text: 'Privacy', link: '/en/privacy' }
         ],

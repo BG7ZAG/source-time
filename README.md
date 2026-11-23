@@ -1,6 +1,15 @@
 # 源时 (SourceTime)
 
-**鸿蒙 TOTP 动态口令工具｜本地离线优先｜WebDAV 端到端加密同步**
+<p align="center">
+  <a href="https://url.cloud.huawei.com/D0D1qLBUbK">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="vitepress/public/badges/appgallery-badge-dark.png">
+      <img src="vitepress/public/badges/appgallery-badge-light.png" alt="在华为应用市场下载源时" height="56">
+    </picture>
+  </a>
+</p>
+
+鸿蒙 TOTP 动态口令工具｜本地离线优先｜WebDAV 端到端加密同步
 
 ✨ **源** = 开源、数据本源 ✨ **时** = 基于时间 TOTP 算法
 
@@ -98,7 +107,7 @@ AES-256-GCM（随机 IV，校验 Authentication Tag）
 ## 🧩 技术栈（V1 技术决策）
 
 | 项目 | 决策 |
-|---|---|
+| --- | --- |
 | 平台 | HarmonyOS NEXT |
 | 开发语言 | ArkTS / ArkUI |
 | TOTP | RFC 6238 |
@@ -149,9 +158,10 @@ entry/src/main/ets/
 
 ## 📥 下载安装
 
-目前支持鸿蒙原生安装（自行构建 `entry-default-signed.hap` 后侧载），后续上架华为应用市场。
+- **华为应用市场**：点击页首徽章，或访问[源时应用市场详情页](https://url.cloud.huawei.com/D0D1qLBUbK)
+- **鸿蒙原生侧载**：自行构建 `entry-default-signed.hap` 后安装
 
-本仓库当前未提供 Release 安装包；正式版、测试版与更新日志将在应用市场上架后统一发布。
+版本更新以华为应用市场发布为准，本仓库不提供 Release 安装包。
 
 ---
 
