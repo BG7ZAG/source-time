@@ -14,7 +14,7 @@
     },
     {
       "name": "about_version",
-      "value": "V1.0.0 · HarmonyOS Native"
+      "value": "V%s · HarmonyOS Native"
     },
     {
       "name": "about_license",

@@ -10,6 +10,7 @@ import {
   glassPillShadow
 } from '../theme/GlassStyle';
 import { DeviceAdapter } from '../utils/DeviceAdapter';
+import { AppInfoUtils } from '../utils/AppInfoUtils';
 
 /**
  * 设置页：模块化分组冰晶卡片 + 单色图标（本项目禁止彩色图标）。
@@ -17,6 +18,18 @@ import { DeviceAdapter } from '../utils/DeviceAdapter';
 @Entry
 @Component
 struct SettingsPage {
+  /** 应用版本：运行时读取 app.json5 的 versionName，不在此处硬编码。 */
+  @State appVersion: string = '';
+
+  aboutToAppear(): void {
+    this.appVersion = AppInfoUtils.getVersionName();
+  }
+
+  /** 关于项副标题：正常显示 V+版本号，读取失败时用占位符兜底。 */
+  private versionLabel(): string {
+    return this.appVersion.length > 0 ? 'V' + this.appVersion : '—';
+  }
+
   private navigateTo(route: string): void {
     this.getUIContext().getRouter().pushUrl({ url: route });
   }
@@ -201,7 +214,7 @@ struct SettingsPage {
                   $r('app.string.settings_item_privacy_note'), AppRoutes.PRIVACY_POLICY, $r('app.media.ic_privacy'), false)
                 // 副标题为版本号，无需本地化
                 this.settingItem($r('app.string.settings_item_about'),
-                  'V1.0.0', AppRoutes.ABOUT, $r('app.media.ic_about'), true)
+                  this.versionLabel(), AppRoutes.ABOUT, $r('app.media.ic_about'), true)
               }
               .width('100%')
               .borderRadius(22)

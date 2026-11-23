@@ -32,3 +32,46 @@
   transform: translateY(-4px);
   box-shadow: 0 12px 30px rgba(47, 111, 237, 0.18);
 }
+
+/* 首页 hero 下方的华为应用市场下载入口 */
+.appgallery-entry {
+  display: flex;
+  justify-content: center;
+  margin: 24px auto 8px;
+}
+
+.appgallery-entry a {
+  display: inline-block;
+  line-height: 0;
+  transition: opacity 0.2s ease;
+}
+
+.appgallery-entry a:hover {
+  opacity: 0.85;
+}
+
+.appgallery-entry img {
+  display: block;
+  height: 56px;
+  width: auto;
+  border-radius: 8px;
+}
+
+/* 中文徽章随站点明暗主题切换（含手动切换，不只跟随系统） */
+.appgallery-entry .badge-dark {
+  display: none;
+}
+
+html.dark .appgallery-entry .badge-light {
+  display: none;
+}
+
+html.dark .appgallery-entry .badge-dark {
+  display: block;
+}
+
+@media (max-width: 480px) {
+  .appgallery-entry img {
+    height: 48px;
+  }
+}

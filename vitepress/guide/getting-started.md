@@ -8,9 +8,12 @@
 
 ## 获取与安装
 
-目前支持鸿蒙原生安装：自行构建 `entry-default-signed.hap` 后侧载，后续上架华为应用市场。
+[![在华为应用市场下载源时](/badges/appgallery-badge-light.png)](https://url.cloud.huawei.com/D0D1qLBUbK)
 
-本仓库当前未提供 Release 安装包；正式版、测试版与更新日志将在应用市场上架后统一发布。
+- **华为应用市场**：点击上方徽章，或访问[源时应用市场详情页](https://url.cloud.huawei.com/D0D1qLBUbK)
+- **鸿蒙原生侧载**：自行构建 `entry-default-signed.hap` 后安装
+
+版本更新以华为应用市场发布为准，本仓库不提供 Release 安装包。
 
 ## 首次启动流程
 

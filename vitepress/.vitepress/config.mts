@@ -3,8 +3,15 @@ import { defineConfig } from 'vitepress'
 // 源时 SourceTime 文档站配置（中英双语）
 const REPO_URL = 'https://github.com/BG7ZAG/source-time/'
 
+// GitHub Pages 项目站点部署在 https://<user>.github.io/<repo>/ 下。
+// 本地开发保持根路径；CI 通过 DOCS_BASE 注入，自定义域名时设为 '/'。
+const DOCS_BASE = process.env.DOCS_BASE ?? '/'
+// GitHub Pages 不会把无扩展名 URL 映射到同名 .html，CI 构建关闭 cleanUrls 避免 404
+const IS_CI = process.env.GITHUB_ACTIONS === 'true' || process.env.CI === 'true'
+
 export default defineConfig({
-  cleanUrls: true,
+  base: DOCS_BASE,
+  cleanUrls: !IS_CI,
   lastUpdated: true,
 
   head: [
@@ -26,6 +33,7 @@ export default defineConfig({
         nav: [
           { text: '首页', link: '/' },
           { text: '指南', link: '/guide/introduction', activeMatch: '/guide/' },
+          { text: '应用市场', link: 'https://url.cloud.huawei.com/D0D1qLBUbK' },
           { text: '用户协议', link: '/agreement' },
           { text: '隐私政策', link: '/privacy' }
         ],
@@ -82,6 +90,7 @@ export default defineConfig({
         nav: [
           { text: 'Home', link: '/en/' },
           { text: 'Guide', link: '/en/guide/introduction', activeMatch: '/en/guide/' },
+          { text: 'AppGallery', link: 'https://url.cloud.huawei.com/D0D1qLBUbK' },
           { text: 'Terms', link: '/en/agreement' },
           { text: 'Privacy', link: '/en/privacy' }
         ],
