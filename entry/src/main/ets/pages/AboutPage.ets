@@ -2,7 +2,6 @@ import { common } from '@kit.AbilityKit';
 import { AuroraBackground } from '../components/AuroraBackground';
 import { frostedPillColor, glassGroupShadow, glassPillShadow } from '../theme/GlassStyle';
 import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
-import { WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
 
 /**
  * 关于页（鸿蒙 7 版）：悬浮 logo + 版本胶囊 + 冰晶信息分组卡片。
@@ -210,9 +209,7 @@ struct AboutPage {
               .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
               .shadow(glassGroupShadow())
 
-              Text(WEBDAV_FEATURE_ENABLED
-                ? $r('app.string.about_footer')
-                : $r('app.string.about_footer_local'))
+              Text($r('app.string.about_footer'))
                 .fontSize(11)
                 .textAlign(TextAlign.Center)
                 .fontColor($r('app.color.text_tertiary'))

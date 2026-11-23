@@ -14,11 +14,11 @@
     },
     {
       "name": "settings_item_webdav",
-      "value": "WebDAV Sync"
+      "value": "Backup & Restore"
     },
     {
       "name": "settings_item_webdav_note",
-      "value": "Cloud backup and multi-device sync"
+      "value": "WebDAV sync · on-device backup and restore"
     },
     {
       "name": "settings_item_logs",
@@ -42,11 +42,7 @@
     },
     {
       "name": "settings_footer",
-      "value": "SourceTime · Data stays on your device by default; no network communication except WebDAV sync"
-    },
-    {
-      "name": "settings_footer_offline",
-      "value": "SourceTime · All data stays on this device; no network communication"
+      "value": "SourceTime · All data stays on this device"
     }
   ]
 }

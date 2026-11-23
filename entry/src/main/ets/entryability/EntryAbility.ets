@@ -120,7 +120,7 @@ export default class EntryAbility extends UIAbility {
    * 导致「新增/删除后自动推送」在未进过该页的会话里静默失效。
    */
   private configureSyncOnStart(secret: string): void {
-    // 联网同步在备案完成前不启用：不读取 WebDAV 配置、不发起自动拉取
+    // 总开关关闭时不读取 WebDAV 配置、不发起自动拉取
     if (!WEBDAV_FEATURE_ENABLED) {
       Logger.info('Network sync is disabled by feature flag');
       return;

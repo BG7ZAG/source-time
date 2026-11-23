@@ -36,6 +36,23 @@ interface EncryptedFileParts {
 }
 
 export class CryptoService {
+  /**
+   * 是否为应用生成的加密载荷：只看文件头魔数，不触发任何解密。
+   *
+   * 本机备份/恢复据此区分「加密备份」与「明文备份」，无需先尝试解密（PBKDF2 有成本）。
+   */
+  static isEncryptedPayload(data: Uint8Array): boolean {
+    if (data.length < MAGIC_LENGTH) {
+      return false;
+    }
+    for (let i = 0; i < MAGIC_LENGTH; i++) {
+      if (data[i] !== MAGIC_BYTES[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   generateRandomEncryptionSecret(): string {
     const random = cryptoFramework.createRandom();
     const blob = random.generateRandomSync(RANDOM_SECRET_LENGTH);

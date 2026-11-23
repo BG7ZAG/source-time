@@ -54,7 +54,14 @@ export struct PinLockOverlay {
     if (digits !== value) {
       this.pin = digits;
     }
-    this.error = '';
+    // 输入被清空（校验失败后）时保留刚给出的错误提示，只有用户重新输入才清掉
+    if (digits.length > 0) {
+      this.error = '';
+    }
+    // 满 6 位即时校验：正确即自动解锁，无需再点按钮；失败/限速的反馈仍由 onUnlock 处理
+    if (PinService.isValidPin(digits)) {
+      this.onUnlock();
+    }
   }
 
   private onUnlock(): void {

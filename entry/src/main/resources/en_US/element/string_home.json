@@ -126,7 +126,7 @@
     },
     {
       "name": "add_issuer_placeholder",
-      "value": "e.g. Google"
+      "value": "Enter issuer"
     },
     {
       "name": "add_account_label",
@@ -134,7 +134,7 @@
     },
     {
       "name": "add_account_placeholder",
-      "value": "e.g. user@xx.com"
+      "value": "Enter account"
     },
     {
       "name": "add_optional",

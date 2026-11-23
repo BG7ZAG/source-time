@@ -179,7 +179,8 @@ struct HomePage {
   @Builder
   addSheetBuilder() {
     Stack({ alignContent: Alignment.Center }) {
-      // 遮罩：半模态自带「点空白关闭」，改成全模态后需要自绘
+      // 遮罩：必须自己铺满整个覆盖层。此前与卡片共用 16vp 的 padding，
+      // 导致屏幕左右各漏出一条没有被遮住的边（暗色模式下尤其明显）。
       Column()
         .width('100%')
         .height('100%')
@@ -188,45 +189,48 @@ struct HomePage {
           this.showAddSheet = false;
         })
 
-      // 居中气泡卡片：样式原先由 bindSheet 的 blur/radius/shadow 选项提供，
-      // 改为内容自绘——半模态（尤其 SheetType.CENTER）在系统层面不做键盘避让，
-      // 键盘一弹就把表单下半截和「保存口令」压在下面，弹出层内部还不可滚动。
+      // 卡片承载区：留白只作用在卡片上，并且靠下对齐——弹窗从屏幕底部向上生长，
+      // 键盘弹出时底部留白变大，卡片整体被抬到键盘上方。
       Column() {
-        AddTotpSheet({
-          // 卡片可用高度：内容超出时由面板内部的 Scroll 承接滚动（手机键盘弹出时用得上）
-          contentMaxHeight: this.addCardMaxHeight(),
-          onSaved: () => {
-            this.showAddSheet = false;
-            this.viewModel.load().then(() => {
-              this.refreshItems();
-            });
-          },
-          onScan: () => {
-            this.showAddSheet = false;
-            this.getUIContext().getRouter().pushUrl({ url: AppRoutes.SCAN });
-          }
-        })
+        // 气泡卡片：样式原先由 bindSheet 的 blur/radius/shadow 选项提供，
+        // 改为内容自绘——半模态（尤其 SheetType.CENTER）在系统层面不做键盘避让，
+        // 键盘一弹就把表单下半截和「保存口令」压在下面，弹出层内部还不可滚动。
+        Column() {
+          AddTotpSheet({
+            // 卡片可用高度：内容超出时由面板内部的 Scroll 承接滚动（手机键盘弹出时用得上）
+            contentMaxHeight: this.addCardMaxHeight(),
+            onSaved: () => {
+              this.showAddSheet = false;
+              this.viewModel.load().then(() => {
+                this.refreshItems();
+              });
+            },
+            onScan: () => {
+              this.showAddSheet = false;
+              this.getUIContext().getRouter().pushUrl({ url: AppRoutes.SCAN });
+            }
+          })
+        }
+        .width('100%')
+        // 宽屏下不被拉成整屏宽：平板上一张 560vp 的卡片，两侧留给遮罩
+        .constraintSize({ maxWidth: OVERLAY_MAX_WIDTH, maxHeight: this.addCardMaxHeight() })
+        .borderRadius(24)
+        .clip(true)
+        .systemMaterial(cardMaterial(supportsImmersive()))
+        .backgroundColor(supportsImmersive() ? Color.Transparent : $r('app.color.card_background'))
+        .backgroundBlurStyle(supportsImmersive() ? BlurStyle.NONE : BlurStyle.COMPONENT_THICK)
+        .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+        .shadow(glassCardShadow())
       }
       .width('100%')
-      // 宽屏下不被拉成整屏宽：平板上一张 560vp 的卡片，两侧留给遮罩
-      .constraintSize({ maxWidth: OVERLAY_MAX_WIDTH, maxHeight: this.addCardMaxHeight() })
-      .borderRadius(24)
-      .clip(true)
-      .systemMaterial(cardMaterial(supportsImmersive()))
-      .backgroundColor(supportsImmersive() ? Color.Transparent : $r('app.color.card_background'))
-      .backgroundBlurStyle(supportsImmersive() ? BlurStyle.NONE : BlurStyle.COMPONENT_THICK)
-      .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
-      .shadow(glassCardShadow())
+      .height('100%')
+      .padding({ left: 16, right: 16, top: 16, bottom: 16 + this.keyboardHeightVp })
+      .justifyContent(FlexAlign.End)
+      // 承载区自身不参与命中测试：卡片以外的空白处点击仍会落到遮罩上关闭弹窗
+      .hitTestBehavior(HitTestMode.None)
     }
     .width('100%')
     .height('100%')
-    // 底部随键盘让出空间：卡片在「剩余可视区」内重新居中，键盘弹出时自然抬到上方
-    .padding({
-      left: 16,
-      right: 16,
-      top: 16,
-      bottom: 16 + this.keyboardHeightVp
-    })
     .onAreaChange((_oldValue: Area, newValue: Area) => {
       this.overlayHeightVp = newValue.height as number;
     })

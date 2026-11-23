@@ -56,7 +56,7 @@ export class SyncService {
    */
   async onEncryptionKeyChanged(newSecret: string): Promise<Result<void>> {
     if (!WEBDAV_FEATURE_ENABLED) {
-      // 备案完成前不向云端推送；密钥变更只影响本地密文
+      // 总开关关闭时不向云端推送；密钥变更只影响本地密文
       return ok(undefined);
     }
     this.encryptionSecret = newSecret;
@@ -89,7 +89,7 @@ export class SyncService {
    */
   async enqueuePush(reason: SyncReason): Promise<Result<void>> {
     if (!WEBDAV_FEATURE_ENABLED) {
-      // 统一开关：WebDAV 未备案关闭时，所有自动推送都静默跳过
+      // 统一开关：关闭联网能力时，所有自动推送都静默跳过
       return ok(undefined);
     }
     if (!this.isConfigured()) {
@@ -103,6 +103,27 @@ export class SyncService {
       return ok(undefined);
     }
     return this.runPushQueue(buildBackupFileName(nowMilliseconds()));
+  }
+
+  /**
+   * 生成一份与 WebDAV 推送内容完全一致的加密备份（本地密文字节）。
+   *
+   * 「备份到本机（加密）」直接复用此入口：两处产物为同一份密文，
+   * 用同一密钥即可相互恢复，也就无需再维护第二套打包逻辑。
+   */
+  async buildEncryptedBackup(): Promise<Result<Uint8Array>> {
+    if (!this.storageService.isInitialized()) {
+      return err<Uint8Array>(AppErrorCode.STORAGE_READ_FAILED, $r('app.string.local_backup_no_data'));
+    }
+    const bytesResult: Result<Uint8Array> = this.storageService.readEncryptedFile();
+    if (!bytesResult.success || bytesResult.data === undefined) {
+      return err<Uint8Array>(AppErrorCode.STORAGE_READ_FAILED,
+        bytesResult.error !== undefined ? bytesResult.error.message : $r('app.string.error_read_local_data_failed'));
+    }
+    if (bytesResult.data.length === 0) {
+      return err<Uint8Array>(AppErrorCode.STORAGE_READ_FAILED, $r('app.string.local_backup_empty_data'));
+    }
+    return ok(bytesResult.data);
   }
 
   /**
@@ -249,23 +270,19 @@ export class SyncService {
       this.state = { status: SyncStatus.FAILED, lastSyncAt: this.state.lastSyncAt, message: notReady };
       return err<void>(AppErrorCode.STORAGE_READ_FAILED, notReady);
     }
-    const bytesResult: Result<Uint8Array> = this.storageService.readEncryptedFile();
-    if (!bytesResult.success || bytesResult.data === undefined) {
+    // 与「备份到本机（加密）」共用同一打包入口：两处产出的密文完全一致，可互相恢复。
+    const payloadResult: Result<Uint8Array> = await this.buildEncryptedBackup();
+    if (!payloadResult.success || payloadResult.data === undefined) {
       // 透传底层真实原因（「本地尚无数据」「读取数据失败」等），不再统一改写成模糊的「读取本地数据失败」
       const readError: ResourceStr =
-        bytesResult.error !== undefined ? bytesResult.error.message : $r('app.string.error_read_local_data_failed');
+        payloadResult.error !== undefined ? payloadResult.error.message : $r('app.string.error_read_local_data_failed');
       const logText: string = typeof readError === 'string' ? readError : UiText.of(readError);
       Logger.error('Sync push read failed: ' + logText + ' | ' + target);
       this.state = { status: SyncStatus.FAILED, lastSyncAt: this.state.lastSyncAt, message: readError };
-      return err<void>(AppErrorCode.STORAGE_READ_FAILED, readError);
+      return err<void>(payloadResult.error !== undefined ? payloadResult.error.code : AppErrorCode.STORAGE_READ_FAILED,
+        readError);
     }
-    const payload: Uint8Array = bytesResult.data;
-    if (payload.length === 0) {
-      const emptyError: ResourceStr = $r('app.string.error_local_data_empty_skip_push');
-      Logger.warn('Sync push skipped: empty payload | ' + target);
-      this.state = { status: SyncStatus.FAILED, lastSyncAt: this.state.lastSyncAt, message: emptyError };
-      return err<void>(AppErrorCode.STORAGE_READ_FAILED, emptyError);
-    }
+    const payload: Uint8Array = payloadResult.data;
     const startedAt: number = nowMilliseconds();
     Logger.info('Sync push start: bytes=' + payload.length + ' | ' + target);
     const uploadResult: Result<void> = await this.webDavService.upload(config, fileName, payload);

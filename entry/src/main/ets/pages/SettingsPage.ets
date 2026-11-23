@@ -190,7 +190,7 @@ struct SettingsPage {
               Column() {
                 this.settingItem($r('app.string.settings_item_security'),
                   $r('app.string.settings_item_security_note'), AppRoutes.SECURITY, $r('app.media.ic_security'), false)
-                // 备案完成前不展示联网同步入口（WEBDAV_FEATURE_ENABLED == false）
+                // 总开关关闭时（例如临时审核要求）不展示备份与恢复入口
                 if (WEBDAV_FEATURE_ENABLED) {
                   this.settingItem($r('app.string.settings_item_webdav'),
                     $r('app.string.settings_item_webdav_note'), AppRoutes.WEBDAV, $r('app.media.ic_sync'), false)
@@ -225,9 +225,7 @@ struct SettingsPage {
           .align(Alignment.TopStart)  // 内容不足一屏时不被 Scroll 垂直居中
 
           // 底部标语固定在页面底部（不再随列表漂浮），与居上的菜单形成上下呼应
-          Text(WEBDAV_FEATURE_ENABLED
-            ? $r('app.string.settings_footer')
-            : $r('app.string.settings_footer_offline'))
+          Text($r('app.string.settings_footer'))
             .fontSize(11)
             .textAlign(TextAlign.Center)
             .fontColor($r('app.color.text_tertiary'))

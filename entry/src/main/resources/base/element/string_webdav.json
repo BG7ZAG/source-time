@@ -2,11 +2,11 @@
   "string": [
     {
       "name": "webdav_title",
-      "value": "WebDAV 同步"
+      "value": "备份和恢复"
     },
     {
       "name": "webdav_subtitle",
-      "value": "云端数据备份与多端联动"
+      "value": "WebDAV 同步 · 本机备份与恢复"
     },
     {
       "name": "webdav_enable_label",
@@ -231,6 +231,134 @@
     {
       "name": "webdav_size_unknown",
       "value": "大小未知"
+    },
+    {
+      "name": "local_backup_title",
+      "value": "本机备份与恢复"
+    },
+    {
+      "name": "local_backup_note",
+      "value": "备份文件保存在你选择的位置；加密备份与 WebDAV 推送使用同一份密文。"
+    },
+    {
+      "name": "local_backup_export_encrypted",
+      "value": "备份到本机（加密）"
+    },
+    {
+      "name": "local_backup_export_plain",
+      "value": "备份到本机（无加密）"
+    },
+    {
+      "name": "local_backup_import",
+      "value": "从本机恢复"
+    },
+    {
+      "name": "local_backup_working",
+      "value": "处理中..."
+    },
+    {
+      "name": "local_backup_plain_warning",
+      "value": "明文备份不加密，任何拿到该文件的人都能读取其中的口令密钥，建议优先使用加密备份。"
+    },
+    {
+      "name": "local_backup_encrypted_success",
+      "value": "加密备份已保存"
+    },
+    {
+      "name": "local_backup_plain_success",
+      "value": "明文备份已保存"
+    },
+    {
+      "name": "local_backup_export_failed",
+      "value": "备份失败"
+    },
+    {
+      "name": "local_backup_import_failed",
+      "value": "读取备份失败"
+    },
+    {
+      "name": "local_backup_restore_success",
+      "value": "已从本机备份恢复"
+    },
+    {
+      "name": "local_backup_restore_failed",
+      "value": "恢复失败"
+    },
+    {
+      "name": "local_backup_unrecognized",
+      "value": "无法识别该文件：它不是源时备份，或文件已损坏"
+    },
+    {
+      "name": "local_backup_key_mismatch",
+      "value": "无法解密该备份：它可能由其他密钥加密，请使用与当前密钥一致的备份"
+    },
+    {
+      "name": "local_backup_empty_file",
+      "value": "所选文件为空，无法作为备份导入"
+    },
+    {
+      "name": "local_backup_too_large",
+      "value": "所选文件过大，无法作为备份导入"
+    },
+    {
+      "name": "local_backup_write_failed",
+      "value": "写入备份文件失败"
+    },
+    {
+      "name": "local_backup_read_failed",
+      "value": "读取备份文件失败"
+    },
+    {
+      "name": "local_backup_preview_title",
+      "value": "确认导入备份"
+    },
+    {
+      "name": "local_backup_preview_subtitle",
+      "value": "请检查以下内容，导入后将覆盖本机现有数据"
+    },
+    {
+      "name": "local_backup_kind_encrypted",
+      "value": "加密备份"
+    },
+    {
+      "name": "local_backup_kind_plain",
+      "value": "明文备份"
+    },
+    {
+      "name": "local_backup_preview_meta",
+      "value": "共 %d 条口令 · 数据更新于 %s"
+    },
+    {
+      "name": "local_backup_preview_items",
+      "value": "备份中的口令"
+    },
+    {
+      "name": "local_backup_preview_empty",
+      "value": "该备份不包含任何口令"
+    },
+    {
+      "name": "local_backup_preview_more",
+      "value": "还有 %d 条未显示"
+    },
+    {
+      "name": "local_backup_preview_confirm",
+      "value": "覆盖并导入"
+    },
+    {
+      "name": "local_backup_overwrite_warning",
+      "value": "导入将覆盖本机现有数据，此操作无法撤销。"
+    },
+    {
+      "name": "local_backup_no_data",
+      "value": "本机尚无数据，无法备份"
+    },
+    {
+      "name": "local_backup_empty_data",
+      "value": "本机数据文件为空，无法备份"
+    },
+    {
+      "name": "webdav_config_section_title",
+      "value": "WebDAV 连接配置"
     }
   ]
 }

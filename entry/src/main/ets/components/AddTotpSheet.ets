@@ -42,9 +42,9 @@ interface ChipOptionParams {
  * - 手动录入态 = 表单卡（SHEET_BODY_MIN_HEIGHT）+ 间距 12 + 保存按钮 46
  * - 扫码态没有保存按钮，因此把「间距 + 按钮」这 58vp 直接算进卡片高度里
  * 二者相加均为 SHEET_BODY_MIN_HEIGHT + ACTION_AREA_HEIGHT，切换时尺寸恒定。
- * 表单卡取略大于自然高度（约 214vp）的值，保证 minHeight 一定生效而不是被内容顶开。
+ * 表单卡取不小于自然高度（纵向三行字段约 300vp）的值，保证 minHeight 生效且底部不出现空洞。
  */
-const SHEET_BODY_MIN_HEIGHT: number = 232;
+const SHEET_BODY_MIN_HEIGHT: number = 302;
 const ACTION_AREA_HEIGHT: number = 58;
 const SCAN_BODY_MIN_HEIGHT: number = SHEET_BODY_MIN_HEIGHT + ACTION_AREA_HEIGHT;
 
@@ -52,7 +52,8 @@ const SCAN_BODY_MIN_HEIGHT: number = SHEET_BODY_MIN_HEIGHT + ACTION_AREA_HEIGHT;
  * 主页半模态弹窗：扫码 / 手动录入 TOTP。
  *
  * 鸿蒙 7 形态：居中冰晶模态 + Segment 分段切换 + 下沉式输入框（获焦散发主色光晕）。
- * 内容刻意保持紧凑：发行方与账号并排一行，控件高度下调，避免弹窗过高。
+ * 手动态的密钥、发行方、账号各占整行：并排两列会把 label 挤窄、占位符截断，
+ * 高级选项展开后行距还会被压缩成「标签贴上输入框」的观感。
  */
 @Component
 export struct AddTotpSheet {
@@ -297,29 +298,31 @@ export struct AddTotpSheet {
   @Builder
   manualCard() {
     Column({ space: 12 }) {
-        Column({ space: 6 }) {
-          this.fieldLabel({ label: $r('app.string.add_secret_label'), showParsedBadge: this.parsedFromUri })
-          SheetField({ value: $secret, placeholder: $r('app.string.add_secret_placeholder'), numeric: false })
-        }
-      .width('100%')
-      .alignItems(HorizontalAlign.Start)
-
-      Row({ space: 10 }) {
-        Column({ space: 6 }) {
-          this.fieldLabel({ label: $r('app.string.add_issuer_label'), optional: true })
-          SheetField({ value: $issuer, placeholder: $r('app.string.add_issuer_placeholder'), numeric: false })
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
-
-        Column({ space: 6 }) {
-          this.fieldLabel({ label: $r('app.string.add_account_label'), optional: true })
-          SheetField({ value: $account, placeholder: $r('app.string.add_account_placeholder'), numeric: false })
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
+      Column({ space: 6 }) {
+        this.fieldLabel({ label: $r('app.string.add_secret_label'), showParsedBadge: this.parsedFromUri })
+        SheetField({ value: $secret, placeholder: $r('app.string.add_secret_placeholder'), numeric: false })
       }
       .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .flexShrink(0)
+
+      // 发行方、账号各占整行：label 有完整宽度，占位符也不会被半宽输入框截断，
+      // 展开高级选项时行距保持不变，不会挤到上方的密钥输入框上。
+      Column({ space: 6 }) {
+        this.fieldLabel({ label: $r('app.string.add_issuer_label'), optional: true })
+        SheetField({ value: $issuer, placeholder: $r('app.string.add_issuer_placeholder'), numeric: false })
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .flexShrink(0)
+
+      Column({ space: 6 }) {
+        this.fieldLabel({ label: $r('app.string.add_account_label'), optional: true })
+        SheetField({ value: $account, placeholder: $r('app.string.add_account_placeholder'), numeric: false })
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .flexShrink(0)
 
       // 高级选项
       Column() {
@@ -398,11 +401,10 @@ export struct AddTotpSheet {
         }
       }
       .width('100%')
+      .flexShrink(0)
     }
     .width('100%')
     .constraintSize({ minHeight: SHEET_BODY_MIN_HEIGHT })
-    // 内容不足最小高度时把余量分摊到各行之间，视觉上像留白而不是底部空洞
-    .justifyContent(FlexAlign.SpaceBetween)
     .alignItems(HorizontalAlign.Start)
     .padding(14)
     .borderRadius(18)

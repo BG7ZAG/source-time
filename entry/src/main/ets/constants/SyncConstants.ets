@@ -3,7 +3,9 @@
  * 例：sourcetime-20261014-154512.enc（本地时区）
  */
 export const REMOTE_BACKUP_PREFIX: string = 'sourcetime-';
+/** 云备份与本机明文备份共用同一时间戳命名规则，仅扩展名不同。 */
 export const REMOTE_BACKUP_SUFFIX: string = '.enc';
+export const LOCAL_PLAIN_BACKUP_SUFFIX: string = '.json';
 
 /** 快照文件名的完整形态：sourcetime-<8 位日期>-<6 位时间>.enc */
 const BACKUP_NAME_PATTERN: RegExp = /^sourcetime-\d{8}-\d{6}\.enc$/;
@@ -21,6 +23,14 @@ export function buildBackupFileName(timestamp: number): string {
   return REMOTE_BACKUP_PREFIX + date.getFullYear().toString() + pad2(date.getMonth() + 1)
     + pad2(date.getDate()) + '-' + pad2(date.getHours()) + pad2(date.getMinutes())
     + pad2(date.getSeconds()) + REMOTE_BACKUP_SUFFIX;
+}
+
+/** 本机明文备份文件名：与加密快照同时间戳规则，扩展名 .json（内容为明文 JSON）。 */
+export function buildPlainBackupFileName(timestamp: number): string {
+  const date: Date = new Date(timestamp);
+  return REMOTE_BACKUP_PREFIX + date.getFullYear().toString() + pad2(date.getMonth() + 1)
+    + pad2(date.getDate()) + '-' + pad2(date.getHours()) + pad2(date.getMinutes())
+    + pad2(date.getSeconds()) + LOCAL_PLAIN_BACKUP_SUFFIX;
 }
 
 /**

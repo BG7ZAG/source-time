@@ -126,7 +126,7 @@
     },
     {
       "name": "add_issuer_placeholder",
-      "value": "如：Google"
+      "value": "请输入发行方"
     },
     {
       "name": "add_account_label",
@@ -134,7 +134,7 @@
     },
     {
       "name": "add_account_placeholder",
-      "value": "如：user@xx.com"
+      "value": "请输入账号"
     },
     {
       "name": "add_optional",

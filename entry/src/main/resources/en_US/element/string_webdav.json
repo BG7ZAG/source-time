@@ -2,11 +2,11 @@
   "string": [
     {
       "name": "webdav_title",
-      "value": "WebDAV Sync"
+      "value": "Backup & Restore"
     },
     {
       "name": "webdav_subtitle",
-      "value": "Cloud backup and multi-device sync"
+      "value": "WebDAV sync · on-device backup and restore"
     },
     {
       "name": "webdav_enable_label",
@@ -231,6 +231,134 @@
     {
       "name": "webdav_size_unknown",
       "value": "Size unknown"
+    },
+    {
+      "name": "local_backup_title",
+      "value": "On-device backup & restore"
+    },
+    {
+      "name": "local_backup_note",
+      "value": "Backup files are saved wherever you choose. Encrypted backups use the same ciphertext as WebDAV push."
+    },
+    {
+      "name": "local_backup_export_encrypted",
+      "value": "Back up to device (encrypted)"
+    },
+    {
+      "name": "local_backup_export_plain",
+      "value": "Back up to device (unencrypted)"
+    },
+    {
+      "name": "local_backup_import",
+      "value": "Restore from device"
+    },
+    {
+      "name": "local_backup_working",
+      "value": "Working..."
+    },
+    {
+      "name": "local_backup_plain_warning",
+      "value": "Unencrypted backups contain your secrets in plain text. Anyone with the file can read them, so prefer the encrypted option."
+    },
+    {
+      "name": "local_backup_encrypted_success",
+      "value": "Encrypted backup saved"
+    },
+    {
+      "name": "local_backup_plain_success",
+      "value": "Unencrypted backup saved"
+    },
+    {
+      "name": "local_backup_export_failed",
+      "value": "Backup failed"
+    },
+    {
+      "name": "local_backup_import_failed",
+      "value": "Failed to read the backup"
+    },
+    {
+      "name": "local_backup_restore_success",
+      "value": "Restored from the device backup"
+    },
+    {
+      "name": "local_backup_restore_failed",
+      "value": "Restore failed"
+    },
+    {
+      "name": "local_backup_unrecognized",
+      "value": "Unrecognized file: it is not a SourceTime backup, or it is corrupted"
+    },
+    {
+      "name": "local_backup_key_mismatch",
+      "value": "Cannot decrypt this backup. It may have been encrypted with a different key; use a backup that matches your current key."
+    },
+    {
+      "name": "local_backup_empty_file",
+      "value": "The selected file is empty and cannot be imported"
+    },
+    {
+      "name": "local_backup_too_large",
+      "value": "The selected file is too large to import"
+    },
+    {
+      "name": "local_backup_write_failed",
+      "value": "Failed to write the backup file"
+    },
+    {
+      "name": "local_backup_read_failed",
+      "value": "Failed to read the backup file"
+    },
+    {
+      "name": "local_backup_preview_title",
+      "value": "Import this backup?"
+    },
+    {
+      "name": "local_backup_preview_subtitle",
+      "value": "Review the contents below. Importing will overwrite your current data."
+    },
+    {
+      "name": "local_backup_kind_encrypted",
+      "value": "Encrypted backup"
+    },
+    {
+      "name": "local_backup_kind_plain",
+      "value": "Unencrypted backup"
+    },
+    {
+      "name": "local_backup_preview_meta",
+      "value": "%d codes · data updated %s"
+    },
+    {
+      "name": "local_backup_preview_items",
+      "value": "Codes in this backup"
+    },
+    {
+      "name": "local_backup_preview_empty",
+      "value": "This backup contains no codes"
+    },
+    {
+      "name": "local_backup_preview_more",
+      "value": "%d more not shown"
+    },
+    {
+      "name": "local_backup_preview_confirm",
+      "value": "Overwrite and import"
+    },
+    {
+      "name": "local_backup_overwrite_warning",
+      "value": "Importing will overwrite your current data. This cannot be undone."
+    },
+    {
+      "name": "local_backup_no_data",
+      "value": "No data on this device to back up"
+    },
+    {
+      "name": "local_backup_empty_data",
+      "value": "The local data file is empty and cannot be backed up"
+    },
+    {
+      "name": "webdav_config_section_title",
+      "value": "WebDAV connection"
     }
   ]
 }

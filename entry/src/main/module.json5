@@ -22,9 +22,11 @@
     ],
     "requestPermissions": [
       {
-        // 当前版本联网同步已关闭（WEBDAV_FEATURE_ENABLED = false），先移除网络权限。
-        // 备案完成、恢复 WebDAV 同步时，需在此重新加回：
-        // { "name": "ohos.permission.INTERNET" }
+        // WebDAV 云端备份 / 恢复需要联网权限（normal 级，安装即授予）。
+        // 若再次关闭 WEBDAV_FEATURE_ENABLED，可同步移除此项。
+        "name": "ohos.permission.INTERNET"
+      },
+      {
         "name": "ohos.permission.CAMERA",
         "reason": "$string:camera_reason",
         "usedScene": {

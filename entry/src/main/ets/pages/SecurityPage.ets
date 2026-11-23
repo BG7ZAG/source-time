@@ -304,7 +304,7 @@ struct SecurityPage {
    * 未启用同步 / 未开启自动推送时，SyncService 内部会静默跳过。
    */
   private triggerSyncAfterKeyChange(newSecret: string): void {
-    // 备案完成前联网同步整体关闭：密钥变更只更新本地密文，不向云端推送
+    // 总开关关闭时密钥变更只更新本地密文，不向云端推送
     if (!WEBDAV_FEATURE_ENABLED) {
       Logger.info('Sync after key change skipped: network sync is disabled');
       return;

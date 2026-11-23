@@ -245,6 +245,31 @@ export class StorageService {
     }
   }
 
+  /**
+   * 解析明文备份（UTF-8 JSON，结构与磁盘内数据库一致）。
+   *
+   * 与 decodeEncryptedDatabase 相同，只做结构校验；供「本机明文备份」的导出与恢复使用。
+   * 失败返回 INVALID_ENCRYPTED_FILE，由调用方决定对外提示（例如「无法识别该文件」）。
+   */
+  parsePlainDatabase(bytes: Uint8Array): Result<DatabaseModel> {
+    try {
+      let json: string = new util.TextDecoder().decode(bytes);
+      // 允许带 UTF-8 BOM 的文件（部分文本编辑器保存时会加上）
+      if (json.length > 0 && json.charCodeAt(0) === 0xFEFF) {
+        json = json.substring(1);
+      }
+      const parsed: DatabaseModel = JSON.parse(json) as DatabaseModel;
+      if (!this.validateDatabase(parsed)) {
+        Logger.error('Storage parse plain backup: invalid database schema');
+        return err<DatabaseModel>(AppErrorCode.INVALID_ENCRYPTED_FILE, $r('app.string.local_backup_unrecognized'));
+      }
+      return ok(parsed);
+    } catch (error) {
+      Logger.warn('Storage parse plain backup: not a JSON database');
+      return err<DatabaseModel>(AppErrorCode.INVALID_ENCRYPTED_FILE, $r('app.string.local_backup_unrecognized'));
+    }
+  }
+
   private createEmptyDatabase(): DatabaseModel {
     return {
       version: CURRENT_SCHEMA_VERSION,

@@ -30,15 +30,13 @@ export const DEFAULT_TOTP_ALGORITHM: TotpAlgorithm = 'SHA1';
 export const DEFAULT_WEBDAV_DIRECTORY: string = '/SourceTime/';
 
 /**
- * 联网同步功能总开关（WebDAV）。
+ * 联网备份总开关（WebDAV）。
  *
- * 当前版本尚未完成相关备案：先屏蔽全部联网入口，避免用户在本版本使用未备案的联网能力。
- * 开关关闭时同时屏蔽：
- * - 设置页「WebDAV 同步」入口与 WebDavPage；
- * - 冷启动自动拉取、密钥变更后的自动推送。
- * 备案完成后把这里改为 true 即可恢复，无需再改各页面逻辑。
+ * 已放开限制：设置页入口、WebDavPage、冷启动自动拉取与密钥变更后的自动推送全部可用。
+ * 若后续需要再次整体关闭联网能力（如临时审核要求），把这里改为 false 即可，
+ * 各页面与服务的既有判断会自动生效；同时需在 module.json5 中移除 INTERNET 权限。
  */
-export const WEBDAV_FEATURE_ENABLED: boolean = false;
+export const WEBDAV_FEATURE_ENABLED: boolean = true;
 
 /** AppStorage 键：应用锁状态，true 表示需要输入 PIN 才能查看内容。 */
 export const APP_LOCK_STORAGE_KEY: string = 'appLocked';
