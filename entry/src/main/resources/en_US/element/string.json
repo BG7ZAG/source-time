@@ -1,0 +1,28 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "SourceTime main module"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "SourceTime TOTP authenticator"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "SourceTime"
+    },
+    {
+      "name": "camera_reason",
+      "value": "Used to scan QR codes and import TOTP secrets"
+    },
+    {
+      "name": "home_search_placeholder",
+      "value": "Search issuer or account"
+    },
+    {
+      "name": "home_search_empty",
+      "value": "No matching codes"
+    }
+  ]
+}

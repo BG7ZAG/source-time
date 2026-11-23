@@ -1,0 +1,68 @@
+{
+  "string": [
+    {
+      "name": "scan_invalid_qr",
+      "value": "Invalid QR code"
+    },
+    {
+      "name": "scan_save_failed",
+      "value": "Save failed"
+    },
+    {
+      "name": "scan_confirm_title",
+      "value": "Confirm verification code details"
+    },
+    {
+      "name": "scan_confirm_subtitle",
+      "value": "Save to the local encrypted database once confirmed"
+    },
+    {
+      "name": "scan_label_issuer",
+      "value": "Issuer"
+    },
+    {
+      "name": "scan_label_account",
+      "value": "Account"
+    },
+    {
+      "name": "scan_label_algorithm",
+      "value": "Algorithm"
+    },
+    {
+      "name": "scan_label_digits",
+      "value": "Digits"
+    },
+    {
+      "name": "scan_digits_value",
+      "value": "%d digits"
+    },
+    {
+      "name": "scan_label_period",
+      "value": "Period"
+    },
+    {
+      "name": "scan_period_value",
+      "value": "%d seconds"
+    },
+    {
+      "name": "scan_avatar_fallback",
+      "value": "S"
+    },
+    {
+      "name": "scan_saving",
+      "value": "Saving..."
+    },
+    {
+      "name": "scan_save_button",
+      "value": "Save"
+    },
+    {
+      "name": "scan_scanning_title",
+      "value": "Scanning QR code"
+    },
+    {
+      "name": "scan_scanning_hint",
+      "value": "Place the otpauth QR code in the frame"
+    }
+  ]
+}

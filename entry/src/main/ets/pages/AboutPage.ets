@@ -1,0 +1,238 @@
+import { common } from '@kit.AbilityKit';
+import { AuroraBackground } from '../components/AuroraBackground';
+import { frostedPillColor, glassGroupShadow, glassPillShadow } from '../theme/GlassStyle';
+import { CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
+
+/**
+ * 关于页（鸿蒙 7 版）：悬浮 logo + 版本胶囊 + 冰晶信息分组卡片。
+ */
+@Entry
+@Component
+struct AboutPage {
+  private repoUrl: string = 'https://github.com/BG7ZAG/source-time';
+
+  @Builder
+  header() {
+    Row() {
+      Stack({ alignContent: Alignment.Center }) {
+        Image($r('app.media.ic_back'))
+          .width(21)
+          .height(21)
+          .fillColor($r('app.color.text_primary'))
+      }
+      .width(42)
+      .height(42)
+      .borderRadius(21)
+      .backgroundColor(frostedPillColor())
+      .backgroundBlurStyle(BlurStyle.COMPONENT_THIN)
+      .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+      .shadow(glassPillShadow())
+      .onClick(() => this.getUIContext().getRouter().back())
+
+      Blank()
+
+      Text($r('app.string.about_title'))
+        .fontSize(19)
+        .fontWeight(FontWeight.Bold)
+        .fontColor($r('app.color.text_primary'))
+
+      Blank()
+
+      Text('')
+        .width(42)
+    }
+    .width('100%')
+    .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  infoRow(icon: Resource, label: ResourceStr, value: ResourceStr, clickable: boolean, isLast: boolean) {
+    Column() {
+      Row({ space: 14 }) {
+        Stack({ alignContent: Alignment.Center }) {
+          Image(icon)
+            .width(20)
+            .height(20)
+            .fillColor($r('app.color.brand'))
+        }
+        .width(36)
+        .height(36)
+        .borderRadius(12)
+        .backgroundColor($r('app.color.brand_container'))
+        .border({ width: 1, color: $r('app.color.card_highlight'), style: BorderStyle.Solid })
+
+        Text(label)
+          .fontSize(15)
+          .fontColor($r('app.color.text_primary'))
+          .layoutWeight(1)
+
+        Text(value)
+          .fontSize(12.5)
+          .fontColor(clickable ? $r('app.color.brand') : $r('app.color.text_tertiary'))
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+        if (clickable) {
+          Image($r('app.media.ic_chevron_right'))
+            .width(14)
+            .height(14)
+            .fillColor($r('app.color.text_tertiary'))
+        }
+      }
+      .width('100%')
+      .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+      .alignItems(VerticalAlign.Center)
+      .onClick(() => {
+        if (clickable) {
+          this.openRepo();
+        }
+      })
+
+      if (!isLast) {
+        Divider()
+          .color($r('app.color.divider'))
+          .margin({ left: 66, right: 16 })
+      }
+    }
+    .width('100%')
+  }
+
+  private openRepo(): void {
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      context.openLink(this.repoUrl).catch(() => {
+        // 无法拉起浏览器时保持静态展示
+      });
+    } catch (error) {
+      // 忽略异常
+    }
+  }
+
+  pageTransition() {
+    PageTransitionEnter({ type: RouteType.Push, duration: 250, curve: Curve.EaseOut })
+      .slide(SlideEffect.Right)
+    PageTransitionExit({ type: RouteType.Push, duration: 250, curve: Curve.EaseIn })
+      .slide(SlideEffect.Left)
+    PageTransitionEnter({ type: RouteType.Pop, duration: 250, curve: Curve.EaseOut })
+      .slide(SlideEffect.Left)
+    PageTransitionExit({ type: RouteType.Pop, duration: 250, curve: Curve.EaseIn })
+      .slide(SlideEffect.Right)
+  }
+
+  build() {
+    // @Entry 页面的 build 只能有唯一根节点，且必须是容器组件；
+    // AuroraBackground 是自定义组件，故由 Stack 作为根承载它。
+    Stack() {
+      AuroraBackground() {
+        Column() {
+          this.header()
+
+          Scroll() {
+            Column({ space: 16 }) {
+              // 悬浮 logo 区
+              Column({ space: 12 }) {
+                Stack({ alignContent: Alignment.Center }) {
+                  // 背后弥散光晕
+                  Column()
+                    .width(132)
+                    .height(132)
+                    .borderRadius(66)
+                    .radialGradient({
+                      center: ['50%', '50%'],
+                      radius: 66,
+                      colors: [['#3D0A59F7', 0.0], ['#000A59F7', 1.0]]
+                    })
+
+                  Image($r('app.media.ic_logo'))
+                    .width(84)
+                    .height(84)
+                    .borderRadius(22)
+                    .border({ width: 1, color: $r('app.color.card_highlight'), style: BorderStyle.Solid })
+                    .shadow({ radius: 20, color: '#4D0A59F7', offsetX: 0, offsetY: 10 })
+                }
+                .width(132)
+                .height(132)
+
+                Text($r('app.string.about_app_name'))
+                  .fontSize(25)
+                  .fontWeight(FontWeight.Bold)
+                  .fontColor($r('app.color.text_primary'))
+
+                Text($r('app.string.about_tagline'))
+                  .fontSize(12.5)
+                  .fontColor($r('app.color.text_secondary'))
+
+                Text($r('app.string.about_version'))
+                  .fontSize(11.5)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('app.color.brand_on_container'))
+                  .padding({ left: 12, right: 12, top: 5, bottom: 5 })
+                  .borderRadius(12)
+                  .backgroundColor($r('app.color.brand_container'))
+                  .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+              }
+              .width('100%')
+              .padding({ top: 20, bottom: 4 })
+              .alignItems(HorizontalAlign.Center)
+
+              Column() {
+                // 审核要求：仅适配较高版本 HarmonyOS 时，必须在应用内给出明显标注
+                this.infoRow($r('app.media.ic_security'), $r('app.string.about_requirement'), $r('app.string.about_requirement_value'), false, false)
+                this.infoRow($r('app.media.ic_doc'), $r('app.string.about_license'), $r('app.string.about_license_value'), false, false)
+                this.infoRow($r('app.media.ic_github'), $r('app.string.about_repo'), 'BG7ZAG/source-time', true, false)
+                this.infoRow($r('app.media.ic_heart'), $r('app.string.about_thanks'), $r('app.string.about_thanks_value'), false, true)
+              }
+              .width('100%')
+              .borderRadius(22)
+              .clip(true)
+              .backgroundColor($r('app.color.card_background_solid'))
+              .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+              .shadow(glassGroupShadow())
+
+              Column({ space: 8 }) {
+                Text($r('app.string.about_usage_title'))
+                  .fontSize(13)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor($r('app.color.text_primary'))
+                  .width('100%')
+                Text($r('app.string.about_usage_body'))
+                  .fontSize(11.5)
+                  .lineHeight(18)
+                  .fontColor($r('app.color.text_secondary'))
+                  .width('100%')
+              }
+              .width('100%')
+              .padding({ left: 16, right: 16, top: 14, bottom: 14 })
+              .borderRadius(22)
+              .backgroundColor($r('app.color.card_background_solid'))
+              .border({ width: 1, color: $r('app.color.card_border'), style: BorderStyle.Solid })
+              .shadow(glassGroupShadow())
+
+              Text($r('app.string.about_footer'))
+                .fontSize(11)
+                .textAlign(TextAlign.Center)
+                .fontColor($r('app.color.text_tertiary'))
+                .width('100%')
+                .padding({ top: 4, bottom: 20 })
+            }
+            .width('100%')
+            // 同设置页：避免内容短于视口时被 Scroll 垂直居中
+            .constraintSize({ minHeight: '100%' })
+            .justifyContent(FlexAlign.Start)
+            .padding({ left: 16, right: 16 })
+          }
+          .layoutWeight(1)
+          .scrollBar(BarState.Off)
+          .edgeEffect(EdgeEffect.Spring)
+          .align(Alignment.TopStart)  // 内容不足一屏时不被 Scroll 垂直居中
+        }
+        .width('100%')
+        .height('100%')
+        .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
+      }
+    }
+    .width('100%')
+    .height('100%')
+  }
+}

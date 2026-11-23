@@ -1,0 +1,41 @@
+#!/bin/sh
+# 阻止把本机签名配置提交进仓库。
+#
+# build-profile.json5 是工程配置，必须进版本库；但里面的 signingConfigs 属于本机：
+# 证书 / Profile 的绝对路径、DevEco 用本机密钥加密后的口令串。对别人毫无用处，
+# 对自己则是泄露目录结构与凭据密文，一旦提交就永久留在历史里。
+#
+# 启用：git config core.hooksPath .githooks
+# 跳过（不推荐）：git commit --no-verify
+
+file="build-profile.json5"
+
+if [ -z "$(git diff --cached --name-only -- "$file")" ]; then
+  exit 0
+fi
+
+# 只看新增行：删除签名配置是合法操作，不能拦。
+# 除了 signingConfigs 本体，产品上的 "signingConfig": "default" 引用也要拦：
+# 它指向的配置块留在本机，别人拉下来会引用一个不存在的签名配置。
+added=$(git diff --cached -U0 -- "$file" \
+  | grep -E '^\+' \
+  | grep -E '"signingConfigs?"|"storePassword"|"keyPassword"|"certpath"')
+
+if [ -n "$added" ]; then
+  # 只报字段名，不打印字段值：否则安全检查本身又把凭据喷到终端回滚里
+  fields=$(echo "$added" | grep -oE '"(signingConfigs?|storePassword|keyPassword|certpath)"' | sort -u | tr '\n' ' ')
+  echo ""
+  echo "✗ 提交被拒绝：$file 里包含本机签名配置。"
+  echo ""
+  echo "  命中字段：$fields"
+  echo ""
+  echo "  signingConfigs 只应留在本机，不进仓库（历史里 b3b124b 已清理过一次）。"
+  echo ""
+  echo "  处理办法："
+  echo "    git restore --staged $file     # 先取消暂存"
+  echo "    git add -p $file               # 只挑与签名无关的改动再提交"
+  echo ""
+  exit 1
+fi
+
+exit 0

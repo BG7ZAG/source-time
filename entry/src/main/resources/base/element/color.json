@@ -1,0 +1,144 @@
+{
+  "color": [
+    {
+      "name": "start_window_background",
+      "value": "#EDF3FF"
+    },
+    {
+      "name": "page_background",
+      "value": "#EDF3FF"
+    },
+    {
+      "name": "page_gradient_start",
+      "value": "#E4EEFF"
+    },
+    {
+      "name": "page_gradient_mid",
+      "value": "#F1F5FE"
+    },
+    {
+      "name": "page_gradient_end",
+      "value": "#FBFCFF"
+    },
+    {
+      "name": "card_background",
+      "value": "#8CFFFFFF"
+    },
+    {
+      "name": "menu_background",
+      "value": "#F1F4FC"
+    },
+    {
+      "name": "subtle_brand_background",
+      "value": "#0F0A59F7"
+    },
+    {
+      "name": "card_background_solid",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "card_border",
+      "value": "#290A59F7"
+    },
+    {
+      "name": "card_highlight",
+      "value": "#E6FFFFFF"
+    },
+    {
+      "name": "glass_input_background",
+      "value": "#59FFFFFF"
+    },
+    {
+      "name": "glass_input_border",
+      "value": "#33FFFFFF"
+    },
+    {
+      "name": "field_background",
+      "value": "#12000000"
+    },
+    {
+      "name": "field_border",
+      "value": "#2E000000"
+    },
+    {
+      "name": "glass_track",
+      "value": "#1F0A59F7"
+    },
+    {
+      "name": "text_primary",
+      "value": "#E6000000"
+    },
+    {
+      "name": "text_secondary",
+      "value": "#99000000"
+    },
+    {
+      "name": "text_tertiary",
+      "value": "#66000000"
+    },
+    {
+      "name": "brand",
+      "value": "#0A59F7"
+    },
+    {
+      "name": "brand_secondary",
+      "value": "#3892FF"
+    },
+    {
+      "name": "brand_container",
+      "value": "#D9E6FF"
+    },
+    {
+      "name": "brand_on_container",
+      "value": "#0A59F7"
+    },
+    {
+      "name": "fab_foreground",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "success",
+      "value": "#34C759"
+    },
+    {
+      "name": "warning",
+      "value": "#FF9500"
+    },
+    {
+      "name": "danger",
+      "value": "#FF3B30"
+    },
+    {
+      "name": "divider",
+      "value": "#14000000"
+    },
+    {
+      "name": "glow",
+      "value": "#00000000"
+    },
+    {
+      "name": "scrim",
+      "value": "#0F000000"
+    },
+    {
+      "name": "modal_scrim",
+      "value": "#4D000000"
+    },
+    {
+      "name": "pill_background",
+      "value": "#66FFFFFF"
+    },
+    {
+      "name": "pill_border",
+      "value": "#99FFFFFF"
+    },
+    {
+      "name": "status_active",
+      "value": "#0A59F7"
+    },
+    {
+      "name": "more_icon",
+      "value": "#99000000"
+    }
+  ]
+}

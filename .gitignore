@@ -1,0 +1,58 @@
+/node_modules
+/oh_modules
+/local.properties
+/.idea
+**/build
+/.hvigor
+.cxx
+/.clangd
+/.clang-format
+/.clang-tidy
+**/.test
+/.appanalyzer
+
+.codeartsdoer
+
+# JiuwenSwarm runtime file operation logs
+.agent_history/
+.office-claw
+coding_memory
+todo
+
+# OfficeAce / openjiuwen 宿主运行时在会话工作目录重建的 agent-home 脚手架（非业务代码，每次会话初始化时生成）
+AGENT.md
+BACKLOG.md
+HEARTBEAT.md
+IDENTITY.md
+SOUL.md
+USER.md
+agents/
+context/
+docs/
+memory/
+messages/
+prompt_attachment/
+skills/.workspace
+.team
+.workbuddy
+
+# 签名材料：私钥、证书、Profile、CSR 一律不入库
+# .p12/.jks/.keystore 是私钥，泄露等于把签名权交出去
+# .p7b 是 Profile（调试版含真实设备 UDID，且带有效期）
+*.p12
+*.jks
+*.keystore
+*.csr
+*.cer
+*.p7b
+/signing/
+/signature/
+/signatures/
+# 本地测试产物与 Agent 工具配置，不入库
+/test_artifacts/
+/.opencode/
+
+
+# 应用商店上架素材（本地生成，不入库）
+/store_assets/
+

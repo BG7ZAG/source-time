@@ -1,0 +1,80 @@
+{
+  "string": [
+    {
+      "name": "log_title",
+      "value": "运行日志"
+    },
+    {
+      "name": "log_stat_total",
+      "value": "总记录"
+    },
+    {
+      "name": "log_stat_warn",
+      "value": "警告"
+    },
+    {
+      "name": "log_stat_error",
+      "value": "错误"
+    },
+    {
+      "name": "log_filter_all",
+      "value": "全部"
+    },
+    {
+      "name": "log_filter_info",
+      "value": "信息"
+    },
+    {
+      "name": "log_filter_warn",
+      "value": "警告"
+    },
+    {
+      "name": "log_filter_error",
+      "value": "错误"
+    },
+    {
+      "name": "log_privacy_note",
+      "value": "日志仅保存在本机，不会上传；密钥、口令、令牌等敏感信息在保存与展示前已脱敏。"
+    },
+    {
+      "name": "log_copy_all",
+      "value": "复制全部"
+    },
+    {
+      "name": "log_nothing_to_copy",
+      "value": "暂无可复制的日志"
+    },
+    {
+      "name": "log_copy_failed",
+      "value": "复制失败"
+    },
+    {
+      "name": "log_copied",
+      "value": "日志已复制到剪贴板"
+    },
+    {
+      "name": "log_clear_dialog_title",
+      "value": "清空运行日志？"
+    },
+    {
+      "name": "log_clear_dialog_message",
+      "value": "将删除本机保存的全部日志记录，删除后无法找回。\n\n此操作不影响你的口令数据与 WebDAV 同步配置。"
+    },
+    {
+      "name": "log_clear_confirm",
+      "value": "确认清空"
+    },
+    {
+      "name": "log_cleared",
+      "value": "日志已清空"
+    },
+    {
+      "name": "log_empty_title",
+      "value": "暂无日志"
+    },
+    {
+      "name": "log_empty_hint",
+      "value": "应用的加密、同步、密钥等运行记录会显示在这里"
+    }
+  ]
+}

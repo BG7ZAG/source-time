@@ -1,0 +1,14 @@
+{
+  "name": "sourcetime",
+  "version": "1.0.0",
+  "modelVersion": "26.0.0",
+  "description": "源时（SourceTime）：开源鸿蒙 TOTP 动态口令工具，本地离线优先，支持 WebDAV 端到端加密同步。",
+  "author": "bg7za",
+  "license": "MIT",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "@ohos/hypium": "1.0.25",
+    "@ohos/hamock": "1.0.0"
+  }
+}

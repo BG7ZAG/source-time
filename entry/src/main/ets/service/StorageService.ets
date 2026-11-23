@@ -1,0 +1,361 @@
+import { fileIo as fs } from '@kit.CoreFileKit';
+import { util } from '@kit.ArkTS';
+import { Logger } from '../utils/Logger';
+import { CryptoService } from './CryptoService';
+import { AppContextHolder } from '../utils/AppContextHolder';
+import { generateUuid } from '../utils/UUIDUtils';
+import { nowMilliseconds } from '../utils/TimeUtils';
+import { DatabaseModel } from '../model/DatabaseModel';
+import { TotpItem } from '../model/TotpItem';
+import { Result, ok, err } from '../types/Result';
+import { AppErrorCode } from '../types/Errors';
+import { DATABASE_FILE_NAME, CURRENT_SCHEMA_VERSION, MIN_TOTP_PERIOD, MAX_TOTP_PERIOD } from '../constants/AppConstants';
+
+const OPEN_READ_ONLY: number = 0;
+const OPEN_WRITE_CREATE_TRUNC: number = 0o2 | 0o100 | 0o1000;
+const TMP_SUFFIX: string = '.tmp';
+const ORPHAN_SUFFIX: string = '.orphan';
+const VALID_ALGORITHMS: string[] = ['SHA1', 'SHA256', 'SHA512'];
+
+export class StorageService {
+  private static instance: StorageService | null = null;
+
+  private cryptoService: CryptoService = new CryptoService();
+  private database: DatabaseModel | null = null;
+  private dbPath: string;
+  private tmpPath: string;
+
+  constructor() {
+    const context = AppContextHolder.getContext();
+    this.dbPath = context.filesDir + '/' + DATABASE_FILE_NAME;
+    this.tmpPath = this.dbPath + TMP_SUFFIX;
+  }
+
+  static getInstance(): StorageService {
+    if (StorageService.instance === null) {
+      StorageService.instance = new StorageService();
+    }
+    return StorageService.instance;
+  }
+
+  /**
+   * 读写串行队列。
+   *
+   * 冷启动载入、同步前后的载入与保存可能并发发起，而每次载入里的解密都会 await 让出执行：
+   * 先发出的请求完全可能后完成，把陈旧的库写回 this.database。此后「读缓存 → 修改 → 写盘」
+   * 就会用旧数据覆盖刚写入的结果（丢条目）。所有载入与保存走同一条 Promise 链即可消除该竞态。
+   */
+  private queueHead: Promise<void> = Promise.resolve();
+
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const run: Promise<T> = this.queueHead.then(() => task());
+    // 队尾吞掉异常：失败由调用方持有的 run 自行处理，否则一次失败会永久断链
+    this.queueHead = run.then(() => {
+    }, () => {
+    });
+    return run;
+  }
+
+  isInitialized(): boolean {
+    try {
+      return fs.accessSync(this.dbPath);
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async initialize(): Promise<Result<void>> {
+    this.database = null;
+    return ok(undefined);
+  }
+
+  loadDatabase(encryptionSecret: string): Promise<Result<DatabaseModel>> {
+    return this.enqueue<Result<DatabaseModel>>(() => this.doLoadDatabase(encryptionSecret));
+  }
+
+  private async doLoadDatabase(encryptionSecret: string): Promise<Result<DatabaseModel>> {
+    try {
+      if (!this.isInitialized()) {
+        // 本地还没有密文文件：返回空库（首次使用或刚清库后的正常状态），不视为错误
+        const emptyDb: DatabaseModel = this.createEmptyDatabase();
+        this.database = emptyDb;
+        Logger.info('Storage load: local database not initialized, using empty database', 'Storage');
+        return ok(emptyDb);
+      }
+      const bytes: Uint8Array = this.readFile();
+      if (bytes.length === 0) {
+        const emptyDb: DatabaseModel = this.createEmptyDatabase();
+        this.database = emptyDb;
+        Logger.warn('Storage load: encrypted file is empty, using empty database', 'Storage');
+        return ok(emptyDb);
+      }
+      const plainBytes: Uint8Array = await this.cryptoService.decrypt(bytes, encryptionSecret);
+      const json: string = new util.TextDecoder().decode(plainBytes);
+      const parsed: DatabaseModel = JSON.parse(json) as DatabaseModel;
+      if (!this.validateDatabase(parsed)) {
+        Logger.error('Storage load: invalid database schema', 'Storage');
+        return err<DatabaseModel>(AppErrorCode.INVALID_ENCRYPTED_FILE, $r('app.string.error_database_format_invalid'));
+      }
+      this.database = parsed;
+      Logger.info('Storage load ok: items=' + parsed.items.length + ' revision=' + parsed.revision
+        + ' bytes=' + bytes.length, 'Storage');
+      return ok(parsed);
+    } catch (error) {
+      Logger.error('Storage load failed: decrypt error (key mismatch or corrupted file)', 'Storage');
+      return err<DatabaseModel>(AppErrorCode.DECRYPT_FAILED, $r('app.string.error_local_decrypt_failed'));
+    }
+  }
+
+  saveDatabase(database: DatabaseModel, encryptionSecret: string): Promise<Result<void>> {
+    return this.enqueue<Result<void>>(() => this.doSaveDatabase(database, encryptionSecret));
+  }
+
+  private async doSaveDatabase(database: DatabaseModel, encryptionSecret: string): Promise<Result<void>> {
+    try {
+      const json: string = JSON.stringify(database);
+      const plainBytes: Uint8Array = new util.TextEncoder().encodeInto(json);
+      const encrypted: Uint8Array = await this.cryptoService.encrypt(plainBytes, encryptionSecret);
+      this.atomicWrite(encrypted);
+      this.database = database;
+      Logger.info('Storage save ok: items=' + database.items.length + ' revision=' + database.revision
+        + ' bytes=' + encrypted.length, 'Storage');
+      return ok(undefined);
+    } catch (error) {
+      Logger.error('Storage save failed', 'Storage');
+      return err<void>(AppErrorCode.STORAGE_WRITE_FAILED, $r('app.string.error_storage_save_failed'));
+    }
+  }
+
+  async replaceDatabase(database: DatabaseModel, encryptionSecret: string): Promise<Result<void>> {
+    return this.saveDatabase(database, encryptionSecret);
+  }
+
+  /**
+   * 隔离当前无法解密的本地数据文件，并返回一个全新的空数据库。
+   *
+   * 场景：加密密钥丢失 / 变更后，本地的 totp.db.enc 已无法用当前密钥解开，
+   * 若不处理会导致「读取失败 → 新增/删除全部失败」的死锁。
+   *
+   * 安全性：只做同目录**重命名**（totp.db.enc → totp.db.enc.orphan-<时间戳>），
+   * 不删除任何字节；原密文仍留在磁盘上，日后用原密钥仍可手动恢复。
+   */
+  async quarantineUnreadableDatabase(): Promise<Result<DatabaseModel>> {
+    try {
+      if (this.isInitialized()) {
+        const orphanPath: string = this.dbPath + ORPHAN_SUFFIX + '-' + nowMilliseconds().toString();
+        fs.renameSync(this.dbPath, orphanPath);
+        Logger.info('Unreadable database quarantined: ' + orphanPath);
+      }
+      const emptyDb: DatabaseModel = this.createEmptyDatabase();
+      this.database = emptyDb;
+      return ok(emptyDb);
+    } catch (error) {
+      Logger.error('Storage quarantine failed');
+      return err<DatabaseModel>(AppErrorCode.STORAGE_WRITE_FAILED, $r('app.string.error_clear_local_data_failed'));
+    }
+  }
+
+  /**
+   * 物理删除本地加密数据文件（含临时文件与历史隔离备份），不可恢复。
+   *
+   * 与 quarantineUnreadableDatabase()（同目录重命名、保留字节）不同：本方法真正 unlink，
+   * 只用于「忘记密钥」这类用户已明确要求销毁数据的场景。
+   */
+  async deleteLocalDatabase(): Promise<Result<void>> {
+    this.database = null;
+    const dir: string = AppContextHolder.getContext().filesDir;
+    // 待删清单：当前密文、写入临时文件、以及历史隔离备份 totp.db.enc.orphan-<时间戳>
+    const targets: string[] = [this.dbPath, this.tmpPath];
+    try {
+      const names: string[] = fs.listFileSync(dir);
+      const orphanPrefix: string = DATABASE_FILE_NAME + ORPHAN_SUFFIX;
+      for (const name of names) {
+        if (name.startsWith(orphanPrefix)) {
+          targets.push(dir + '/' + name);
+        }
+      }
+    } catch (error) {
+      // 列目录失败不阻断主流程：仍继续删除当前密文
+      Logger.error('Storage delete: list files failed');
+    }
+    for (const path of targets) {
+      try {
+        fs.unlinkSync(path);
+        Logger.info('Local encrypted file removed: ' + path);
+      } catch (error) {
+        // 文件本就不存在属正常情况，忽略
+      }
+    }
+    Logger.info('Local encrypted data physically deleted');
+    return ok(undefined);
+  }
+
+  changeEncryptionSecret(oldSecret: string, newSecret: string): Promise<Result<void>> {
+    return this.enqueue<Result<void>>(() => this.doChangeEncryptionSecret(oldSecret, newSecret));
+  }
+
+  private async doChangeEncryptionSecret(oldSecret: string, newSecret: string): Promise<Result<void>> {
+    try {
+      if (!this.isInitialized()) {
+        return err<void>(AppErrorCode.KEY_REQUIRED, $r('app.string.error_no_encrypted_data'));
+      }
+      const bytes: Uint8Array = this.readFile();
+      const plainBytes: Uint8Array = await this.cryptoService.decrypt(bytes, oldSecret);
+      const reEncrypted: Uint8Array = await this.cryptoService.encrypt(plainBytes, newSecret);
+      this.atomicWrite(reEncrypted);
+      return ok(undefined);
+    } catch (error) {
+      Logger.error('Storage change key failed');
+      return err<void>(AppErrorCode.INVALID_KEY, $r('app.string.error_current_key_incorrect'));
+    }
+  }
+
+  getDatabase(): DatabaseModel | null {
+    return this.database;
+  }
+
+  readEncryptedFile(): Result<Uint8Array> {
+    try {
+      if (!this.isInitialized()) {
+        Logger.warn('Storage read skipped: local database not initialized', 'Storage');
+        return err<Uint8Array>(AppErrorCode.STORAGE_READ_FAILED, $r('app.string.error_no_local_data'));
+      }
+      const bytes: Uint8Array = this.readFile();
+      Logger.debug('Storage read encrypted file: bytes=' + bytes.length, 'Storage');
+      return ok(bytes);
+    } catch (error) {
+      Logger.error('Storage read encrypted file failed', 'Storage');
+      return err<Uint8Array>(AppErrorCode.STORAGE_READ_FAILED, $r('app.string.error_read_data_failed'));
+    }
+  }
+
+  async decodeEncryptedDatabase(bytes: Uint8Array, encryptionSecret: string): Promise<Result<DatabaseModel>> {
+    try {
+      const plainBytes: Uint8Array = await this.cryptoService.decrypt(bytes, encryptionSecret);
+      const json: string = new util.TextDecoder().decode(plainBytes);
+      const parsed: DatabaseModel = JSON.parse(json) as DatabaseModel;
+      if (!this.validateDatabase(parsed)) {
+        Logger.error('Storage decode: invalid database schema');
+        return err<DatabaseModel>(AppErrorCode.INVALID_ENCRYPTED_FILE, $r('app.string.error_database_format_invalid'));
+      }
+      return ok(parsed);
+    } catch (error) {
+      Logger.error('Storage decode encrypted database failed');
+      return err<DatabaseModel>(AppErrorCode.DECRYPT_FAILED, $r('app.string.error_remote_decrypt_failed'));
+    }
+  }
+
+  /**
+   * 解析明文备份（UTF-8 JSON，结构与磁盘内数据库一致）。
+   *
+   * 与 decodeEncryptedDatabase 相同，只做结构校验；供「本机明文备份」的导出与恢复使用。
+   * 失败返回 INVALID_ENCRYPTED_FILE，由调用方决定对外提示（例如「无法识别该文件」）。
+   */
+  parsePlainDatabase(bytes: Uint8Array): Result<DatabaseModel> {
+    try {
+      let json: string = new util.TextDecoder().decode(bytes);
+      // 允许带 UTF-8 BOM 的文件（部分文本编辑器保存时会加上）
+      if (json.length > 0 && json.charCodeAt(0) === 0xFEFF) {
+        json = json.substring(1);
+      }
+      const parsed: DatabaseModel = JSON.parse(json) as DatabaseModel;
+      if (!this.validateDatabase(parsed)) {
+        Logger.error('Storage parse plain backup: invalid database schema');
+        return err<DatabaseModel>(AppErrorCode.INVALID_ENCRYPTED_FILE, $r('app.string.local_backup_unrecognized'));
+      }
+      return ok(parsed);
+    } catch (error) {
+      Logger.warn('Storage parse plain backup: not a JSON database');
+      return err<DatabaseModel>(AppErrorCode.INVALID_ENCRYPTED_FILE, $r('app.string.local_backup_unrecognized'));
+    }
+  }
+
+  private createEmptyDatabase(): DatabaseModel {
+    return {
+      version: CURRENT_SCHEMA_VERSION,
+      revision: 0,
+      updatedAt: 0,
+      deviceId: generateUuid(),
+      items: []
+    };
+  }
+
+  private readFile(): Uint8Array {
+    const file = fs.openSync(this.dbPath, OPEN_READ_ONLY);
+    try {
+      const stat = fs.statSync(this.dbPath);
+      const buffer: ArrayBuffer = new ArrayBuffer(stat.size);
+      fs.readSync(file.fd, buffer);
+      return new Uint8Array(buffer);
+    } finally {
+      fs.closeSync(file);
+    }
+  }
+
+  private atomicWrite(data: Uint8Array): void {
+    try {
+      fs.unlinkSync(this.tmpPath);
+    } catch (error) {
+      // tmp may not exist, ignore
+    }
+    const file = fs.openSync(this.tmpPath, OPEN_WRITE_CREATE_TRUNC);
+    try {
+      const independent: Uint8Array = data.slice(0, data.length);
+      fs.writeSync(file.fd, independent.buffer);
+      fs.fsyncSync(file.fd);
+    } finally {
+      fs.closeSync(file);
+    }
+    const stat = fs.statSync(this.tmpPath);
+    if (stat.size !== data.length) {
+      try {
+        fs.unlinkSync(this.tmpPath);
+      } catch (error) {
+        // ignore
+      }
+      throw new Error('STORAGE_WRITE_FAILED');
+    }
+    fs.renameSync(this.tmpPath, this.dbPath);
+  }
+
+  private validateDatabase(db: DatabaseModel): boolean {
+    if (db.version !== CURRENT_SCHEMA_VERSION) {
+      return false;
+    }
+    if (!Array.isArray(db.items)) {
+      return false;
+    }
+    for (let i = 0; i < db.items.length; i++) {
+      if (!this.validateTotpItem(db.items[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private validateTotpItem(item: TotpItem): boolean {
+    if (typeof item.id !== 'string' || item.id.length === 0) {
+      return false;
+    }
+    if (typeof item.issuer !== 'string') {
+      return false;
+    }
+    if (typeof item.account !== 'string') {
+      return false;
+    }
+    if (typeof item.secret !== 'string' || item.secret.length === 0) {
+      return false;
+    }
+    if (VALID_ALGORITHMS.indexOf(item.algorithm) < 0) {
+      return false;
+    }
+    if (item.digits !== 6 && item.digits !== 8) {
+      return false;
+    }
+    if (typeof item.period !== 'number' || !Number.isInteger(item.period) || item.period < MIN_TOTP_PERIOD
+      || item.period > MAX_TOTP_PERIOD) {
+      return false;
+    }
+    return true;
+  }
+}

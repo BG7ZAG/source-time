@@ -1,0 +1,264 @@
+{
+  "string": [
+    {
+      "name": "error_secret_format",
+      "value": "Invalid secret format"
+    },
+    {
+      "name": "error_qr_content_invalid",
+      "value": "Invalid QR code content"
+    },
+    {
+      "name": "error_not_totp_qr",
+      "value": "Not a valid TOTP QR code"
+    },
+    {
+      "name": "error_qr_algorithm_unsupported",
+      "value": "Unsupported algorithm in this QR code. Only SHA1 / SHA256 / SHA512 are supported"
+    },
+    {
+      "name": "error_qr_digits_unsupported",
+      "value": "Unsupported digit count in this QR code. Only 6 or 8 digits are supported"
+    },
+    {
+      "name": "error_qr_period_invalid",
+      "value": "Invalid refresh period in this QR code"
+    },
+    {
+      "name": "error_qr_parse_failed",
+      "value": "Failed to parse the QR code"
+    },
+    {
+      "name": "error_period_invalid",
+      "value": "Invalid period"
+    },
+    {
+      "name": "error_code_generation_failed",
+      "value": "Failed to generate the verification code"
+    },
+    {
+      "name": "error_cannot_generate_code",
+      "value": "Unable to generate the verification code"
+    },
+    {
+      "name": "error_database_format_invalid",
+      "value": "Invalid database format"
+    },
+    {
+      "name": "error_local_decrypt_failed",
+      "value": "Unable to decrypt the data. Check that the encryption key is correct"
+    },
+    {
+      "name": "error_remote_decrypt_failed",
+      "value": "Unable to decrypt the remote data. Check that the encryption key is correct"
+    },
+    {
+      "name": "error_storage_save_failed",
+      "value": "Failed to save data"
+    },
+    {
+      "name": "error_clear_local_data_failed",
+      "value": "Failed to clear local data"
+    },
+    {
+      "name": "error_no_encrypted_data",
+      "value": "No encrypted data yet"
+    },
+    {
+      "name": "error_current_key_incorrect",
+      "value": "The current encryption key is incorrect"
+    },
+    {
+      "name": "error_no_local_data",
+      "value": "No local data yet"
+    },
+    {
+      "name": "error_read_data_failed",
+      "value": "Failed to read data"
+    },
+    {
+      "name": "error_save_settings_failed",
+      "value": "Failed to save settings"
+    },
+    {
+      "name": "error_save_config_failed",
+      "value": "Failed to save the configuration"
+    },
+    {
+      "name": "error_webdav_password_key_missing",
+      "value": "Missing encryption key. The WebDAV password cannot be saved securely"
+    },
+    {
+      "name": "error_pin_format",
+      "value": "PIN must be 6 digits"
+    },
+    {
+      "name": "error_salt_generation_failed",
+      "value": "Failed to generate a random salt"
+    },
+    {
+      "name": "error_pin_process_failed",
+      "value": "Failed to process the PIN. Please try again"
+    },
+    {
+      "name": "error_app_lock_not_initialized",
+      "value": "App lock is not initialized"
+    },
+    {
+      "name": "error_app_lock_data_corrupted",
+      "value": "App lock data is corrupted"
+    },
+    {
+      "name": "error_verify_failed",
+      "value": "Verification failed"
+    },
+    {
+      "name": "error_verify_failed_retry",
+      "value": "Verification failed. Please try again"
+    },
+    {
+      "name": "error_pin_incorrect",
+      "value": "Incorrect PIN"
+    },
+    {
+      "name": "error_webdav_sync_not_enabled",
+      "value": "WebDAV sync is not enabled"
+    },
+    {
+      "name": "error_backup_list_failed",
+      "value": "Failed to get the backup list"
+    },
+    {
+      "name": "error_pull_failed",
+      "value": "Pull failed"
+    },
+    {
+      "name": "error_remote_data_invalid",
+      "value": "Invalid remote data"
+    },
+    {
+      "name": "error_remote_not_latest",
+      "value": "The remote data is not the latest version"
+    },
+    {
+      "name": "error_local_replace_failed",
+      "value": "Failed to replace local data"
+    },
+    {
+      "name": "error_webdav_not_configured",
+      "value": "WebDAV is not configured"
+    },
+    {
+      "name": "error_no_local_data_to_push",
+      "value": "No local data to push (no codes added yet). To restore from the cloud, use Pull instead"
+    },
+    {
+      "name": "error_read_local_data_failed",
+      "value": "Failed to read local data"
+    },
+    {
+      "name": "error_local_data_empty_skip_push",
+      "value": "The local data file is empty. Push skipped to avoid overwriting cloud backups"
+    },
+    {
+      "name": "error_sync_failed",
+      "value": "Sync failed"
+    },
+    {
+      "name": "error_server_url_invalid",
+      "value": "Invalid server address"
+    },
+    {
+      "name": "error_webdav_connect_failed",
+      "value": "Unable to connect to the WebDAV server"
+    },
+    {
+      "name": "error_webdav_upload_failed",
+      "value": "Upload failed (network error or no response from the server)"
+    },
+    {
+      "name": "error_webdav_download_failed",
+      "value": "Download failed (network error or no response from the server)"
+    },
+    {
+      "name": "error_webdav_delete_failed",
+      "value": "Delete failed (network error or no response from the server)"
+    },
+    {
+      "name": "error_no_remote_backup",
+      "value": "No remote backup data yet"
+    },
+    {
+      "name": "error_remote_data_format_invalid",
+      "value": "Invalid remote data format"
+    },
+    {
+      "name": "error_webdav_plain_http_blocked",
+      "value": "Plain HTTP connections are blocked. Use HTTPS instead, or enable \"Allow insecure connection\" below"
+    },
+    {
+      "name": "error_backup_file_name_invalid",
+      "value": "Invalid backup file name"
+    },
+    {
+      "name": "error_webdav_auth_failed",
+      "value": "Authentication failed. Check the username or password"
+    },
+    {
+      "name": "error_webdav_permission_denied",
+      "value": "Insufficient permission to access this directory"
+    },
+    {
+      "name": "error_remote_path_not_found",
+      "value": "Remote path not found"
+    },
+    {
+      "name": "error_remote_parent_missing",
+      "value": "The parent directory does not exist. Check the server address and sync directory hierarchy"
+    },
+    {
+      "name": "error_request_timeout",
+      "value": "Request timed out"
+    },
+    {
+      "name": "error_too_many_requests",
+      "value": "Too many requests. Please try again later"
+    },
+    {
+      "name": "error_server_error",
+      "value": "Server error"
+    },
+    {
+      "name": "error_request_failed_status",
+      "value": "Request failed (status code %d)"
+    },
+    {
+      "name": "error_copy_failed",
+      "value": "Copy failed"
+    },
+    {
+      "name": "error_load_data_failed",
+      "value": "Failed to load data"
+    },
+    {
+      "name": "error_data_load_failed",
+      "value": "Failed to load data"
+    },
+    {
+      "name": "error_secret_required",
+      "value": "Enter the secret"
+    },
+    {
+      "name": "error_digits_invalid",
+      "value": "Invalid digit count"
+    },
+    {
+      "name": "error_encryption_key_unavailable",
+      "value": "Encryption key unavailable. Local data cannot be read (you can set a new key in Settings > Security)"
+    },
+    {
+      "name": "error_save_failed",
+      "value": "Save failed"
+    }
+  ]
+}

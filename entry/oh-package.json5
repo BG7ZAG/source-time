@@ -1,0 +1,10 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "源时（SourceTime）主模块：TOTP 验证码管理与 WebDAV 加密同步。",
+  "main": "",
+  "author": "bg7za",
+  "license": "MIT",
+  "dependencies": {}
+}
+

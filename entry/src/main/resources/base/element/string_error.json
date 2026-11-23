@@ -1,0 +1,264 @@
+{
+  "string": [
+    {
+      "name": "error_secret_format",
+      "value": "密钥格式无效"
+    },
+    {
+      "name": "error_qr_content_invalid",
+      "value": "二维码内容无效"
+    },
+    {
+      "name": "error_not_totp_qr",
+      "value": "不是有效的 TOTP 二维码"
+    },
+    {
+      "name": "error_qr_algorithm_unsupported",
+      "value": "该二维码的算法不受支持，仅支持 SHA1 / SHA256 / SHA512"
+    },
+    {
+      "name": "error_qr_digits_unsupported",
+      "value": "该二维码的位数不受支持，仅支持 6 位或 8 位"
+    },
+    {
+      "name": "error_qr_period_invalid",
+      "value": "该二维码的刷新周期无效"
+    },
+    {
+      "name": "error_qr_parse_failed",
+      "value": "二维码解析失败"
+    },
+    {
+      "name": "error_period_invalid",
+      "value": "周期无效"
+    },
+    {
+      "name": "error_code_generation_failed",
+      "value": "验证码生成失败"
+    },
+    {
+      "name": "error_cannot_generate_code",
+      "value": "无法生成验证码"
+    },
+    {
+      "name": "error_database_format_invalid",
+      "value": "数据库格式无效"
+    },
+    {
+      "name": "error_local_decrypt_failed",
+      "value": "无法解密数据，请确认加密密钥是否正确"
+    },
+    {
+      "name": "error_remote_decrypt_failed",
+      "value": "无法解密远程数据，请确认加密密钥是否正确"
+    },
+    {
+      "name": "error_storage_save_failed",
+      "value": "保存数据失败"
+    },
+    {
+      "name": "error_clear_local_data_failed",
+      "value": "清除本地数据失败"
+    },
+    {
+      "name": "error_no_encrypted_data",
+      "value": "尚无加密数据"
+    },
+    {
+      "name": "error_current_key_incorrect",
+      "value": "当前密钥不正确"
+    },
+    {
+      "name": "error_no_local_data",
+      "value": "本地尚无数据"
+    },
+    {
+      "name": "error_read_data_failed",
+      "value": "读取数据失败"
+    },
+    {
+      "name": "error_save_settings_failed",
+      "value": "保存设置失败"
+    },
+    {
+      "name": "error_save_config_failed",
+      "value": "保存配置失败"
+    },
+    {
+      "name": "error_webdav_password_key_missing",
+      "value": "缺少加密密钥，无法安全保存 WebDAV 密码"
+    },
+    {
+      "name": "error_pin_format",
+      "value": "PIN 需为 6 位数字"
+    },
+    {
+      "name": "error_salt_generation_failed",
+      "value": "生成随机盐失败"
+    },
+    {
+      "name": "error_pin_process_failed",
+      "value": "PIN 处理失败，请重试"
+    },
+    {
+      "name": "error_app_lock_not_initialized",
+      "value": "应用锁未初始化"
+    },
+    {
+      "name": "error_app_lock_data_corrupted",
+      "value": "应用锁数据损坏"
+    },
+    {
+      "name": "error_verify_failed",
+      "value": "校验失败"
+    },
+    {
+      "name": "error_verify_failed_retry",
+      "value": "校验失败，请重试"
+    },
+    {
+      "name": "error_pin_incorrect",
+      "value": "PIN 不正确"
+    },
+    {
+      "name": "error_webdav_sync_not_enabled",
+      "value": "未启用 WebDAV 同步"
+    },
+    {
+      "name": "error_backup_list_failed",
+      "value": "获取备份列表失败"
+    },
+    {
+      "name": "error_pull_failed",
+      "value": "拉取失败"
+    },
+    {
+      "name": "error_remote_data_invalid",
+      "value": "远程数据无效"
+    },
+    {
+      "name": "error_remote_not_latest",
+      "value": "远程数据不是最新版本"
+    },
+    {
+      "name": "error_local_replace_failed",
+      "value": "本地替换失败"
+    },
+    {
+      "name": "error_webdav_not_configured",
+      "value": "未配置 WebDAV"
+    },
+    {
+      "name": "error_no_local_data_to_push",
+      "value": "本地暂无数据可推送（尚未添加口令）。如需从云端恢复，请改用「拉取」"
+    },
+    {
+      "name": "error_read_local_data_failed",
+      "value": "读取本地数据失败"
+    },
+    {
+      "name": "error_local_data_empty_skip_push",
+      "value": "本地数据文件为空，已跳过推送（避免覆盖云端备份）"
+    },
+    {
+      "name": "error_sync_failed",
+      "value": "同步失败"
+    },
+    {
+      "name": "error_server_url_invalid",
+      "value": "服务器地址无效"
+    },
+    {
+      "name": "error_webdav_connect_failed",
+      "value": "无法连接 WebDAV 服务器"
+    },
+    {
+      "name": "error_webdav_upload_failed",
+      "value": "上传失败（网络异常或服务器无响应）"
+    },
+    {
+      "name": "error_webdav_download_failed",
+      "value": "下载失败（网络异常或服务器无响应）"
+    },
+    {
+      "name": "error_webdav_delete_failed",
+      "value": "删除失败（网络异常或服务器无响应）"
+    },
+    {
+      "name": "error_no_remote_backup",
+      "value": "远端暂无备份数据"
+    },
+    {
+      "name": "error_remote_data_format_invalid",
+      "value": "远程数据格式无效"
+    },
+    {
+      "name": "error_webdav_plain_http_blocked",
+      "value": "明文 http 连接已被阻止：请改用 https，或在下方勾选「允许不安全连接」"
+    },
+    {
+      "name": "error_backup_file_name_invalid",
+      "value": "备份文件名无效"
+    },
+    {
+      "name": "error_webdav_auth_failed",
+      "value": "认证失败，请检查用户名或密码"
+    },
+    {
+      "name": "error_webdav_permission_denied",
+      "value": "权限不足，无法访问该目录"
+    },
+    {
+      "name": "error_remote_path_not_found",
+      "value": "远程路径不存在"
+    },
+    {
+      "name": "error_remote_parent_missing",
+      "value": "上级目录不存在，请检查服务器地址与同步目录层级"
+    },
+    {
+      "name": "error_request_timeout",
+      "value": "请求超时"
+    },
+    {
+      "name": "error_too_many_requests",
+      "value": "请求过于频繁，请稍后再试"
+    },
+    {
+      "name": "error_server_error",
+      "value": "服务器错误"
+    },
+    {
+      "name": "error_request_failed_status",
+      "value": "请求失败（状态码 %d）"
+    },
+    {
+      "name": "error_copy_failed",
+      "value": "复制失败"
+    },
+    {
+      "name": "error_load_data_failed",
+      "value": "加载数据失败"
+    },
+    {
+      "name": "error_data_load_failed",
+      "value": "数据加载失败"
+    },
+    {
+      "name": "error_secret_required",
+      "value": "请输入密钥"
+    },
+    {
+      "name": "error_digits_invalid",
+      "value": "位数无效"
+    },
+    {
+      "name": "error_encryption_key_unavailable",
+      "value": "加密密钥不可用，无法读取本地数据（可在 设置 > 安全 中重新设置密钥）"
+    },
+    {
+      "name": "error_save_failed",
+      "value": "保存失败"
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "string": [
+    {
+      "name": "log_title",
+      "value": "Runtime logs"
+    },
+    {
+      "name": "log_stat_total",
+      "value": "Total"
+    },
+    {
+      "name": "log_stat_warn",
+      "value": "Warnings"
+    },
+    {
+      "name": "log_stat_error",
+      "value": "Errors"
+    },
+    {
+      "name": "log_filter_all",
+      "value": "All"
+    },
+    {
+      "name": "log_filter_info",
+      "value": "Info"
+    },
+    {
+      "name": "log_filter_warn",
+      "value": "Warn"
+    },
+    {
+      "name": "log_filter_error",
+      "value": "Error"
+    },
+    {
+      "name": "log_privacy_note",
+      "value": "Logs are kept on this device only and are never uploaded; sensitive data such as encryption keys, codes and tokens is redacted before being saved or displayed."
+    },
+    {
+      "name": "log_copy_all",
+      "value": "Copy all"
+    },
+    {
+      "name": "log_nothing_to_copy",
+      "value": "No logs to copy"
+    },
+    {
+      "name": "log_copy_failed",
+      "value": "Copy failed"
+    },
+    {
+      "name": "log_copied",
+      "value": "Logs copied to clipboard"
+    },
+    {
+      "name": "log_clear_dialog_title",
+      "value": "Clear runtime logs?"
+    },
+    {
+      "name": "log_clear_dialog_message",
+      "value": "All log records saved on this device will be deleted and cannot be recovered.\n\nThis does not affect your verification code data or WebDAV sync settings."
+    },
+    {
+      "name": "log_clear_confirm",
+      "value": "Clear"
+    },
+    {
+      "name": "log_cleared",
+      "value": "Logs cleared"
+    },
+    {
+      "name": "log_empty_title",
+      "value": "No logs yet"
+    },
+    {
+      "name": "log_empty_hint",
+      "value": "Records of encryption, sync and key operations will appear here"
+    }
+  ]
+}

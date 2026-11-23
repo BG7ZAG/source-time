@@ -1,0 +1,388 @@
+{
+  "string": [
+    {
+      "name": "security_title",
+      "value": "Security & encryption key"
+    },
+    {
+      "name": "security_subtitle",
+      "value": "Protect your data"
+    },
+    {
+      "name": "security_regen_title",
+      "value": "Regenerate the encryption key?"
+    },
+    {
+      "name": "security_regen_message",
+      "value": "Regenerating will overwrite the key currently entered. Data that is already encrypted can only be decrypted with the old key."
+    },
+    {
+      "name": "security_regen_confirm",
+      "value": "Regenerate"
+    },
+    {
+      "name": "security_key_copied",
+      "value": "Encryption key copied"
+    },
+    {
+      "name": "security_copy_failed",
+      "value": "Copy failed"
+    },
+    {
+      "name": "security_keystore_failed_title",
+      "value": "Encryption key not saved to system secure storage"
+    },
+    {
+      "name": "security_keystore_failed_message",
+      "value": "SourceTime could not store the encryption key in the system asset vault.\n\nIf you don't retry, the app will not unlock automatically on the next launch and you will have to enter the key manually."
+    },
+    {
+      "name": "security_later",
+      "value": "Later"
+    },
+    {
+      "name": "security_secret_required",
+      "value": "Enter or generate an encryption key"
+    },
+    {
+      "name": "security_secret_length_invalid",
+      "value": "The key must be 12-128 characters long"
+    },
+    {
+      "name": "security_save_failed",
+      "value": "Save failed"
+    },
+    {
+      "name": "security_old_secret_required",
+      "value": "Enter the old key"
+    },
+    {
+      "name": "security_no_local_data",
+      "value": "No encrypted data on this device yet; you can set a new key directly"
+    },
+    {
+      "name": "security_read_local_failed",
+      "value": "Failed to read local data"
+    },
+    {
+      "name": "security_old_secret_incorrect",
+      "value": "The old key is incorrect"
+    },
+    {
+      "name": "security_new_secret_required",
+      "value": "Enter the new key"
+    },
+    {
+      "name": "security_decrypt_failed",
+      "value": "Decryption failed"
+    },
+    {
+      "name": "security_key_updated",
+      "value": "Encryption key updated"
+    },
+    {
+      "name": "security_sync_failed",
+      "value": "Sync failed"
+    },
+    {
+      "name": "security_forget_title",
+      "value": "Forgot the encryption key?"
+    },
+    {
+      "name": "security_forget_message",
+      "value": "Once confirmed, the old key will be deleted from system secure storage, and the encrypted data files (TOTP entries and history backups) plus the WebDAV password will be permanently deleted from this device.\n\nSourceTime cannot recover keys, so the data cannot be retrieved after deletion. You will need to set a new key and add your codes again from scratch."
+    },
+    {
+      "name": "security_forget_confirm",
+      "value": "Delete"
+    },
+    {
+      "name": "security_delete_old_key_failed_title",
+      "value": "Failed to delete the old key"
+    },
+    {
+      "name": "security_delete_old_key_failed_message",
+      "value": "The encryption key could not be deleted from system secure storage. To avoid leaving the old key behind, local encrypted data has not been cleared. Please try again."
+    },
+    {
+      "name": "security_forget_cancelled",
+      "value": "Cancelled; no data was deleted"
+    },
+    {
+      "name": "security_clear_local_failed",
+      "value": "Failed to clear local data"
+    },
+    {
+      "name": "security_cleared",
+      "value": "Old key and encrypted data cleared; please set a new key"
+    },
+    {
+      "name": "security_step_1",
+      "value": "Step 1 of 2"
+    },
+    {
+      "name": "security_step_2",
+      "value": "Step 2 of 2"
+    },
+    {
+      "name": "security_key_lost_title",
+      "value": "Encryption key lost"
+    },
+    {
+      "name": "security_key_lost_body",
+      "value": "The encryption key in system secure storage has been lost. Previously encrypted data (including TOTP entries and the WebDAV password) can no longer be decrypted. Set a new key; you will need to re-enter the WebDAV password afterwards."
+    },
+    {
+      "name": "security_local_protection_title",
+      "value": "Local encryption protection"
+    },
+    {
+      "name": "security_local_protection_body",
+      "value": "SourceTime protects your local TOTP data with the encryption key you set. The key is never uploaded to any server."
+    },
+    {
+      "name": "security_label_encryption_key",
+      "value": "Encryption key"
+    },
+    {
+      "name": "security_placeholder_encryption_key",
+      "value": "Enter encryption key"
+    },
+    {
+      "name": "security_copied",
+      "value": "Copied"
+    },
+    {
+      "name": "security_copy_key",
+      "value": "Copy key"
+    },
+    {
+      "name": "security_saving",
+      "value": "Saving..."
+    },
+    {
+      "name": "security_reset_key",
+      "value": "Set a new key"
+    },
+    {
+      "name": "security_finish_setup",
+      "value": "Complete setup"
+    },
+    {
+      "name": "security_verify_current_title",
+      "value": "Verify current key"
+    },
+    {
+      "name": "security_verify_current_body",
+      "value": "Changing the encryption key requires verifying the current key first. Once verified, all data will be re-encrypted with the new key."
+    },
+    {
+      "name": "security_label_current_key",
+      "value": "Current encryption key"
+    },
+    {
+      "name": "security_placeholder_old_secret",
+      "value": "Enter old key"
+    },
+    {
+      "name": "security_verifying",
+      "value": "Verifying..."
+    },
+    {
+      "name": "security_verify_old_button",
+      "value": "Verify old key"
+    },
+    {
+      "name": "security_forget_button",
+      "value": "Forgot the key?"
+    },
+    {
+      "name": "security_set_new_title",
+      "value": "Set new key"
+    },
+    {
+      "name": "security_set_new_body",
+      "value": "Old key verified. Enter or randomly generate a new encryption key."
+    },
+    {
+      "name": "security_label_new_key",
+      "value": "New encryption key"
+    },
+    {
+      "name": "security_placeholder_new_secret",
+      "value": "Enter new key (min. 12 characters)"
+    },
+    {
+      "name": "security_copy_new_key",
+      "value": "Copy new key"
+    },
+    {
+      "name": "security_keep_safe_title",
+      "value": "Keep it safe"
+    },
+    {
+      "name": "security_keep_safe_body",
+      "value": "SourceTime offers no server-side key recovery. If the key is lost, encrypted data can no longer be decrypted."
+    },
+    {
+      "name": "security_save_new_key",
+      "value": "Save new key"
+    },
+    {
+      "name": "security_app_lock_on",
+      "value": "App lock enabled"
+    },
+    {
+      "name": "security_app_lock_off",
+      "value": "App lock disabled"
+    },
+    {
+      "name": "security_app_lock_on_body",
+      "value": "On cold start and when returning to the foreground, the code list is covered until you enter your 6-digit PIN. The PIN is only verified locally with PBKDF2 and is never sent in any network request."
+    },
+    {
+      "name": "security_app_lock_off_body",
+      "value": "When enabled, the code list is covered on cold start and when returning to the foreground until you enter your 6-digit PIN. SourceTime does not store the PIN; if you forget it, the only option is to clear the app data."
+    },
+    {
+      "name": "security_label_current_pin",
+      "value": "Current PIN"
+    },
+    {
+      "name": "security_placeholder_current_pin",
+      "value": "Enter current 6-digit PIN"
+    },
+    {
+      "name": "security_label_new_pin",
+      "value": "New PIN"
+    },
+    {
+      "name": "security_placeholder_new_pin",
+      "value": "Enter new 6-digit PIN"
+    },
+    {
+      "name": "security_label_confirm_pin",
+      "value": "Confirm new PIN"
+    },
+    {
+      "name": "security_placeholder_confirm_pin",
+      "value": "Re-enter new PIN"
+    },
+    {
+      "name": "security_label_set_pin",
+      "value": "Set PIN"
+    },
+    {
+      "name": "security_placeholder_set_pin",
+      "value": "Enter 6-digit PIN"
+    },
+    {
+      "name": "security_label_confirm_set_pin",
+      "value": "Confirm PIN"
+    },
+    {
+      "name": "security_placeholder_confirm_set_pin",
+      "value": "Re-enter the same PIN"
+    },
+    {
+      "name": "security_processing",
+      "value": "Processing..."
+    },
+    {
+      "name": "security_change_pin",
+      "value": "Change PIN"
+    },
+    {
+      "name": "security_disable_app_lock",
+      "value": "Turn off app lock"
+    },
+    {
+      "name": "security_enable_app_lock",
+      "value": "Turn on app lock"
+    },
+    {
+      "name": "security_pin_updated",
+      "value": "PIN updated"
+    },
+    {
+      "name": "pin_invalid_format",
+      "value": "PIN must be 6 digits"
+    },
+    {
+      "name": "pin_mismatch",
+      "value": "The two PINs do not match"
+    },
+    {
+      "name": "pin_current_required",
+      "value": "Enter your current PIN"
+    },
+    {
+      "name": "pin_new_invalid_format",
+      "value": "New PIN must be 6 digits"
+    },
+    {
+      "name": "pin_new_mismatch",
+      "value": "The two new PINs do not match"
+    },
+    {
+      "name": "pin_current_incorrect",
+      "value": "Current PIN is incorrect"
+    },
+    {
+      "name": "pin_enable_failed",
+      "value": "Failed to enable app lock"
+    },
+    {
+      "name": "pin_verify_failed",
+      "value": "Verification failed"
+    },
+    {
+      "name": "pin_change_failed",
+      "value": "Failed to change PIN"
+    },
+    {
+      "name": "pin_disable_failed",
+      "value": "Failed to disable app lock"
+    },
+    {
+      "name": "pin_current_required_before_disable",
+      "value": "Enter your current PIN before turning off the app lock"
+    },
+    {
+      "name": "pin_locked_title",
+      "value": "SourceTime is locked"
+    },
+    {
+      "name": "pin_locked_hint",
+      "value": "Enter your app lock PIN to view your codes"
+    },
+    {
+      "name": "pin_placeholder",
+      "value": "6-digit PIN"
+    },
+    {
+      "name": "pin_required",
+      "value": "Enter your 6-digit PIN"
+    },
+    {
+      "name": "pin_incorrect",
+      "value": "Incorrect PIN"
+    },
+    {
+      "name": "pin_locked_retry",
+      "value": "Too many attempts. Try again in %d seconds"
+    },
+    {
+      "name": "pin_verifying",
+      "value": "Verifying..."
+    },
+    {
+      "name": "pin_unlock",
+      "value": "Unlock"
+    },
+    {
+      "name": "pin_forgot_hint",
+      "value": "If you forget the PIN, you must clear the app data; codes and the encryption key will be unrecoverable"
+    }
+  ]
+}
