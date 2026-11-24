@@ -1,3 +1,4 @@
+import { KeyboardAvoidMode } from '@kit.ArkUI';
 import { PinService } from '../service/PinService';
 import { Result } from '../types/Result';
 import { Logger } from '../utils/Logger';
@@ -25,13 +26,31 @@ export struct PinLockOverlay {
   private lockTimerId: number = -1;
 
   aboutToAppear(): void {
+    // 键盘弹出时让页面收缩到键盘上方，锁屏内容在剩余区域重新居中：
+    // 默认 OFFSET 只保证聚焦的输入框可见，输入框下方的解锁按钮仍会被输入法压住。
+    this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.RESIZE);
     this.refreshLockout();
   }
 
   aboutToDisappear(): void {
+    this.getUIContext().setKeyboardAvoidMode(KeyboardAvoidMode.OFFSET);
     if (this.lockTimerId >= 0) {
       clearInterval(this.lockTimerId);
       this.lockTimerId = -1;
+    }
+  }
+
+  /**
+   * 锁屏出现时清掉下层页面残留的输入焦点。
+   *
+   * 从后台回来时，原页面里聚焦的输入框可能仍持有焦点，软键盘会压在锁屏之上弹出，
+   * 甚至能隔着遮罩继续往原输入框里输入。锁屏挂载后主动清焦点即可收起键盘。
+   */
+  private dismissEditingFocus(): void {
+    try {
+      this.getUIContext().getFocusController().clearFocus();
+    } catch (error) {
+      Logger.warn('Clear focus for app lock overlay failed');
     }
   }
 
@@ -186,7 +205,12 @@ export struct PinLockOverlay {
     .width('100%')
     .height('100%')
     .justifyContent(FlexAlign.Center)
-    .padding({ left: 34, right: 34 })
+    // 底部额外留白：键盘弹出时页面虽已收缩到键盘上方，但输入框与解锁按钮仍可能贴边，
+    // 这段留白让整组内容再上移约一半（未弹键盘时视觉上也略微偏上，符合锁屏习惯）。
+    .padding({ left: 34, right: 34, bottom: 96 })
     .backgroundColor($r('app.color.page_background'))
+    .onAppear(() => {
+      this.dismissEditingFocus();
+    })
   }
 }

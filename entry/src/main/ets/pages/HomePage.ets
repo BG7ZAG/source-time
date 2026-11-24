@@ -647,12 +647,8 @@ struct HomePage {
                           })
                         }
                         .width('100%')
-                        // 网格卡片没有左滑手势，长按也能弹「重命名 / 删除」
-                        .gesture(LongPressGesture().onAction(() => {
-                          this.openCardMenu(display.item);
-                        }))
                       }
-                    }, (display: TotpDisplayItem) => this.cardKey(display))
+                    }, (display: TotpDisplayItem, index: number) => this.cardKey(display) + '|' + index)
                   }
                   .width('100%')
                   .padding({
@@ -668,9 +664,11 @@ struct HomePage {
                 .edgeEffect(EdgeEffect.Spring)
               } else {
                 // 手机：单列列表
-                List({ space: DeviceAdapter.listSpacing() }) {
-                  ForEach(this.filteredItems(), (display: TotpDisplayItem, index: number) => {
-                    ListItem() {
+                // 用 Scroll + Column 而不是 List：List 会虚拟化未进入可视区的 ListItem，
+                // 第 5 条以后不参与内容高度计算，导致内容永远滚不出来。这里全部布局，滚动范围准确。
+                Scroll() {
+                  Column({ space: DeviceAdapter.listSpacing() }) {
+                    ForEach(this.filteredItems(), (display: TotpDisplayItem, index: number) => {
                       Stack({ alignContent: Alignment.Center }) {
                         TotpCard({
                           issuer: display.item.issuer,
@@ -731,47 +729,37 @@ struct HomePage {
                         }
                       }
                       .width('100%')
-                      // 与网格一致：长按也能重命名/删除（左滑是隐藏手势，长按更好发现）
-                      .gesture(LongPressGesture().onAction(() => {
-                        this.openCardMenu(display.item);
-                      }))
-                    }
-                    .swipeAction({ end: this.deleteAction(display.item) })
-                  }, (display: TotpDisplayItem) => this.cardKey(display))
+                    }, (display: TotpDisplayItem, index: number) => this.cardKey(display) + '|' + index)
+                  }
+                  .width('100%')
+                  .padding({
+                    left: DeviceAdapter.pagePaddingH(),
+                    right: DeviceAdapter.pagePaddingH(),
+                    top: 2,
+                    bottom: 90
+                  })
                 }
                 .layoutWeight(1)
-                .width('100%')
-                .padding({
-                  left: DeviceAdapter.pagePaddingH(),
-                  right: DeviceAdapter.pagePaddingH(),
-                  top: 2,
-                  bottom: 90
-                })
+                .align(Alignment.TopStart)
                 .scrollBar(BarState.Off)
                 .edgeEffect(EdgeEffect.Spring)
               }
             }
-
-            // 悬浮光效球：右下角，带环绕呼吸光晕与点击粒子。
-            // 外层布局盒为 148x148（含光晕与粒子活动区），偏移 +45 使 58 光球视觉中心落在距右下各 37vp 处。
-            // 偏移挂在普通 Row 上，避免把通用属性直接挂在自定义组件上。
-            Row() {
-              Row() {
-                GlowFab({
-                  label: '＋',
-                  diameter: DeviceAdapter.fabDiameter(),
-                  onTap: () => this.openAdd()
-                })
-              }
-              .offset({ x: 45, y: 45 })
-            }
-            .width('100%')
-            .padding({ right: 8, bottom: 8 })
-            .justifyContent(FlexAlign.End)
           }
           .width('100%')
           .height('100%')
           .constraintSize({ maxWidth: CONTENT_MAX_WIDTH })
+
+          // 悬浮光效球：绝对定位到右下角，不占列表高度，也不会铺满全屏拦截列表滚动。
+          Row() {
+            GlowFab({
+              label: '＋',
+              diameter: DeviceAdapter.fabDiameter(),
+              onTap: () => this.openAdd()
+            })
+          }
+          .offset({ x: 45, y: 45 })
+          .position({ right: 8, bottom: 8 })
         }
         .width('100%')
         .height('100%')
