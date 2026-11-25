@@ -73,6 +73,8 @@ export struct AuroraBackground {
       .width('100%')
       .height('100%')
       .padding({ top: this.statusBarHeight, bottom: this.bottomSafeHeight })
+      // 锁定期间下层页面整体禁用：既挡住触摸，也让残留焦点的输入框失焦、收起键盘
+      .enabled(!this.appLocked)
 
       // 应用锁遮罩置于最上层：锁定期间盖住口令、密钥与配置内容
       if (this.appLocked) {

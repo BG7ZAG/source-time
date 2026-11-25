@@ -2,6 +2,7 @@ import { KeyboardAvoidMode } from '@kit.ArkUI';
 import { PinService } from '../service/PinService';
 import { Result } from '../types/Result';
 import { Logger } from '../utils/Logger';
+import { dismissEditingFocus } from '../utils/EditingFocus';
 import { UiText } from '../utils/UiText';
 import { APP_LOCK_STORAGE_KEY } from '../constants/AppConstants';
 import { LOCK_CONTENT_MAX_WIDTH } from '../constants/LayoutConstants';
@@ -41,17 +42,14 @@ export struct PinLockOverlay {
   }
 
   /**
-   * 锁屏出现时清掉下层页面残留的输入焦点。
+   * 锁屏出现时清掉下层页面残留的输入焦点并收起软键盘。
    *
    * 从后台回来时，原页面里聚焦的输入框可能仍持有焦点，软键盘会压在锁屏之上弹出，
    * 甚至能隔着遮罩继续往原输入框里输入。锁屏挂载后主动清焦点即可收起键盘。
+   * 回前台时遮罩不会重新触发 onAppear，那一路由 EntryAbility.onForeground 处理。
    */
-  private dismissEditingFocus(): void {
-    try {
-      this.getUIContext().getFocusController().clearFocus();
-    } catch (error) {
-      Logger.warn('Clear focus for app lock overlay failed');
-    }
+  private releaseEditingFocus(): void {
+    dismissEditingFocus(this.getUIContext());
   }
 
   private refreshLockout(): void {
@@ -210,7 +208,7 @@ export struct PinLockOverlay {
     .padding({ left: 34, right: 34, bottom: 96 })
     .backgroundColor($r('app.color.page_background'))
     .onAppear(() => {
-      this.dismissEditingFocus();
+      this.releaseEditingFocus();
     })
   }
 }

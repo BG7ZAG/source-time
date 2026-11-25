@@ -10,6 +10,7 @@ import { SyncService } from '../service/SyncService';
 import { WebDavConfig } from '../model/WebDavConfig';
 import { Result } from '../types/Result';
 import { Logger } from '../utils/Logger';
+import { dismissEditingFocus, EDITING_FOCUS_RETRY_DELAY_MS } from '../utils/EditingFocus';
 import { UiText } from '../utils/UiText';
 import { APP_LOCK_STORAGE_KEY, WEBDAV_FEATURE_ENABLED } from '../constants/AppConstants';
 import { initGlassTheme, initImmersiveMaterialSupport, isDarkMode, supportsImmersive } from '../theme/GlassStyle';
@@ -176,6 +177,14 @@ export default class EntryAbility extends UIAbility {
       mainWindow.on('avoidAreaChange', () => {
         this.syncSafeAreaInsets(mainWindow);
       });
+
+      // 回到前台、窗口重新获得焦点时再清一次：系统可能把退后台前的焦点和键盘一起恢复，
+      // 这个时机比 onForeground 更贴近输入法恢复，命中率更高
+      mainWindow.on('windowEvent', (event: window.WindowEventType) => {
+        if (event === window.WindowEventType.WINDOW_ACTIVE) {
+          this.releaseEditingFocus();
+        }
+      });
     } catch (err) {
       hilog.error(DOMAIN, 'SourceTime', 'Failed to setup immersive window. Cause: %{public}s', JSON.stringify(err));
     }
@@ -235,6 +244,9 @@ export default class EntryAbility extends UIAbility {
 
   onForeground(): void {
     hilog.info(DOMAIN, 'SourceTime', '%{public}s', 'Ability onForeground');
+    // 退后台时锁屏遮罩就已挂载完成，回到前台不会再次触发它的 onAppear；
+    // 而系统会在窗口重新可见后恢复退后台前的输入法和焦点，必须在这里再清一次。
+    this.releaseEditingFocus();
   }
 
   onBackground(): void {
@@ -242,6 +254,28 @@ export default class EntryAbility extends UIAbility {
     // 退到后台即重新上锁：口令是高敏数据，回到前台时必须再次验证
     if (new PinService().isLockUsable()) {
       AppStorage.setOrCreate<boolean>(APP_LOCK_STORAGE_KEY, true);
+      // 先收起键盘，减少系统把输入法会话带回前台的概率
+      this.releaseEditingFocus();
     }
+  }
+
+  /**
+   * 锁定态下清掉下层页面残留的输入焦点并收起软键盘。
+   *
+   * 立即清一次，再延时补一次：系统恢复输入法会话可能晚于 onForeground 回调，
+   * 只清一次会出现「锁屏上仍带着键盘、继续输入还能写进原输入框」的情况。
+   * 解锁后跳过延时清理，避免误清用户正在使用的输入框。
+   */
+  private releaseEditingFocus(): void {
+    if (AppStorage.get<boolean>(APP_LOCK_STORAGE_KEY) !== true || this.mainWindow === undefined) {
+      return;
+    }
+    dismissEditingFocus(this.mainWindow.getUIContext());
+    setTimeout(() => {
+      if (AppStorage.get<boolean>(APP_LOCK_STORAGE_KEY) !== true || this.mainWindow === undefined) {
+        return;
+      }
+      dismissEditingFocus(this.mainWindow.getUIContext());
+    }, EDITING_FOCUS_RETRY_DELAY_MS);
   }
 }
